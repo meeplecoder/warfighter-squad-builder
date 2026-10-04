@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Warfighter Squad Builder</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header id="app-header">
+    <div class="header-brand">⚔ Warfighter Squad Builder</div>
+    <nav id="header-auth"></nav>
+  </header>
+
+  <div id="app-layout">
+    <nav id="sidebar">
+      <a href="#/cards"   class="nav-link" data-route="cards">Cards</a>
+      <a href="#/squads"  class="nav-link" data-route="squads">Squads</a>
+      <a href="#/builder" class="nav-link" data-route="builder" id="nav-builder">Builder</a>
+      <a href="#/profile" class="nav-link" data-route="profile" id="nav-profile">Profile</a>
+    </nav>
+    <main id="app-main">
+      <div class="spinner-wrap"><div class="spinner"></div></div>
+    </main>
+  </div>
+
+  <!-- Global card image hover thumbnail -->
+  <div id="card-thumb"></div>
+
+  <script src="/static/api.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

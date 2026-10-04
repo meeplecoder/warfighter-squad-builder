@@ -1,0 +1,10 @@
+data/
+*.db
+__pycache__/
+*.pyc
+*.pyo
+.env
+static/card_images/*.jpg
+static/card_images/*.jpeg
+static/card_images/*.png
+static/card_images/*.webp
