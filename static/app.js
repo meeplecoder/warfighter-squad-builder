@@ -1162,13 +1162,12 @@ function renderBuilder() {
     const loadCls = loadPct > 100 ? 'over' : loadPct >= 80 ? 'warn' : '';
 
     const gearItems = s.gear.map((g, gi) => {
-      const unitRp = g.card.resource_cost || 0;
-      const totalRp = unitRp * g.quantity;
+      const unitRp = g.card.resource_cost != null ? g.card.resource_cost : 0;
       return `
       <div class="gear-item">
-        ${g.quantity > 1 ? `<span class="gear-qty">${g.quantity}×</span>` : ''}
-        <span ${cardImageAttr(g.card)}>${esc(g.card.name)}</span>
-        <span class="text-muted">${g.quantity > 1 ? `${totalRp} RP (${unitRp}×${g.quantity})` : `${unitRp} RP`}</span>
+        <span ${cardImageAttr(g.card)} style="flex:1">${esc(g.card.name)}</span>
+        <span class="text-muted" style="white-space:nowrap">${unitRp} RP</span>
+        ${g.quantity > 1 ? `<span class="gear-qty">×${g.quantity}</span>` : '<span></span>'}
         <button class="btn btn-icon remove-gear-btn" data-sidx="${idx}" data-gidx="${gi}" title="Remove">✕</button>
       </div>`;
     }).join('');
@@ -1449,7 +1448,7 @@ async function loadPickerResults() {
       onRowClick: async (card) => {
         // For mission/objective/situation/soldier we need the full detail object
         let fullCard = card;
-        if (['mission', 'objective', 'situation'].includes(builderState.pickerMode)) {
+        if (['mission', 'objective', 'situation', 'soldier'].includes(builderState.pickerMode)) {
           try { fullCard = (await API.get('/cards/' + card.id)).card; } catch (_) {}
         }
         switch (builderState.pickerMode) {
