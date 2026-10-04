@@ -100,40 +100,44 @@ def extract_refs(notes: str, soldier_nation: str, lookup: dict) -> list:
         if not candidate or is_stat_line(line):
             continue
 
+        # Skip purely numeric candidates — these come from stat table rows like "3               2"
+        # and would incorrectly match cards whose names end with "-2", "-4", etc.
+        if re.match(r'^\d+$', candidate):
+            continue
+
         candidate_low = candidate.lower()
 
-        # Pass 1: exact match
-        if candidate_low in lookup:
-            card = lookup[candidate_low]
-            if card.id not in seen_ids:
-                refs.append((card, quantity))
-                seen_ids.add(card.id)
-            continue
-
-        # Pass 2: suffix match — handles nation-prefixed names like "UK-Keep Calm"
-        suffix = f'-{candidate_low}'
-        matches = [(name, card) for name, card in lookup.items() if name.endswith(suffix)]
-
-        if not matches:
-            continue
-
-        if len(matches) == 1:
-            card = matches[0][1]
-            if card.id not in seen_ids:
-                refs.append((card, quantity))
-                seen_ids.add(card.id)
-        else:
+        def _resolve(cand_low: str) -> 'Card | None':
+            """Try exact then suffix match for a candidate string. Returns card or None."""
+            # Pass 1: exact match
+            if cand_low in lookup:
+                return lookup[cand_low]
+            # Pass 2: suffix match — handles nation-prefixed names like "UK-Keep Calm"
+            suffix = f'-{cand_low}'
+            matches = [(name, c) for name, c in lookup.items() if name.endswith(suffix)]
+            if not matches:
+                return None
+            if len(matches) == 1:
+                return matches[0][1]
             # Multiple nation variants — prefer the one matching the soldier's nation
             preferred = [
-                (name, card) for name, card in matches
+                (name, c) for name, c in matches
                 if name.startswith(soldier_nation_low + '-')
             ]
-            if len(preferred) == 1:
-                card = preferred[0][1]
-                if card.id not in seen_ids:
-                    refs.append((card, quantity))
-                    seen_ids.add(card.id)
-            # else: ambiguous (multiple nation matches or no nation match) — skip
+            return preferred[0][1] if len(preferred) == 1 else None
+
+        card = _resolve(candidate_low)
+
+        # Plural fallback: "Mk2 Grenades" → try "Mk2 Grenade"
+        if card is None and candidate_low.endswith('s'):
+            card = _resolve(candidate_low[:-1])
+
+        if card is None:
+            continue
+
+        if card.id not in seen_ids:
+            refs.append((card, quantity))
+            seen_ids.add(card.id)
 
     return refs
 

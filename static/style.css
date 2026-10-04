@@ -197,7 +197,7 @@ h3 { font-size: 1rem; font-weight: 600; }
 /* ---- Cards (detail view) ------------------------------------------- */
 .card-detail-layout {
   display: grid;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: 1fr 260px;
   gap: 24px;
   align-items: start;
 }
@@ -499,6 +499,30 @@ h3 { font-size: 1rem; font-weight: 600; }
 }
 
 /* ---- Quick filter pill --------------------------------------------- */
+/* ---- Tabs ---------------------------------------------------------- */
+.tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border);
+}
+.tab-btn {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  margin-bottom: -2px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--accent-light); border-bottom-color: var(--accent); }
+.badge-ok { background: #1a3a1a; color: var(--success); border: 1px solid var(--success); border-radius: 4px; padding: 1px 6px; font-size: 11px; }
+.badge-cx { background: #2a2200; color: var(--warning); border: 1px solid var(--warning); border-radius: 4px; padding: 1px 6px; font-size: 11px; font-style: normal; margin-left: 4px; }
+.badge-xp { background: #1a2a3a; color: var(--link); border: 1px solid var(--link); border-radius: 4px; padding: 1px 6px; font-size: 11px; font-style: normal; margin-left: 4px; }
+
 .quick-filter {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 4px 12px; border-radius: 99px;

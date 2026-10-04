@@ -279,6 +279,21 @@ def main():
                 stats = parse_stats(stats_str)
                 has_image = check_has_image(images_dir, number)
 
+                # Parse pre-printed CX (combat experience) and XP from notes
+                combat_xp = 0
+                soldier_xp = 0
+                if notes and category == 'Soldier':
+                    for line in notes.split('\n'):
+                        stripped = line.strip()
+                        if not combat_xp:
+                            m = re.match(r'^(\d+)\s+CX\.?$', stripped, re.IGNORECASE)
+                            if m:
+                                combat_xp = int(m.group(1))
+                        if not soldier_xp:
+                            m = re.match(r'^(\d+)\s+XP\.?$', stripped, re.IGNORECASE)
+                            if m:
+                                soldier_xp = int(m.group(1))
+
                 existing = Card.query.filter_by(number=number).first()
                 if existing:
                     existing.name = name
@@ -290,6 +305,8 @@ def main():
                     existing.notes = notes
                     existing.vassal_module = vassal_module
                     existing.has_image = has_image
+                    existing.cx = combat_xp
+                    existing.xp = soldier_xp
                     for col, val in stats.items():
                         setattr(existing, col, val)
                     updated += 1
@@ -305,6 +322,8 @@ def main():
                         notes=notes,
                         vassal_module=vassal_module,
                         has_image=has_image,
+                        cx=combat_xp,
+                        xp=soldier_xp,
                         **{k: v for k, v in stats.items()},
                     )
                     db.session.add(card)

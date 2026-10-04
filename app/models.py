@@ -42,6 +42,8 @@ class Card(db.Model):
     loss = db.Column(db.Integer)
     vassal_module = db.Column(db.Text)
     has_image = db.Column(db.Integer, nullable=False, default=0)
+    cx = db.Column('combat_xp', db.Integer, nullable=False, default=0)  # CX = Combat Experience (pre-printed)
+    xp = db.Column('soldier_xp', db.Integer, nullable=False, default=0)  # XP = Experience Points (pre-printed)
 
     def to_card_object(self):
         image_url = f'/static/card_images/{self.number}.jpg' if self.has_image else None
@@ -56,11 +58,19 @@ class Card(db.Model):
             'resource_cost': self.resource_cost,
             'health': self.health,
             'loadout': self.loadout,
+            'loadout_modifier': self.loadout_modifier,
             'movement': self.movement,
             'cover': self.cover,
             'hth': self.hth,
             'actions': self.actions,
+            'resources': self.resources,
+            'time': self.time,
+            'objective_location': self.objective_location,
+            'entrance_cost': self.entrance_cost,
+            'action_cost_hth': self.action_cost_hth,
             'image_url': image_url,
+            'cx': self.cx or 0,
+            'xp': self.xp or 0,
         }
 
     def to_card_detail(self):

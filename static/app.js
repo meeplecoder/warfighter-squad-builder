@@ -66,6 +66,8 @@ async function boot() {
   } catch (e) {
     currentUser = null;
   }
+  // Pre-load nations so builder nation select is available on first visit
+  try { const r = await API.get('/nations'); allNations = r.nations || []; } catch (_) {}
   renderHeader();
   updateProfileLink();
   route();
@@ -239,6 +241,8 @@ function openLightbox(url) {
 // VIEW: Cards Browser
 // ---------------------------------------------------------------------------
 let cardFilters = { q: '', category: '', subtype: '', nation: '', module: '', sort: 'module', order: 'asc', page: 1, per_page: 50 };
+// IDs of cards currently visible in the browser list (for prev/next navigation)
+let cardNavList = [];
 let allNations = [];
 let allModules = [];
 let allCategories = ['Soldier','Weapon','Equipment','Skill','Service Record','Mission',
@@ -412,6 +416,9 @@ async function refreshCardsTable() {
     });
   });
 
+  // Persist card ID order for prev/next navigation in card detail
+  cardNavList = items.map(c => c.id);
+
   resultsDiv.querySelectorAll('tr[data-id]').forEach(row => {
     row.addEventListener('click', () => navigate('cards/' + row.dataset.id));
   });
@@ -438,7 +445,17 @@ async function showCardDetail(idOrNumber) {
     return;
   }
 
-  const stats = [
+  const isSoldier = card.card_category === 'Soldier';
+  const stats = isSoldier ? [
+    ['RP Cost',   card.resource_cost],
+    ['Health',    card.health],
+    ['Movement',  card.movement],
+    ['Cover',     card.cover],
+    ['Loadout',   card.loadout],
+    ['HtH',       card.hth != null ? (card.hth >= 0 ? '+' : '') + card.hth : null],
+    ['XP',        card.xp ?? 0],
+    ['CX',        card.cx ?? 0],
+  ].filter(([, v]) => v != null) : [
     ['RP Cost', card.resource_cost],
     ['Health', card.health],
     ['Movement', card.movement],
@@ -479,12 +496,41 @@ async function showCardDetail(idOrNumber) {
   const addBtn = builderState.missionCard
     ? `<button class="btn btn-primary mt-2" id="add-to-build">+ Add to current build</button>` : '';
 
+  const assocs = card.associations || [];
+  const assocTable = assocs.length > 0 ? `
+    <div style="margin-top:24px">
+      <div class="builder-section-title">Included Cards (pre-printed)</div>
+      <table class="data-table" style="margin-top:8px">
+        <thead><tr><th>#</th><th>Name</th><th>Category</th><th>Qty</th></tr></thead>
+        <tbody>
+          ${assocs.map(a => `
+            <tr class="clickable" data-id="${a.card.id}">
+              <td class="text-muted" style="font-size:11px">${esc(a.card.number)}</td>
+              <td><span ${cardImageAttr(a.card)}>${esc(a.card.name)}</span></td>
+              <td>${chipForCategory(a.card.card_category)}</td>
+              <td>${a.quantity}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>` : '';
+
+  // Build prev/next navigation from the current card browser list
+  const navIdx = cardNavList.indexOf(card.id);
+  const prevId = navIdx > 0 ? cardNavList[navIdx - 1] : null;
+  const nextId = navIdx >= 0 && navIdx < cardNavList.length - 1 ? cardNavList[navIdx + 1] : null;
+  const prevBtn = prevId ? `<a href="#/cards/${prevId}" class="btn btn-ghost btn-sm">← Prev</a>` : `<span class="btn btn-ghost btn-sm" style="opacity:.35;cursor:default">← Prev</span>`;
+  const nextBtn = nextId ? `<a href="#/cards/${nextId}" class="btn btn-ghost btn-sm">Next →</a>` : `<span class="btn btn-ghost btn-sm" style="opacity:.35;cursor:default">Next →</span>`;
+  const navPos = navIdx >= 0 ? `<span class="text-muted" style="font-size:12px">${navIdx + 1} / ${cardNavList.length}</span>` : '';
+
   setMain(`
-    <div style="margin-bottom:12px">
-      <a href="#/cards" class="btn btn-ghost btn-sm">← Back to Cards</a>
+    <div style="margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <a href="#/cards" class="btn btn-ghost btn-sm">↩ Cards</a>
+      <span style="flex:1"></span>
+      ${navPos}
+      ${prevBtn}
+      ${nextBtn}
     </div>
     <div class="card-detail-layout">
-      ${imagePanel}
       <div class="card-stats-panel">
         <div class="card-header-bar">
           ${esc(card.number)} · ${chipForCategory(card.card_category)} ${chipForSubtype(card.card_subtype)}
@@ -494,13 +540,18 @@ async function showCardDetail(idOrNumber) {
         <div class="card-name">${esc(card.name)}</div>
         <div class="stat-grid">${statItems || '<span class="text-muted">No numeric stats.</span>'}</div>
         ${card.notes ? `<div class="card-notes">${esc(card.notes)}</div>` : ''}
+        ${assocTable}
         ${addBtn}
       </div>
+      ${imagePanel}
     </div>
   `);
 
   const imgEl = document.querySelector('.card-full-img');
   if (imgEl) imgEl.addEventListener('click', () => openLightbox(card.image_url));
+
+  document.querySelectorAll('.card-stats-panel tr[data-id]').forEach(row =>
+    row.addEventListener('click', () => navigate('cards/' + row.dataset.id)));
 
   const addBtn2 = document.getElementById('add-to-build');
   if (addBtn2) {
@@ -948,6 +999,8 @@ const CARD_TABLE_COLS = {
   nation:            { header: 'Nation', render: c => esc(c.nation || '—'), sortKey: 'nation' },
   module:            { header: 'Module', render: c => esc(c.module), sortKey: 'module' },
   rp:                { header: 'RP', render: c => c.resource_cost != null ? String(c.resource_cost) : '', sortKey: 'resource_cost' },
+  cx:                { header: 'CX', render: c => c.cx ? String(c.cx) : '' },
+  xp:                { header: 'XP', render: c => c.xp ? String(c.xp) : '' },
   health:            { header: 'HP', render: c => c.health != null ? String(c.health) : '' },
   loadout:           { header: 'Loadout', render: c => c.loadout != null ? String(c.loadout) : '' },
   movement:          { header: 'Move', render: c => c.movement != null ? String(c.movement) : '' },
@@ -957,13 +1010,15 @@ const CARD_TABLE_COLS = {
   time:              { header: 'Turns', render: c => c.time != null ? String(c.time) : '' },
   objective_location:{ header: 'Obj@', render: c => c.objective_location != null ? String(c.objective_location) : '' },
   loadout_modifier:  { header: 'LM', render: c => c.loadout_modifier != null ? (c.loadout_modifier >= 0 ? '+' : '') + c.loadout_modifier : '' },
+  entrance_cost:     { header: 'EN', render: c => c.entrance_cost != null ? String(c.entrance_cost) : '', sortKey: 'entrance_cost' },
+  action_cost_hth:   { header: 'ACHtH', render: c => c.action_cost_hth != null ? String(c.action_cost_hth) : '', sortKey: 'action_cost_hth' },
 };
 
 const MODE_COLS = {
-  mission:   ['number', 'name', 'nation', 'module', 'rp', 'resources', 'time', 'objective_location', 'loadout_modifier'],
-  objective: ['number', 'name', 'module', 'rp'],
+  mission:   ['number', 'name', 'module', 'resources', 'time', 'objective_location', 'loadout_modifier'],
+  objective: ['number', 'name', 'module', 'entrance_cost', 'action_cost_hth'],
   situation: ['number', 'name', 'module', 'rp'],
-  soldier:   ['number', 'name', 'subtype', 'nation', 'module', 'rp', 'health', 'loadout', 'movement', 'cover', 'hth'],
+  soldier:   ['number', 'name', 'subtype', 'nation', 'module', 'rp', 'cx', 'xp', 'health', 'loadout', 'movement', 'cover', 'hth'],
   gear:      ['number', 'name', 'category', 'nation', 'module', 'rp', 'loadout'],
 };
 
@@ -1043,7 +1098,7 @@ register('builder', async function(squadId) {
     // Fresh builder — always reset when navigating to #/builder without an ID
     resetBuilderState();
   }
-  builderState.pickerMode = builderState.missionCard ? null : 'mission';
+  builderState.pickerMode = null;
   renderBuilder();
 });
 
@@ -1051,10 +1106,8 @@ function builderRpTotal() {
   let total = 0;
   for (const s of builderState.soldiers) {
     total += s.card.resource_cost || 0;
-    if (s.card.card_subtype === 'Player') {
-      for (const g of s.gear) {
-        total += (g.card.resource_cost || 0) * g.quantity;
-      }
+    for (const g of s.gear) {
+      total += (g.card.resource_cost || 0) * g.quantity;
     }
   }
   return total;
@@ -1108,12 +1161,17 @@ function renderBuilder() {
     const loadPct = effectiveLoadout > 0 ? Math.min(100, Math.round(gearLoadout / effectiveLoadout * 100)) : 0;
     const loadCls = loadPct > 100 ? 'over' : loadPct >= 80 ? 'warn' : '';
 
-    const gearItems = s.gear.map((g, gi) => `
+    const gearItems = s.gear.map((g, gi) => {
+      const unitRp = g.card.resource_cost || 0;
+      const totalRp = unitRp * g.quantity;
+      return `
       <div class="gear-item">
+        ${g.quantity > 1 ? `<span class="gear-qty">${g.quantity}×</span>` : ''}
         <span ${cardImageAttr(g.card)}>${esc(g.card.name)}</span>
-        <span class="text-muted">${g.card.resource_cost || 0} RP</span>
+        <span class="text-muted">${g.quantity > 1 ? `${totalRp} RP (${unitRp}×${g.quantity})` : `${unitRp} RP`}</span>
         <button class="btn btn-icon remove-gear-btn" data-sidx="${idx}" data-gidx="${gi}" title="Remove">✕</button>
-      </div>`).join('');
+      </div>`;
+    }).join('');
 
     const dg = s.defaultGear || [];
     const defaultGearHtml = dg.length > 0 ? `
@@ -1133,6 +1191,8 @@ function renderBuilder() {
           <span>
             ${chipForSubtype(c.card_subtype)}
             <span class="soldier-slot-name" ${cardImageAttr(c)}>${esc(c.name)}</span>
+            ${c.cx ? `<span class="badge-cx" title="Combat Experience: grants extra Action cards per turn">${c.cx} CX</span>` : ''}
+            ${c.xp ? `<span class="badge-xp" title="Experience Points (pre-printed)">${c.xp} XP</span>` : ''}
           </span>
           <span>
             <span class="soldier-slot-cost text-muted">${c.resource_cost || 0} RP</span>
@@ -1210,7 +1270,7 @@ function renderBuilder() {
           ${builderState.missionCard
             ? `<select id="nation-select" style="width:100%">
                 <option value="">— Select nation —</option>
-                ${NATIONS.map(n => `<option value="${esc(n)}" ${builderState.nation===n?'selected':''}>${esc(n)}</option>`).join('')}
+                ${allNations.map(n => `<option value="${esc(n)}" ${builderState.nation===n?'selected':''}>${esc(n)}</option>`).join('')}
                </select>`
             : `<span class="text-muted">Select a mission first.</span>`}
         </div>
@@ -1406,7 +1466,7 @@ async function loadPickerResults() {
             builderState.pickerMode = null;
             break;
           case 'soldier':
-            if (addSoldierToBuilder(fullCard)) builderState.pickerMode = null;
+            addSoldierToBuilder(fullCard);
             break;
           case 'gear':
             addGearToBuilder(fullCard, builderState.pickerTarget);
@@ -1720,14 +1780,4 @@ register('404', function() {
 // ---------------------------------------------------------------------------
 // Nation list (static)
 // ---------------------------------------------------------------------------
-const NATIONS = [
-  'US','UK','Russian','German','Poland','USMC','Japan','Australian','France','China',
-  'US Airborne','UK Airborne','German Airborne','German SS','German Afrika Korps',
-  'North Korean (KW)','China (KW)','South Korean (KW)','United Nations (KW)',
-  'Finland','Canada','Norway','Commonwealth','Japan SNLF','UK Desert Rats',
-  'Italian','Italian Regio Esercito','Free French','Vichy French','German Alpine',
-  'New Zealand','Greece','Italian Partisans','Italian Airborne','Italian Cavalry',
-  'UK LRDG','UK Med','UK Gurkhas',
-  'US Clergy','UK Clergy','RU Clergy','PO Clergy',
-  'US Undead','UK Undead','Russian Undead','Poland Undead','German Undead','Japan Undead',
-];
+// Nations are loaded from /api/nations during boot() into allNations (normalized, deduplicated)
