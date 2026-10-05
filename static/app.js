@@ -632,11 +632,10 @@ async function showCardDetail(idOrNumber) {
           </div>`;
         })() : ''}
         ${(card.weapon_range_table || card.weapon_mode_table) ? (() => {
-          const renderWeaponTable = (title, tbl) => {
+          const renderWeaponTable = (tbl) => {
             if (!tbl) return '';
             const { headers, rows } = tbl;
             return `<div class="spawn-table-wrap" style="margin-top:10px">
-              <div class="spawn-table-title">${title}</div>
               <table class="spawn-table">
                 <thead><tr>${headers.map(h => `<th class="spawn-rp">${esc(h)}</th>`).join('')}</tr></thead>
                 <tbody>
@@ -647,8 +646,8 @@ async function showCardDetail(idOrNumber) {
               </table>
             </div>`;
           };
-          return renderWeaponTable('Range / Reload / Hit', card.weapon_range_table) +
-                 renderWeaponTable('Fire Modes', card.weapon_mode_table);
+          return renderWeaponTable(card.weapon_range_table) +
+                 renderWeaponTable(card.weapon_mode_table);
         })() : ''}
         ${assocTable}
         ${addBtn}
