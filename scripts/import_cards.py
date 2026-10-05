@@ -294,6 +294,10 @@ def main():
                     continue
 
                 category, subtype = normalize_type(raw_type)
+
+                if category in ('Event', 'Location', 'Action'):
+                    skipped += 1
+                    continue
                 obj_family = None
                 # Derive semantic subtype from notes (overrides raw_type-based subtype)
                 if category == 'Objective':
