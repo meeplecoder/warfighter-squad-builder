@@ -138,7 +138,7 @@ function chipForCategory(cat) {
 }
 
 // Categories where card_subtype is a real type label (not a theater name)
-const SUBTYPE_CATS = new Set(['Soldier','Hostile','Weapon','Skill','Equipment','Clergy']);
+const SUBTYPE_CATS = new Set(['Soldier','Hostile','Weapon','Skill','Equipment','Clergy','Objective']);
 
 function chipForSubtype(subtype, category) {
   if (category && !SUBTYPE_CATS.has(category)) return '';
