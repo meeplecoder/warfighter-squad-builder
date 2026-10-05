@@ -45,7 +45,8 @@ def _squad_detail(squad, liked_by_me=False):
             'nation': oc.nation,
             'module': oc.module,
             'theater': theater_from_raw_type(oc.raw_type or ''),
-            'objective_type': oc.card_subtype,  # now stored directly in DB
+            'objective_type': oc.card_subtype,
+            'objective_family': oc.objective_family,
             'entrance_cost': oc.entrance_cost,
             'action_cost_hth': oc.action_cost_hth,
         })
@@ -55,6 +56,8 @@ def _squad_detail(squad, liked_by_me=False):
     base['mission'].update({
         'nation': mc.nation,
         'module': mc.module,
+        'mission_type': mc.card_subtype,
+        'theater': theater_from_raw_type(mc.raw_type or ''),
         'time': mc.time,
         'objective_location': mc.objective_location,
         'loadout_modifier': mc.loadout_modifier,

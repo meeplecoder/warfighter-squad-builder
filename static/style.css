@@ -364,6 +364,10 @@ h3 { font-size: 1rem; font-weight: 600; }
   font-size: 1.05rem; font-weight: 700; color: var(--text);
   margin-bottom: 2px; line-height: 1.3;
 }
+.mission-meta-row {
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 4px; min-height: 18px;
+}
 .mission-subtitle {
   font-size: 11px; color: var(--text-muted);
   letter-spacing: 0.03em; margin-bottom: 10px;

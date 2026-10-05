@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from flask_login import UserMixin
 from app import db
-from app.utils import classify_objective_type, theater_from_raw_type
+from app.utils import classify_objective_type, classify_objective_family, theater_from_raw_type
 
 
 def now_utc():
@@ -41,6 +41,7 @@ class Card(db.Model):
     covert_cost = db.Column(db.Integer)
     gain = db.Column(db.Integer)
     loss = db.Column(db.Integer)
+    objective_family = db.Column(db.Text)
     vassal_module = db.Column(db.Text)
     has_image = db.Column(db.Integer, nullable=False, default=0)
     cx = db.Column('combat_xp', db.Integer, nullable=False, default=0)  # CX = Combat Experience (pre-printed)
@@ -69,6 +70,7 @@ class Card(db.Model):
             'objective_location': self.objective_location,
             'entrance_cost': self.entrance_cost,
             'action_cost_hth': self.action_cost_hth,
+            'objective_family': self.objective_family,
             'image_url': image_url,
             'cx': self.cx or 0,
             'xp': self.xp or 0,
@@ -77,7 +79,11 @@ class Card(db.Model):
     def to_card_detail(self):
         d = self.to_card_object()
         if self.card_category == 'Objective':
-            d['objective_type'] = self.card_subtype  # now stored directly in DB
+            d['objective_type'] = self.card_subtype
+            d['objective_family'] = self.objective_family
+            d['theater'] = theater_from_raw_type(self.raw_type or '')
+        elif self.card_category == 'Mission':
+            d['mission_type'] = self.card_subtype
             d['theater'] = theater_from_raw_type(self.raw_type or '')
         d.update({
             'notes': self.notes,

@@ -21,7 +21,7 @@ except ImportError:
 
 from app import create_app, db
 from app.models import Card
-from app.utils import classify_objective_type
+from app.utils import classify_objective_type, classify_objective_family, classify_mission_type
 
 
 # ---------------------------------------------------------------------------
@@ -290,9 +290,13 @@ def main():
                     continue
 
                 category, subtype = normalize_type(raw_type)
-                # For objectives, derive the mission-type subtype from notes
+                obj_family = None
+                # Derive semantic subtype from notes (overrides raw_type-based subtype)
                 if category == 'Objective':
                     subtype = classify_objective_type(notes or '')
+                    obj_family = classify_objective_family(notes or '', raw_type, module)
+                elif category == 'Mission':
+                    subtype = classify_mission_type(notes or '', raw_type)
                 stats = parse_stats(stats_str)
                 has_image = check_has_image(images_dir, number)
 
@@ -317,6 +321,7 @@ def main():
                     existing.raw_type = raw_type
                     existing.card_category = category
                     existing.card_subtype = subtype
+                    existing.objective_family = obj_family
                     existing.nation = nation
                     existing.module = module
                     existing.notes = notes
@@ -334,6 +339,7 @@ def main():
                         raw_type=raw_type,
                         card_category=category,
                         card_subtype=subtype,
+                        objective_family=obj_family,
                         nation=nation,
                         module=module,
                         notes=notes,

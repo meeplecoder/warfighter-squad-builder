@@ -138,7 +138,7 @@ function chipForCategory(cat) {
 }
 
 // Categories where card_subtype is a real type label (not a theater name)
-const SUBTYPE_CATS = new Set(['Soldier','Hostile','Weapon','Skill','Equipment','Clergy','Objective']);
+const SUBTYPE_CATS = new Set(['Soldier','Hostile','Weapon','Skill','Equipment','Clergy','Objective','Mission']);
 
 function chipForSubtype(subtype, category) {
   if (category && !SUBTYPE_CATS.has(category)) return '';
@@ -945,10 +945,26 @@ async function showSquadDetail(squadId) {
           ].filter(Boolean);
           const chips = attrDefs.map(([k,v]) =>
             `<span class="mission-attr">${k} <strong>${v}</strong></span>`).join('');
+          const MISSION_TYPE_COLOR = {
+            'Raid':           '#b45309',
+            'Airborne':       '#3730a3',
+            'Shore Invasion': '#075985',
+            'Holding Action': '#166534',
+            'Hold the Line':  '#14532d',
+            'Escape':         '#7c3aed',
+          };
+          const mtColor = MISSION_TYPE_COLOR[m.mission_type] || 'var(--text-muted)';
+          const objFamily = squad.objective?.objective_family;
+          const isFortified = objFamily === 'Fortification';
           return `
             <div class="mission-name">
               <span ${cardImageAttr(m)}>${esc(m.name)}</span>
               ${m.nation ? `<span class="chip chip-mission" style="margin-left:6px;vertical-align:middle">${esc(m.nation)}</span>` : ''}
+            </div>
+            <div class="mission-meta-row">
+              ${m.mission_type && m.mission_type !== 'Standard' ? `<span class="obj-type-badge" style="background:${mtColor}">${esc(m.mission_type)}</span>` : ''}
+              ${isFortified ? `<span class="obj-type-badge" style="background:#7f1d1d">Fortification</span>` : ''}
+              ${m.theater ? `<span class="text-muted" style="font-size:12px">${esc(m.theater)}</span>` : ''}
             </div>
             ${m.module ? `<div class="mission-subtitle">${esc(m.module)}</div>` : ''}
             <div class="mission-rp-track"><div class="mission-rp-fill ${over ? 'over' : ''}" style="width:${pct}%"></div></div>
@@ -964,13 +980,22 @@ async function showSquadDetail(squadId) {
         ${squad.objective ? (() => {
           const o = squad.objective;
           const OBJ_TYPE_COLOR = {
-            Eliminate: 'var(--danger)',
-            Destroy:   '#b45309',
-            Hold:      'var(--accent)',
-            Escape:    '#7c3aed',
-            Rescue:    '#0e7490',
+            'Eliminate Hostiles':   'var(--danger)',
+            'Destroy Target':       '#b45309',
+            'Keep Clear':           'var(--accent)',
+            'Escape':               '#7c3aed',
+            'Kill Specified Hostile': '#0e7490',
+          };
+          const OBJ_FAMILY_COLOR = {
+            'Fallback':      '#92400e',
+            'Right Flank':   '#166534',
+            'Shore':         '#075985',
+            'Fortification': '#7f1d1d',
+            'Airborne':      '#3730a3',
+            'Embedded':      '#4a044e',
           };
           const typeColor = OBJ_TYPE_COLOR[o.objective_type] || 'var(--text-muted)';
+          const familyColor = o.objective_family ? (OBJ_FAMILY_COLOR[o.objective_family] || 'var(--text-muted)') : null;
           const attrDefs = [
             o.theater         != null ? ['Theater',    o.theater]       : null,
             o.entrance_cost   != null ? ['Entry Cost', o.entrance_cost] : null,
@@ -981,6 +1006,7 @@ async function showSquadDetail(squadId) {
           return `
             <div class="mission-name">
               ${o.objective_type ? `<span class="obj-type-badge" style="background:${typeColor}">${esc(o.objective_type)}</span>` : ''}
+              ${familyColor ? `<span class="obj-type-badge" style="background:${familyColor}">${esc(o.objective_family)}</span>` : ''}
               <span ${cardImageAttr(o)}>${esc(o.name)}</span>
               ${o.nation ? `<span class="chip chip-mission" style="margin-left:6px;vertical-align:middle">${esc(o.nation)}</span>` : ''}
             </div>
@@ -1371,16 +1397,27 @@ function renderBuilder() {
         <div class="builder-section">
           <div class="builder-section-title">Mission</div>
           ${builderState.missionCard
-            ? `<div class="flex justify-between items-center">
-                <span ${cardImageAttr(builderState.missionCard)}><strong>${esc(builderState.missionCard.name)}</strong></span>
-                <button class="btn btn-sm btn-ghost" id="change-mission-btn">Change</button>
-               </div>
-               <div class="text-muted" style="font-size:12px;margin-top:4px">${[
-                 builderState.missionCard.resources != null ? `${builderState.missionCard.resources} RP` : null,
-                 builderState.missionCard.time != null ? `${builderState.missionCard.time} Turns` : null,
-                 builderState.missionCard.objective_location != null ? `Obj.Loc: ${builderState.missionCard.objective_location}` : null,
-                 builderState.missionCard.loadout_modifier != null ? `Loadout: ${builderState.missionCard.loadout_modifier >= 0 ? '+' : ''}${builderState.missionCard.loadout_modifier}` : null,
-               ].filter(Boolean).join(' · ')}</div>`
+            ? (() => {
+                const mc = builderState.missionCard;
+                const BUILDER_MISSION_COLOR = {
+                  'Raid':'#b45309','Airborne':'#3730a3','Shore Invasion':'#075985',
+                  'Holding Action':'#166534','Hold the Line':'#14532d','Escape':'#7c3aed',
+                };
+                const bmColor = BUILDER_MISSION_COLOR[mc.card_subtype];
+                return `<div class="flex justify-between items-center">
+                  <span>
+                    ${bmColor ? `<span class="obj-type-badge" style="background:${bmColor}">${esc(mc.card_subtype)}</span>` : ''}
+                    <span ${cardImageAttr(mc)}><strong>${esc(mc.name)}</strong></span>
+                  </span>
+                  <button class="btn btn-sm btn-ghost" id="change-mission-btn">Change</button>
+                </div>
+                <div class="text-muted" style="font-size:12px;margin-top:4px">${[
+                  mc.resources != null ? `${mc.resources} RP` : null,
+                  mc.time != null ? `${mc.time} Turns` : null,
+                  mc.objective_location != null ? `Obj.Loc: ${mc.objective_location}` : null,
+                  mc.loadout_modifier != null ? `Loadout: ${mc.loadout_modifier >= 0 ? '+' : ''}${mc.loadout_modifier}` : null,
+                ].filter(Boolean).join(' · ')}</div>`;
+              })()
             : `<button class="btn btn-ghost" id="pick-mission-btn">Select a Mission…</button>`}
         </div>
 
@@ -1389,7 +1426,13 @@ function renderBuilder() {
           ${builderState.objectiveCard
             ? (() => {
                 const oc = builderState.objectiveCard;
-                const OBJ_TYPE_COLOR = { Eliminate:'var(--danger)', Destroy:'#b45309', Hold:'var(--accent)', Escape:'#7c3aed', Rescue:'#0e7490' };
+                const OBJ_TYPE_COLOR = {
+                  'Eliminate Hostiles':    'var(--danger)',
+                  'Destroy Target':        '#b45309',
+                  'Keep Clear':            'var(--accent)',
+                  'Escape':                '#7c3aed',
+                  'Kill Specified Hostile':'#0e7490',
+                };
                 const tc = OBJ_TYPE_COLOR[oc.objective_type] || 'var(--text-muted)';
                 const attrs = [
                   oc.theater          ? `${oc.theater}` : null,
