@@ -24,8 +24,7 @@ _NATION_PREFIXES: dict[str, list[str]] = {
     'South Korean': ['South Korean'],
     'UK': ['UK'],
     'United Nations': ['United Nations'],
-    'US': ['US '],          # "US " prefix prevents matching "USMC"
-    'USMC': ['USMC'],
+    'US': ['US ', 'USMC'],  # "US " prefix prevents false-matching; USMC is US Marines
 }
 
 # Reverse: raw nation string → canonical base nation

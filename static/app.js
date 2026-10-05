@@ -267,7 +267,6 @@ const NATION_FLAGS = {
   'South Korean':  '🇰🇷',
   'UK':            '🇬🇧',
   'US':            '🇺🇸',
-  'USMC':          '🇺🇸',
   'United Nations':'🇺🇳',
 };
 
