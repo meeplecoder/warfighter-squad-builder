@@ -1245,10 +1245,12 @@ function renderBuilder() {
                 <span ${cardImageAttr(builderState.missionCard)}><strong>${esc(builderState.missionCard.name)}</strong></span>
                 <button class="btn btn-sm btn-ghost" id="change-mission-btn">Change</button>
                </div>
-               <div class="text-muted" style="font-size:12px;margin-top:4px">
-                 Budget: ${budget} RP
-                 ${lm !== 0 ? `· Loadout Mod: ${lm >= 0 ? '+' : ''}${lm}` : ''}
-               </div>`
+               <div class="text-muted" style="font-size:12px;margin-top:4px">${[
+                 builderState.missionCard.resources != null ? `B: ${builderState.missionCard.resources} RPs` : null,
+                 builderState.missionCard.time != null ? `T: ${builderState.missionCard.time}` : null,
+                 builderState.missionCard.objective_location != null ? `Obj@: ${builderState.missionCard.objective_location}` : null,
+                 builderState.missionCard.loadout_modifier != null ? `LM: ${builderState.missionCard.loadout_modifier >= 0 ? '+' : ''}${builderState.missionCard.loadout_modifier}` : null,
+               ].filter(Boolean).join(' | ')}</div>`
             : `<button class="btn btn-ghost" id="pick-mission-btn">Select a Mission…</button>`}
         </div>
 
