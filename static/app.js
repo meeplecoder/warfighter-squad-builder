@@ -821,9 +821,15 @@ async function showSquadDetail(squadId) {
     const isPS = c.card_subtype === 'Player';
     const badgeHtml = chipForSubtype(c.card_subtype);
 
-    const loadoutBar = isPS && ss.effective_loadout != null
-      ? `<div class="text-muted" style="font-size:12px;margin-bottom:6px">Loadout: ${ss.gear_loadout_used}/${ss.effective_loadout}</div>`
-      : '';
+    const loadoutBar = (() => {
+      if (!isPS || ss.effective_loadout == null) return '';
+      const lm = ss.effective_loadout - (c.loadout || 0);
+      const tip = lm !== 0
+        ? `Base: ${c.loadout}, Mission modifier: ${lm >= 0 ? '+' : ''}${lm}`
+        : `Base loadout: ${c.loadout}`;
+      const color = lm !== 0 ? ' color:var(--danger);' : '';
+      return `<div class="text-muted" style="font-size:12px;margin-bottom:6px;${color}" title="${tip}">Loadout: ${ss.gear_loadout_used}/${ss.effective_loadout}</div>`;
+    })();
 
     const gearHtml = (() => {
       const ps_gear = isPS ? ss.gear : [];
@@ -870,13 +876,7 @@ async function showSquadDetail(squadId) {
           ${c.cover != null ? `<span>Cover ${c.cover}</span>` : ''}
           ${c.movement != null ? `<span>Move ${c.movement}</span>` : ''}
           ${c.hth != null ? `<span>HtH ${c.hth >= 0 ? '+' : ''}${c.hth}</span>` : ''}
-          ${isPS && ss.effective_loadout != null ? (() => {
-            const lm = ss.effective_loadout - (c.loadout || 0);
-            const tip = lm !== 0
-              ? `Base: ${c.loadout}, Mission modifier: ${lm >= 0 ? '+' : ''}${lm}`
-              : `Base loadout: ${c.loadout}`;
-            return `<span title="${tip}"${lm !== 0 ? ' style="color:var(--danger)"' : ''}>Loadout ${ss.effective_loadout}</span>`;
-          })() : (!isPS && c.loadout != null ? `<span>Loadout ${c.loadout}</span>` : '')}
+          ${!isPS && c.loadout != null ? `<span>Loadout ${c.loadout}</span>` : ''}
         </div>
         ${loadoutBar}
         ${gearHtml}
