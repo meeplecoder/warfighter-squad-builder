@@ -137,7 +137,11 @@ function chipForCategory(cat) {
   return `<span class="chip ${map[cat] || ''}">${esc(cat)}</span>`;
 }
 
-function chipForSubtype(subtype) {
+// Categories where card_subtype is a real type label (not a theater name)
+const SUBTYPE_CATS = new Set(['Soldier','Hostile','Weapon','Skill','Equipment','Clergy']);
+
+function chipForSubtype(subtype, category) {
+  if (category && !SUBTYPE_CATS.has(category)) return '';
   if (subtype === 'Player') return `<span class="chip chip-ps">PS</span>`;
   if (subtype === 'NPS') return `<span class="chip chip-nps">NPS</span>`;
   return subtype ? `<span class="chip">${esc(subtype)}</span>` : '';
@@ -424,7 +428,7 @@ async function refreshCardsTable() {
       <td><span class="text-muted" style="font-size:11px">${esc(c.number)}</span></td>
       <td><span ${cardImageAttr(c)}>${esc(c.name)}</span></td>
       <td>${chipForCategory(c.card_category)}</td>
-      <td>${esc(c.card_subtype || '')}</td>
+      <td>${SUBTYPE_CATS.has(c.card_category) ? esc(c.card_subtype || '') : ''}</td>
       <td>${esc(c.nation || '—')}</td>
       <td>${esc(c.module)}</td>
       <td style="text-align:right">${c.resource_cost != null ? c.resource_cost : ''}</td>
@@ -437,7 +441,7 @@ async function refreshCardsTable() {
         <tr>
           ${thSort('#','number',s,o)}
           ${thSort('Name','name',s,o)}
-          <th>Category</th><th>Subtype</th>
+          <th>Type</th><th>Subtype</th>
           ${thSort('Nation','nation',s,o)}
           ${thSort('Module','module',s,o)}
           ${thSort('RP','resource_cost',s,o)}
@@ -581,7 +585,7 @@ async function showCardDetail(idOrNumber) {
     <div class="card-detail-layout">
       <div class="card-stats-panel">
         <div class="card-header-bar">
-          ${esc(card.number)} · ${chipForCategory(card.card_category)} ${chipForSubtype(card.card_subtype)}
+          ${esc(card.number)} · ${chipForCategory(card.card_category)} ${chipForSubtype(card.card_subtype, card.card_category)}
           ${card.nation ? `· <span class="chip">${esc(card.nation)}</span>` : ''}
           · <span class="text-muted" style="font-size:12px">${esc(card.module)}</span>
         </div>
@@ -819,7 +823,7 @@ async function showSquadDetail(squadId) {
   const soldiersHtml = squad.soldiers.map(ss => {
     const c = ss.card;
     const isPS = c.card_subtype === 'Player';
-    const badgeHtml = chipForSubtype(c.card_subtype);
+    const badgeHtml = chipForSubtype(c.card_subtype, c.card_category);
 
     const loadoutBar = (() => {
       if (!isPS || ss.effective_loadout == null) return '';
@@ -1096,7 +1100,7 @@ async function showSquadDetail(squadId) {
 const CARD_TABLE_COLS = {
   number:            { header: '#', render: c => esc(c.number), sortKey: 'number' },
   name:              { header: 'Name', render: c => `<span ${cardImageAttr(c)}>${esc(c.name)}</span>`, sortKey: 'name' },
-  subtype:           { header: 'Type', render: c => chipForSubtype(c.card_subtype) },
+  subtype:           { header: 'Type', render: c => chipForSubtype(c.card_subtype, c.card_category) },
   category:          { header: 'Category', render: c => chipForCategory(c.card_category) },
   nation:            { header: 'Nation', render: c => esc(c.nation || '—'), sortKey: 'nation' },
   module:            { header: 'Module', render: c => esc(c.module), sortKey: 'module' },
@@ -1309,7 +1313,7 @@ function renderBuilder() {
       <div class="soldier-slot">
         <div class="soldier-slot-header">
           <span>
-            ${chipForSubtype(c.card_subtype)}
+            ${chipForSubtype(c.card_subtype, c.card_category)}
             <span class="soldier-slot-name" ${cardImageAttr(c)}>${esc(c.name)}</span>
             ${c.cx ? `<span class="badge-cx" title="Combat Experience: grants extra Action cards per turn">${c.cx} CX</span>` : ''}
             ${c.xp ? `<span class="badge-xp" title="Experience Points (pre-printed)">${c.xp} XP</span>` : ''}
