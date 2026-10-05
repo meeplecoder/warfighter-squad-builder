@@ -922,19 +922,30 @@ async function showSquadDetail(squadId) {
       <div style="margin-top:8px">${likeBtn}</div>
     </div>
 
-    <div class="squad-mission-box">
-      <div><strong>Mission:</strong>
-        <span ${cardImageAttr(squad.mission)}>${esc(squad.mission ? squad.mission.name : '—')}</span>
-        ${squad.mission ? `· Budget: <strong>${squad.mission.resources} RP</strong>` : ''}
+    <div class="squad-info-row">
+      <div class="squad-mission-box">
+        <div class="squad-box-label">Mission</div>
+        <div><span ${cardImageAttr(squad.mission)}>${esc(squad.mission ? squad.mission.name : '—')}</span></div>
+        ${squad.mission ? `<div class="text-muted" style="font-size:12px;margin-top:4px">${[
+          squad.mission.resources != null ? `Budget: ${squad.mission.resources} RP` : null,
+          squad.mission.time != null ? `${squad.mission.time} Turns` : null,
+        ].filter(Boolean).join(' · ')}</div>` : ''}
+        <div style="margin-top:8px;font-size:13px">
+          <strong>Squad RP:</strong> ${squad.computed.rp_total}
+          &nbsp;·&nbsp; <strong>Remaining:</strong>
+          <span class="${squad.computed.rp_remaining < 0 ? 'text-danger' : 'text-success'}">
+            ${squad.computed.rp_remaining} RP
+          </span>
+        </div>
       </div>
-      ${squad.objective ? `<div><strong>Objective:</strong> ${esc(squad.objective.name)}</div>` : ''}
-      ${squad.situation ? `<div><strong>Situation:</strong> ${esc(squad.situation.name)}</div>` : ''}
-      <div style="margin-top:8px">
-        <strong>Squad RP:</strong> ${squad.computed.rp_total}
-        &nbsp;·&nbsp; <strong>Remaining:</strong>
-        <span class="${squad.computed.rp_remaining < 0 ? 'text-danger' : 'text-success'}">
-          ${squad.computed.rp_remaining} RP
-        </span>
+      <div class="squad-mission-box">
+        <div class="squad-box-label">Objective &amp; Situation</div>
+        ${squad.objective
+          ? `<div><span ${cardImageAttr(squad.objective)}>${esc(squad.objective.name)}</span></div>`
+          : `<div class="text-muted" style="font-size:13px">No objective</div>`}
+        ${squad.situation
+          ? `<div style="margin-top:6px"><span class="text-muted" style="font-size:12px">Situation: </span><span ${cardImageAttr(squad.situation)}>${esc(squad.situation.name)}</span></div>`
+          : ''}
       </div>
     </div>
 

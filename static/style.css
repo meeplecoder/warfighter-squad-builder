@@ -340,11 +340,22 @@ h3 { font-size: 1rem; font-weight: 600; }
 .squad-header { margin-bottom: 16px; }
 .squad-title { font-size: 1.4rem; font-weight: 700; }
 .squad-meta { color: var(--text-muted); font-size: 13px; margin-top: 4px; }
+.squad-info-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
 .squad-mission-box {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 12px 16px; margin-bottom: 16px;
+  padding: 12px 16px;
+}
+.squad-box-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  color: var(--text-muted); letter-spacing: 0.07em;
+  margin-bottom: 6px;
 }
 .soldiers-grid {
   display: grid;
