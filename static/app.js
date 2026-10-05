@@ -132,13 +132,12 @@ function chipForCategory(cat) {
   const map = {
     Soldier: 'chip-soldier', Weapon: 'chip-weapon', Equipment: 'chip-equipment',
     Skill: 'chip-skill', Mission: 'chip-mission', Objective: 'chip-mission',
-    Hostile: 'chip-hostile',
   };
   return `<span class="chip ${map[cat] || ''}">${esc(cat)}</span>`;
 }
 
 // card_types where card_subtype is a real type label (not a theater name)
-const SUBTYPE_CATS = new Set(['Soldier','Hostile','Weapon','Skill','Equipment','Clergy','Objective','Mission']);
+const SUBTYPE_CATS = new Set(['Soldier','Weapon','Skill','Equipment','Objective','Mission']);
 
 function chipForSubtype(subtype, category) {
   if (category && !SUBTYPE_CATS.has(category)) return '';
@@ -297,8 +296,7 @@ function sortedNations(nations) {
   const rest = nations.filter(n => !NATION_PINNED.includes(n));
   return [...pinned, ...rest];
 }
-let allCategories = ['Soldier','Weapon','Equipment','Skill','Service Record','Mission',
-  'Objective','Situation','Hostile','Action','Event','Location','Fortification','Other'];
+let allCategories = ['Soldier','Mission','Objective','Weapon','Equipment','Skill'];
 
 register('cards', async function(subId) {
   if (subId) { await showCardDetail(subId); return; }

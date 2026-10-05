@@ -295,7 +295,7 @@ def main():
 
                 category, subtype = normalize_type(raw_type)
 
-                if category in ('Event', 'Location', 'Action'):
+                if category not in ('Soldier', 'Mission', 'Objective', 'Weapon', 'Equipment', 'Skill'):
                     skipped += 1
                     continue
                 obj_family = None
