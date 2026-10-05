@@ -1274,27 +1274,32 @@ function renderBuilder() {
             <button class="btn btn-icon remove-soldier-btn" data-sidx="${idx}" title="Remove soldier">✕</button>
           </span>
         </div>
-        ${isPS || c.card_subtype !== 'Vehicle' ? `
+        ${isPS ? `
           <div class="gear-list">${gearItems}</div>
-          ${isPS ? `
-            <div class="bar-wrapper" style="margin-top:6px">
-              <div class="bar-label">Loadout ${gearLoadout}/${effectiveLoadout}</div>
-              <div class="bar-track"><div class="bar-fill ${loadCls}" style="width:${loadPct}%"></div></div>
-            </div>` : `<div class="nps-gear-note" style="font-size:11px;margin-top:4px">Cards below not counted in budget</div>`}
+          <div class="bar-wrapper" style="margin-top:6px">
+            <div class="bar-label">Loadout ${gearLoadout}/${effectiveLoadout}</div>
+            <div class="bar-track"><div class="bar-fill ${loadCls}" style="width:${loadPct}%"></div></div>
+          </div>
           ${defaultGearHtml}
           <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
-            ${isPS ? `
-              <button class="btn btn-sm btn-ghost add-weapon-btn" data-sidx="${idx}">+ Weapon</button>
-              <button class="btn btn-sm btn-ghost add-equip-btn" data-sidx="${idx}">+ Equipment</button>
-              <button class="btn btn-sm btn-ghost add-skill-btn" data-sidx="${idx}">+ Skill</button>
-              <button class="btn btn-sm btn-ghost add-sr-btn" data-sidx="${idx}">+ Service Record</button>
-            ` : `
-              <button class="btn btn-sm btn-ghost add-nps-wpn-btn" data-sidx="${idx}">+ Weapon</button>
-              <button class="btn btn-sm btn-ghost add-nps-eqp-btn" data-sidx="${idx}">+ Equipment</button>
-              <button class="btn btn-sm btn-ghost add-nps-skl-btn" data-sidx="${idx}">+ Skill</button>
-              <button class="btn btn-sm btn-ghost add-nps-act-btn" data-sidx="${idx}">+ Action</button>
-            `}
-          </div>` : ''}
+            <button class="btn btn-sm btn-ghost add-weapon-btn" data-sidx="${idx}">+ Weapon</button>
+            <button class="btn btn-sm btn-ghost add-equip-btn" data-sidx="${idx}">+ Equipment</button>
+            <button class="btn btn-sm btn-ghost add-skill-btn" data-sidx="${idx}">+ Skill</button>
+            <button class="btn btn-sm btn-ghost add-sr-btn" data-sidx="${idx}">+ Service Record</button>
+          </div>
+        ` : (c.card_subtype === 'NPS' || c.card_subtype === 'Squad') ? `
+          ${defaultGearHtml}
+        ` : c.card_subtype !== 'Vehicle' ? `
+          <div class="gear-list">${gearItems}</div>
+          <div class="nps-gear-note" style="font-size:11px;margin-top:4px">Cards below not counted in budget</div>
+          ${defaultGearHtml}
+          <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+            <button class="btn btn-sm btn-ghost add-nps-wpn-btn" data-sidx="${idx}">+ Weapon</button>
+            <button class="btn btn-sm btn-ghost add-nps-eqp-btn" data-sidx="${idx}">+ Equipment</button>
+            <button class="btn btn-sm btn-ghost add-nps-skl-btn" data-sidx="${idx}">+ Skill</button>
+            <button class="btn btn-sm btn-ghost add-nps-act-btn" data-sidx="${idx}">+ Action</button>
+          </div>
+        ` : ''}
       </div>`;
   }).join('');
 
