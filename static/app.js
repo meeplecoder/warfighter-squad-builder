@@ -939,7 +939,7 @@ async function showSquadDetail(squadId) {
           `</table>`;
       }
       if (nps_gear.length) {
-        out += `<div class="gear-section-label">Available cards <span class="nps-gear-note">(not counted in budget)</span></div>
+        out += `<div class="gear-section-label">Default gear</div>
           <table class="gear-table">` +
           nps_gear.map(g => `
             <tr>
