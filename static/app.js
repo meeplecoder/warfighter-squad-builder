@@ -1186,8 +1186,8 @@ const CARD_TABLE_COLS = {
 };
 
 const MODE_COLS = {
-  mission:   ['number', 'name', 'module', 'resources', 'time', 'objective_position', 'loadout_modifier'],
-  objective: ['number', 'name', 'module', 'entrance_cost', 'action_cost_hth'],
+  mission:   ['number', 'name', 'subtype', 'module', 'resources', 'time', 'objective_position', 'loadout_modifier'],
+  objective: ['number', 'name', 'subtype', 'module', 'entrance_cost', 'action_cost_hth'],
   situation: ['number', 'name', 'module', 'rp'],
   soldier:   ['number', 'name', 'subtype', 'nation', 'module', 'rp', 'cx', 'xp', 'health', 'loadout', 'movement', 'cover', 'hth'],
   gear:      ['number', 'name', 'category', 'nation', 'module', 'rp', 'loadout'],
@@ -1489,18 +1489,17 @@ function renderBuilder() {
                   oc.entrance_cost != null ? `Entry: ${oc.entrance_cost}` : null,
                   oc.action_cost_hth != null ? `HtH: ${oc.action_cost_hth}` : null,
                 ].filter(Boolean).join(' · ');
+                const subtypeLabel = [ocFamily, ocMechanic].filter(Boolean).join(' · ');
                 return `<div class="flex justify-between items-center">
                   <span>
-                    ${ocFamily && ocFamilyColor ? `<span class="obj-type-badge" style="background:${ocFamilyColor}">${esc(ocFamily)}</span>` : ''}
-                    ${ocMechanic ? `<span class="obj-type-badge" style="background:${tc}">${esc(ocMechanic)}</span>` : ''}
-                    <span ${cardImageAttr(oc)}>${esc(oc.name)}</span>
+                    <span ${cardImageAttr(oc)}><strong>${esc(oc.name)}</strong></span>
                   </span>
                   <span style="display:flex;gap:4px">
                     <button class="btn btn-sm btn-ghost" id="change-obj-btn">Change</button>
                     <button class="btn btn-sm btn-ghost" id="clear-obj-btn" title="Remove objective" style="color:var(--text-muted)">✕</button>
                   </span>
                 </div>
-                ${attrs ? `<div class="text-muted" style="font-size:12px;margin-top:4px">${attrs}</div>` : ''}`;
+                <div class="text-muted" style="font-size:11px;margin-top:3px">${[subtypeLabel, attrs].filter(Boolean).join(' · ')}</div>`;
               })()
             : builderState.missionCard
               ? `<button class="btn btn-ghost" id="pick-obj-btn">Select an Objective…</button>`
