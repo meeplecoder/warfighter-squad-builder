@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_login import current_user, login_required
 from sqlalchemy import or_
 from app import db
-from app.models import Card, Squad, SquadSoldier, SquadGear, SquadLike, SquadComment, CardAssociation
+from app.models import Card, Squad, SquadSoldier, SquadGear, SquadLike, SquadComment, CardAssociation, SquadObjective
 from app.models import now_utc
 from app import rules as rules_module
 from app.utils import classify_objective_type, theater_from_raw_type
@@ -34,30 +34,34 @@ def _build_soldiers_data(payload_soldiers):
     return soldiers_data, None
 
 
+def _objective_detail(oc):
+    family = oc.objective_family or ''
+    combined = oc.card_subtype or ''
+    if family and combined.startswith(family + ' / '):
+        mechanic = combined[len(family) + 3:]
+    elif not family:
+        mechanic = combined
+    else:
+        mechanic = ''
+    return {
+        'id': oc.id,
+        'name': oc.name,
+        'nation': oc.nation,
+        'module': oc.module,
+        'theater': theater_from_raw_type(oc.raw_type or ''),
+        'objective_mechanic': mechanic,
+        'objective_family': family,
+        'entrance_cost': oc.entrance_cost,
+        'action_cost_hth': oc.action_cost_hth,
+    }
+
+
 def _squad_detail(squad, liked_by_me=False):
     base = squad.to_summary(liked_by_me=liked_by_me)
     sc_card = squad.situation_card
     situation = {'id': sc_card.id, 'name': sc_card.name, 'nation': sc_card.nation, 'module': sc_card.module} if sc_card else None
     base['situation'] = situation
-    if base['objective'] and squad.objective_card:
-        oc = squad.objective_card
-        family = oc.objective_family or ''
-        combined = oc.card_subtype or ''
-        if family and combined.startswith(family + ' / '):
-            mechanic = combined[len(family) + 3:]
-        elif not family:
-            mechanic = combined
-        else:
-            mechanic = ''
-        base['objective'].update({
-            'nation': oc.nation,
-            'module': oc.module,
-            'theater': theater_from_raw_type(oc.raw_type or ''),
-            'objective_mechanic': mechanic,
-            'objective_family': family,
-            'entrance_cost': oc.entrance_cost,
-            'action_cost_hth': oc.action_cost_hth,
-        })
+    base['objectives'] = [_objective_detail(so.card) for so in squad.objectives]
     base['notes'] = squad.notes
     # Enrich mission with full card attributes for the detail view
     mc = squad.mission_card
@@ -150,6 +154,14 @@ def _parse_and_validate(data):
 
     validation = rules_module.validate_squad(data, mission_card.to_card_detail(), soldiers_data)
     return mission_card, data, soldiers_data, validation, None
+
+
+def _save_objectives(squad, objective_card_ids):
+    for so in list(squad.objectives):
+        db.session.delete(so)
+    db.session.flush()
+    for i, oid in enumerate(objective_card_ids):
+        db.session.add(SquadObjective(squad_id=squad.id, card_id=oid, sort_order=i))
 
 
 def _save_squad(squad, data, soldiers_payload):
@@ -275,11 +287,11 @@ def create_squad():
     if target_status == 'published' and not validation['valid']:
         return jsonify(error='Squad has validation errors.', validation=validation), 422
 
+    objective_ids = [int(i) for i in (data.get('objective_card_ids') or []) if i]
     squad = Squad(
         user_id=current_user.id,
         name=(data.get('name') or '').strip() or 'Unnamed Squad',
         mission_card_id=data['mission_card_id'],
-        objective_card_id=data.get('objective_card_id'),
         situation_card_id=data.get('situation_card_id'),
         nation=data['nation'],
         notes=data.get('notes') or '',
@@ -289,6 +301,7 @@ def create_squad():
     )
     db.session.add(squad)
     db.session.flush()
+    _save_objectives(squad, objective_ids)
     _save_squad(squad, data, data.get('soldiers', []))
     db.session.commit()
     return jsonify(squad=_squad_detail(squad)), 201
@@ -315,9 +328,9 @@ def update_squad(squad_id):
     if target_status == 'published' and not validation['valid']:
         return jsonify(error='Squad has validation errors.', validation=validation), 422
 
+    objective_ids = [int(i) for i in (data.get('objective_card_ids') or []) if i]
     squad.name = (data.get('name') or '').strip() or squad.name
     squad.mission_card_id = data['mission_card_id']
-    squad.objective_card_id = data.get('objective_card_id')
     squad.situation_card_id = data.get('situation_card_id')
     squad.nation = data['nation']
     squad.notes = data.get('notes') or ''
@@ -326,6 +339,7 @@ def update_squad(squad_id):
     squad.status = target_status
     squad.updated_at = now_utc()
 
+    _save_objectives(squad, objective_ids)
     _save_squad(squad, data, data.get('soldiers', []))
     db.session.commit()
     return jsonify(squad=_squad_detail(squad))
@@ -351,7 +365,7 @@ def publish_squad(squad_id):
     ]
     squad_data = {
         'mission_card_id': squad.mission_card_id,
-        'objective_card_id': squad.objective_card_id,
+        'objective_card_ids': [so.card_id for so in squad.objectives],
         'situation_card_id': squad.situation_card_id,
         'nation': squad.nation,
         'soldiers': soldiers_payload,

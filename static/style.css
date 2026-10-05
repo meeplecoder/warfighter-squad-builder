@@ -515,6 +515,14 @@ h3 { font-size: 1rem; font-weight: 600; }
   background: var(--hardy-color, var(--text-muted));
 }
 
+/* ---- Picker selected row ------------------------------------------- */
+tr.picker-row-selected { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+tr.picker-row-selected td:first-child { font-weight: 600; }
+tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--accent); }
+
+/* ---- Compact objective row ----------------------------------------- */
+.obj-compact-row { padding: 3px 0; }
+
 /* ---- Author notes -------------------------------------------------- */
 .squad-author-notes { margin-top: 28px; }
 

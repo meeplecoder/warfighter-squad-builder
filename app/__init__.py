@@ -18,7 +18,7 @@ def create_app():
     login_manager.init_app(app)
     login_manager.login_view = None  # API-only; return 401 instead of redirect
 
-    from app.models import User, CardAssociation  # noqa: F401 — ensure table is registered
+    from app.models import User, CardAssociation, SquadObjective  # noqa: F401 — ensure tables are registered
 
     @login_manager.user_loader
     def load_user(user_id):
@@ -110,6 +110,33 @@ def create_app():
                 conn.commit()
             except Exception:
                 pass  # Column already exists
+
+            # Migrate single objective_card_id → squad_objectives junction table
+            try:
+                conn.execute(db.text("""
+                    CREATE TABLE IF NOT EXISTS squad_objectives (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        squad_id INTEGER NOT NULL REFERENCES squads(id) ON DELETE CASCADE,
+                        card_id INTEGER NOT NULL REFERENCES cards(id),
+                        sort_order INTEGER NOT NULL DEFAULT 0,
+                        UNIQUE (squad_id, card_id)
+                    )
+                """))
+                conn.commit()
+                # Populate from existing objective_card_id where not already migrated
+                squads_with_obj = conn.execute(db.text(
+                    "SELECT id, objective_card_id FROM squads WHERE objective_card_id IS NOT NULL"
+                )).fetchall()
+                for row in squads_with_obj:
+                    try:
+                        conn.execute(db.text(
+                            "INSERT OR IGNORE INTO squad_objectives (squad_id, card_id, sort_order) VALUES (:sid, :cid, 0)"
+                        ), {'sid': row[0], 'cid': row[1]})
+                    except Exception:
+                        pass
+                conn.commit()
+            except Exception:
+                pass
 
             # Add soldier_xp column and populate from notes (XP lines)
             try:

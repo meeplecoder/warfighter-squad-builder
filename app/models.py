@@ -193,6 +193,7 @@ class Squad(db.Model):
     objective_card = db.relationship('Card', foreign_keys=[objective_card_id])
     situation_card = db.relationship('Card', foreign_keys=[situation_card_id])
     soldiers = db.relationship('SquadSoldier', backref='squad', cascade='all, delete-orphan', order_by='SquadSoldier.sort_order')
+    objectives = db.relationship('SquadObjective', cascade='all, delete-orphan', order_by='SquadObjective.sort_order', foreign_keys='SquadObjective.squad_id')
     squad_likes = db.relationship('SquadLike', backref='squad', cascade='all, delete-orphan')
     squad_comments = db.relationship('SquadComment', backref='squad', cascade='all, delete-orphan')
 
@@ -214,10 +215,10 @@ class Squad(db.Model):
                 'name': self.mission_card.name,
                 'resources': self.mission_card.resources,
             },
-            'objective': {
-                'id': self.objective_card.id,
-                'name': self.objective_card.name,
-            } if self.objective_card else None,
+            'objectives': [
+                {'id': so.card.id, 'name': so.card.name}
+                for so in self.objectives
+            ],
             'soldier_count': len(self.soldiers),
         }
 
@@ -247,6 +248,20 @@ class SquadGear(db.Model):
     card = db.relationship('Card')
 
     __table_args__ = (db.UniqueConstraint('squad_soldier_id', 'card_id'),)
+
+
+class SquadObjective(db.Model):
+    """Objectives selected for a squad — many-to-many via junction table."""
+    __tablename__ = 'squad_objectives'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    squad_id = db.Column(db.Integer, db.ForeignKey('squads.id', ondelete='CASCADE'), nullable=False)
+    card_id = db.Column(db.Integer, db.ForeignKey('cards.id'), nullable=False)
+    sort_order = db.Column(db.Integer, nullable=False, default=0)
+
+    card = db.relationship('Card')
+
+    __table_args__ = (db.UniqueConstraint('squad_id', 'card_id'),)
 
 
 class SquadLike(db.Model):

@@ -11,7 +11,7 @@ const builderState = {
   squadId: null,       // null = new squad
   name: '',
   missionCard: null,
-  objectiveCard: null,
+  objectiveCards: [],
   situationCard: null,
   nation: '',
   notes: '',
@@ -1011,8 +1011,7 @@ async function showSquadDetail(squadId) {
             'Escape':         '#7c3aed',
           };
           const mtColor = MISSION_TYPE_COLOR[m.mission_type] || 'var(--text-muted)';
-          const objFamily = squad.objective?.objective_family;
-          const isFortified = objFamily === 'Fortification';
+          const isFortified = squad.objectives?.some(o => o.objective_family === 'Fortification');
           return `
             <div class="mission-name">
               <span ${cardImageAttr(m)}>${esc(m.name)}</span>
@@ -1033,50 +1032,61 @@ async function showSquadDetail(squadId) {
         })() : '<span class="text-muted">—</span>'}
       </div>
       <div class="squad-mission-box">
-        <div class="squad-box-label">Objective</div>
-        ${squad.objective ? (() => {
-          const o = squad.objective;
+        <div class="squad-box-label">Objective${squad.objectives?.length > 1 ? 's' : ''}</div>
+        ${(() => {
           const OBJ_TYPE_COLOR = {
-            'Eliminate Hostiles':   'var(--danger)',
-            'Destroy Target':       '#b45309',
-            'Keep Clear':           'var(--accent)',
-            'Escape':               '#7c3aed',
+            'Eliminate Hostiles':     'var(--danger)',
+            'Destroy Target':         '#b45309',
+            'Keep Clear':             'var(--accent)',
+            'Escape':                 '#7c3aed',
             'Kill Specified Hostile': '#0e7490',
           };
           const OBJ_FAMILY_COLOR = {
-            'Fallback':      '#92400e',
-            'Right Flank':   '#166534',
-            'Shore':         '#075985',
-            'Fortification': '#7f1d1d',
-            'Airborne':      '#3730a3',
-            'Embedded':      '#4a044e',
+            'Fallback':      '#92400e', 'Right Flank': '#166534', 'Shore':    '#075985',
+            'Fortification': '#7f1d1d', 'Airborne':    '#3730a3', 'Embedded': '#4a044e',
           };
-          const typeColor = OBJ_TYPE_COLOR[o.objective_mechanic] || 'var(--text-muted)';
-          const familyColor = o.objective_family ? (OBJ_FAMILY_COLOR[o.objective_family] || 'var(--text-muted)') : null;
-          const attrDefs = [
-            o.theater         != null ? ['Theater',    o.theater]       : null,
-            o.entrance_cost   != null ? ['Entry Cost', o.entrance_cost] : null,
-            o.action_cost_hth != null ? ['HtH Cost',   o.action_cost_hth] : null,
-          ].filter(Boolean);
-          const chips = attrDefs.map(([k,v]) =>
-            `<span class="mission-attr">${k} <strong>${v}</strong></span>`).join('');
-          return `
-            <div class="mission-name">
-              ${o.objective_mechanic ? `<span class="obj-type-badge" style="background:${typeColor}">${esc(o.objective_mechanic)}</span>` : ''}
-              ${familyColor ? `<span class="obj-type-badge" style="background:${familyColor}">${esc(o.objective_family)}</span>` : ''}
-              <span ${cardImageAttr(o)}>${esc(o.name)}</span>
-              ${o.nation ? `<span class="chip chip-mission" style="margin-left:6px;vertical-align:middle">${esc(o.nation)}</span>` : ''}
-            </div>
-            ${o.module ? `<div class="mission-subtitle">${esc(o.module)}</div>` : ''}
-            ${chips ? `<div class="mission-attrs" style="margin-top:8px">${chips}</div>` : ''}
-            ${squad.situation ? `
-              <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
-                <div class="squad-box-label" style="margin-bottom:4px">Situation</div>
-                <div style="font-size:13px"><span ${cardImageAttr(squad.situation)}>${esc(squad.situation.name)}</span>
-                ${squad.situation.nation ? `<span class="chip chip-mission" style="margin-left:6px;vertical-align:middle">${esc(squad.situation.nation)}</span>` : ''}</div>
-                ${squad.situation.module ? `<div class="mission-subtitle" style="margin-top:2px">${esc(squad.situation.module)}</div>` : ''}
-              </div>` : ''}`;
-        })() : `<div class="text-muted" style="font-size:13px;margin-top:4px">No objective selected</div>`}
+          const situationHtml = squad.situation ? `
+            <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
+              <div class="squad-box-label" style="margin-bottom:4px">Situation</div>
+              <div style="font-size:13px"><span ${cardImageAttr(squad.situation)}>${esc(squad.situation.name)}</span>
+              ${squad.situation.nation ? `<span class="chip chip-mission" style="margin-left:6px;vertical-align:middle">${esc(squad.situation.nation)}</span>` : ''}</div>
+              ${squad.situation.module ? `<div class="mission-subtitle" style="margin-top:2px">${esc(squad.situation.module)}</div>` : ''}
+            </div>` : '';
+
+          const objs = squad.objectives || [];
+          if (!objs.length) {
+            return `<div class="text-muted" style="font-size:13px;margin-top:4px">No objective selected</div>${situationHtml}`;
+          }
+          const isSingle = objs.length === 1;
+          const objsHtml = objs.map((o, idx) => {
+            const typeColor = OBJ_TYPE_COLOR[o.objective_mechanic] || 'var(--text-muted)';
+            const familyColor = o.objective_family ? (OBJ_FAMILY_COLOR[o.objective_family] || 'var(--text-muted)') : null;
+            if (isSingle) {
+              const attrDefs = [
+                o.theater != null ? ['Theater', o.theater] : null,
+                o.entrance_cost != null ? ['Entry Cost', o.entrance_cost] : null,
+                o.action_cost_hth != null ? ['HtH Cost', o.action_cost_hth] : null,
+              ].filter(Boolean);
+              const chips = attrDefs.map(([k,v]) =>
+                `<span class="mission-attr">${k} <strong>${v}</strong></span>`).join('');
+              return `<div class="mission-name">
+                ${o.objective_mechanic ? `<span class="obj-type-badge" style="background:${typeColor}">${esc(o.objective_mechanic)}</span>` : ''}
+                ${familyColor ? `<span class="obj-type-badge" style="background:${familyColor}">${esc(o.objective_family)}</span>` : ''}
+                <span ${cardImageAttr(o)}>${esc(o.name)}</span>
+                ${o.nation ? `<span class="chip chip-mission" style="margin-left:6px;vertical-align:middle">${esc(o.nation)}</span>` : ''}
+              </div>
+              ${o.module ? `<div class="mission-subtitle">${esc(o.module)}</div>` : ''}
+              ${chips ? `<div class="mission-attrs" style="margin-top:8px">${chips}</div>` : ''}`;
+            } else {
+              // Compact row — name + tiny badges only
+              return `<div class="flex items-center obj-compact-row" style="${idx > 0 ? 'margin-top:6px;padding-top:6px;border-top:1px solid var(--border)' : ''}">
+                <span style="font-size:13px"><span ${cardImageAttr(o)}>${esc(o.name)}</span></span>
+                ${o.objective_mechanic ? `<span class="obj-type-badge" style="background:${typeColor};margin-left:6px;font-size:10px;padding:1px 5px">${esc(o.objective_mechanic)}</span>` : ''}
+              </div>`;
+            }
+          }).join('');
+          return objsHtml + situationHtml;
+        })()}
       </div>
     </div>
 
@@ -1276,7 +1286,7 @@ register('builder', async function(squadId) {
       builderState.squadId = sq.id;
       builderState.name = sq.name;
       builderState.missionCard = sq.mission;
-      builderState.objectiveCard = sq.objective;
+      builderState.objectiveCards = sq.objectives || [];
       builderState.nation = sq.nation;
       builderState.notes = sq.notes || '';
       builderState.soldiers = sq.soldiers.map(ss => ({
@@ -1484,48 +1494,44 @@ function renderBuilder() {
         </div>
 
         <div class="builder-section">
-          <div class="builder-section-title">Objective <span class="text-muted">(optional)</span></div>
-          ${builderState.objectiveCard
+          <div class="builder-section-title">Objectives <span class="text-muted">(optional)</span></div>
+          ${builderState.objectiveCards.length > 0
             ? (() => {
-                const oc = builderState.objectiveCard;
-                const OBJ_TYPE_COLOR = {
-                  'Eliminate Hostiles':    'var(--danger)',
-                  'Destroy Target':        '#b45309',
-                  'Keep Clear':            'var(--accent)',
-                  'Escape':                '#7c3aed',
-                  'Kill Specified Hostile':'#0e7490',
-                };
-                const OBJ_FAMILY_COLOR2 = {
-                  'Fallback':'#92400e','Right Flank':'#166534','Shore':'#075985',
-                  'Fortification':'#7f1d1d','Airborne':'#3730a3','Embedded':'#4a044e',
-                };
-                // card_subtype = "Family / Mechanic" or just one of them
-                const ocFamily = oc.objective_family || '';
-                const ocSubtype = oc.card_subtype || '';
-                const ocMechanic = ocFamily && ocSubtype.startsWith(ocFamily + ' / ')
-                  ? ocSubtype.slice(ocFamily.length + 3)
-                  : (ocFamily ? '' : ocSubtype);
-                const tc = OBJ_TYPE_COLOR[ocMechanic] || 'var(--text-muted)';
-                const ocFamilyColor = OBJ_FAMILY_COLOR2[ocFamily];
-                const attrs = [
-                  oc.theater          ? `${oc.theater}` : null,
-                  oc.entrance_cost != null ? `Entry: ${oc.entrance_cost}` : null,
-                  oc.action_cost_hth != null ? `HtH: ${oc.action_cost_hth}` : null,
-                ].filter(Boolean).join(' · ');
-                const subtypeLabel = [ocFamily, ocMechanic].filter(Boolean).join(' · ');
-                return `<div class="flex justify-between items-center">
-                  <span>
-                    <span ${cardImageAttr(oc)}><strong>${esc(oc.name)}</strong></span>
-                  </span>
-                  <span style="display:flex;gap:4px">
-                    <button class="btn btn-sm btn-ghost" id="change-obj-btn">Change</button>
-                    <button class="btn btn-sm btn-ghost" id="clear-obj-btn" title="Remove objective" style="color:var(--text-muted)">✕</button>
-                  </span>
-                </div>
-                <div class="text-muted" style="font-size:11px;margin-top:3px">${[subtypeLabel, attrs].filter(Boolean).join(' · ')}</div>`;
+                const isSingle = builderState.objectiveCards.length === 1;
+                const rows = builderState.objectiveCards.map((oc, idx) => {
+                  if (isSingle) {
+                    const ocFamily = oc.objective_family || '';
+                    const ocSubtype = oc.card_subtype || '';
+                    const ocMechanic = ocFamily && ocSubtype.startsWith(ocFamily + ' / ')
+                      ? ocSubtype.slice(ocFamily.length + 3) : (ocFamily ? '' : ocSubtype);
+                    const attrs = [
+                      oc.theater ? oc.theater : null,
+                      oc.entrance_cost != null ? `Entry: ${oc.entrance_cost}` : null,
+                      oc.action_cost_hth != null ? `HtH: ${oc.action_cost_hth}` : null,
+                    ].filter(Boolean).join(' · ');
+                    const subtypeLabel = [ocFamily, ocMechanic].filter(Boolean).join(' · ');
+                    return `<div class="flex justify-between items-center">
+                      <span><span ${cardImageAttr(oc)}><strong>${esc(oc.name)}</strong></span></span>
+                      <span style="display:flex;gap:4px">
+                        <button class="btn btn-sm btn-ghost" data-change-obj="1">Change</button>
+                        <button class="btn btn-sm btn-ghost remove-obj-btn" data-idx="${idx}" title="Remove" style="color:var(--text-muted)">✕</button>
+                      </span>
+                    </div>
+                    <div class="text-muted" style="font-size:11px;margin-top:3px">${[subtypeLabel, attrs].filter(Boolean).join(' · ')}</div>`;
+                  } else {
+                    return `<div class="flex justify-between items-center obj-compact-row">
+                      <span style="font-size:13px"><span ${cardImageAttr(oc)}>${esc(oc.name)}</span></span>
+                      <button class="btn btn-sm btn-ghost remove-obj-btn" data-idx="${idx}" title="Remove" style="color:var(--text-muted)">✕</button>
+                    </div>`;
+                  }
+                }).join('');
+                const addMoreBtn = !isSingle && builderState.missionCard
+                  ? `<button class="btn btn-ghost btn-sm" id="add-obj-btn" style="margin-top:6px">+ Add another…</button>`
+                  : '';
+                return rows + addMoreBtn;
               })()
             : builderState.missionCard
-              ? `<button class="btn btn-ghost" id="pick-obj-btn">Select an Objective…</button>`
+              ? `<button class="btn btn-ghost" id="pick-obj-btn">Add an Objective…</button>`
               : `<span class="text-muted">Select a mission first.</span>`}
         </div>
 
@@ -1585,8 +1591,18 @@ function renderBuilder() {
   main.querySelector('#pick-mission-btn')?.addEventListener('click', () => { setPickerMode('mission'); renderBuilder(); });
   main.querySelector('#change-mission-btn')?.addEventListener('click', () => { setPickerMode('mission'); renderBuilder(); });
   main.querySelector('#pick-obj-btn')?.addEventListener('click', () => { setPickerMode('objective'); renderBuilder(); });
-  main.querySelector('#change-obj-btn')?.addEventListener('click', () => { setPickerMode('objective'); renderBuilder(); });
-  main.querySelector('#clear-obj-btn')?.addEventListener('click', () => { builderState.objectiveCard = null; renderBuilder(); });
+  main.querySelector('#add-obj-btn')?.addEventListener('click', () => { setPickerMode('objective'); renderBuilder(); });
+  main.querySelector('[data-change-obj]')?.addEventListener('click', () => {
+    builderState.objectiveCards = [];
+    setPickerMode('objective');
+    renderBuilder();
+  });
+  main.querySelectorAll('.remove-obj-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      builderState.objectiveCards.splice(parseInt(btn.dataset.idx), 1);
+      renderBuilder();
+    });
+  });
   main.querySelector('#add-soldier-btn')?.addEventListener('click', () => { setPickerMode('soldier'); renderBuilder(); });
 
   // Gear buttons (delegated)
@@ -1732,9 +1748,12 @@ async function loadPickerResults() {
             builderState.pickerMode = null;
             break;
           case 'objective':
-            builderState.objectiveCard = fullCard;
-            builderState.pickerMode = null;
-            break;
+            if (!builderState.objectiveCards.find(o => o.id === fullCard.id)) {
+              builderState.objectiveCards.push(fullCard);
+            }
+            renderBuilder();
+            loadPickerResults();
+            return;
           case 'situation':
             builderState.situationCard = fullCard;
             builderState.pickerMode = null;
@@ -1755,6 +1774,14 @@ async function loadPickerResults() {
         renderBuilder();
       },
     });
+
+    // Mark already-selected objectives
+    if (builderState.pickerMode === 'objective' && builderState.objectiveCards.length > 0) {
+      const selectedIds = new Set(builderState.objectiveCards.map(o => o.id));
+      resultsDiv.querySelectorAll('tr[data-id]').forEach(tr => {
+        if (selectedIds.has(parseInt(tr.dataset.id))) tr.classList.add('picker-row-selected');
+      });
+    }
 
     // Wire picker search/filter inputs
     const qInput = document.getElementById('picker-q');
@@ -1794,7 +1821,7 @@ async function validateSquad() {
 
 function resetBuilderState() {
   Object.assign(builderState, {
-    squadId: null, name: '', missionCard: null, objectiveCard: null,
+    squadId: null, name: '', missionCard: null, objectiveCards: [],
     situationCard: null, nation: '', notes: '', soldiers: [],
     pickerMode: null, pickerTarget: null, pickerGearCat: null,
     pickerSort: 'module', pickerOrder: 'asc', pickerPage: 1,
@@ -1827,7 +1854,7 @@ function buildSquadPayload(status = 'draft') {
   return {
     name: builderState.name || 'Unnamed Squad',
     mission_card_id: builderState.missionCard?.id || null,
-    objective_card_id: builderState.objectiveCard?.id || null,
+    objective_card_ids: builderState.objectiveCards.map(o => o.id),
     situation_card_id: builderState.situationCard?.id || null,
     nation: builderState.nation,
     notes: builderState.notes,
