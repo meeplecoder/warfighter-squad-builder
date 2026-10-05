@@ -298,9 +298,15 @@ const NATION_FLAGS = {
   'Vichy French':           '🇫🇷',
 };
 
+const NATION_DISPLAY_NAMES = {
+  'North Korean (KW)': 'North Korea (KW)',
+  'South Korean (KW)': 'South Korea (KW)',
+};
+
 function nationLabel(n) {
-  const flag = NATION_FLAGS[n];
-  return flag ? `${flag} ${n}` : n;
+  const flag = NATION_FLAGS[n] || '';
+  const display = NATION_DISPLAY_NAMES[n] || n;
+  return flag ? `${flag} ${display}` : display;
 }
 let allCategories = ['Soldier','Weapon','Equipment','Skill','Service Record','Mission',
   'Objective','Situation','Hostile','Action','Event','Location','Fortification','Other'];
