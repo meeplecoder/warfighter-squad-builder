@@ -403,6 +403,28 @@ def main():
         db.session.commit()
         print(f'\nDone. Total: {total} | Inserted: {inserted} | Updated: {updated} | Skipped: {skipped}')
 
+        # Strip card-reference lines from soldier notes (same logic as parse_associations.py)
+        print('\nStripping association lines from soldier notes...')
+        import sys as _sys
+        _sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from parse_associations import build_gear_lookup, extract_refs
+        lookup = build_gear_lookup()
+        soldiers = Card.query.filter_by(card_type='Soldier').all()
+        notes_cleaned = 0
+        for soldier in soldiers:
+            if not soldier.notes:
+                continue
+            _, matched_lines = extract_refs(soldier.notes, soldier.nation, lookup)
+            if not matched_lines:
+                continue
+            kept = [l for l in soldier.notes.split('\n') if l.strip() not in matched_lines]
+            cleaned = '\n'.join(kept).strip() or None
+            if cleaned != soldier.notes:
+                soldier.notes = cleaned
+                notes_cleaned += 1
+        db.session.commit()
+        print(f'  Notes cleaned: {notes_cleaned}/{len(soldiers)} soldiers')
+
 
 if __name__ == '__main__':
     main()
