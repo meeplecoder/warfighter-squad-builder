@@ -53,7 +53,7 @@ def _squad_detail(squad, liked_by_me=False):
             'nation': oc.nation,
             'module': oc.module,
             'theater': theater_from_raw_type(oc.raw_type or ''),
-            'objective_type': mechanic,
+            'objective_mechanic': mechanic,
             'objective_family': family,
             'entrance_cost': oc.entrance_cost,
             'action_cost_hth': oc.action_cost_hth,
@@ -67,7 +67,7 @@ def _squad_detail(squad, liked_by_me=False):
         'mission_type': mc.card_subtype,
         'theater': theater_from_raw_type(mc.raw_type or ''),
         'time': mc.time,
-        'objective_location': mc.objective_location,
+        'objective_position': mc.objective_position,
         'loadout_modifier': mc.loadout_modifier,
         'action_cost_hth': mc.action_cost_hth,
     })
@@ -84,7 +84,7 @@ def _squad_detail(squad, liked_by_me=False):
             gc = sg.card
             counts = is_ps
             lw = None
-            if counts and gc.card_category in ('Weapon', 'Equipment'):
+            if counts and gc.card_type in ('Weapon', 'Equipment'):
                 w = gc.loadout if gc.loadout is not None else (gc.resource_cost or 0)
                 gear_loadout_used += w * sg.quantity
                 lw = w
@@ -131,7 +131,7 @@ def _parse_and_validate(data):
         return None, None, None, None, 'mission_card_id is required.'
 
     mission_card = db.session.get(Card, mission_card_id)
-    if not mission_card or mission_card.card_category != 'Mission':
+    if not mission_card or mission_card.card_type != 'Mission':
         return None, None, None, None, 'Invalid mission card.'
 
     nation = (data.get('nation') or '').strip()

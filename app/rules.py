@@ -16,7 +16,7 @@ NON_BUDGET_SUBTYPES = {NPS_SUBTYPE, SQUAD_SUBTYPE, VEHICLE_SUBTYPE}
 
 def gear_loadout_weight(gear_card):
     """Loadout weight of a single gear card."""
-    if gear_card['card_category'] in NO_LOADOUT_CATEGORIES:
+    if gear_card['card_type'] in NO_LOADOUT_CATEGORIES:
         return 0
     if gear_card.get('loadout') is not None:
         return gear_card['loadout']
@@ -88,7 +88,7 @@ def validate_squad(payload, mission_card, soldiers_data):
             gear_loadout_used = sum(
                 gear_loadout_weight(g['card']) * g['quantity']
                 for g in s['gear']
-                if g['card']['card_category'] in GEAR_LOADOUT_CATEGORIES
+                if g['card']['card_type'] in GEAR_LOADOUT_CATEGORIES
             )
             loadout_remaining = effective_loadout - gear_loadout_used
             if gear_loadout_used > effective_loadout:
@@ -103,7 +103,7 @@ def validate_squad(payload, mission_card, soldiers_data):
             # Duplicate skill names
             skill_names = []
             for g in s['gear']:
-                if g['card']['card_category'] == 'Skill':
+                if g['card']['card_type'] == 'Skill':
                     sname = g['card']['name']
                     if sname in skill_names:
                         errors.append({

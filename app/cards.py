@@ -11,7 +11,7 @@ SORT_COLS = {
     'resource_cost': Card.resource_cost,
     'number': Card.number,
     'module': Card.module,
-    'card_category': Card.card_category,
+    'card_type': Card.card_type,
     'nation': Card.nation,
 }
 
@@ -36,7 +36,7 @@ def list_cards():
         like = f'%{q}%'
         query = query.filter(or_(Card.name.ilike(like), Card.notes.ilike(like)))
     if category:
-        query = query.filter(Card.card_category == category)
+        query = query.filter(Card.card_type == category)
     if subtype:
         query = query.filter(Card.card_subtype == subtype)
     if nation:
@@ -83,7 +83,7 @@ def get_card(id_or_number):
         return jsonify(error='Card not found.'), 404
 
     detail = card.to_card_detail()
-    if card.card_category == 'Soldier':
+    if card.card_type == 'Soldier':
         from app.models import CardAssociation
         assocs = (CardAssociation.query
                   .filter_by(parent_card_id=card.id)

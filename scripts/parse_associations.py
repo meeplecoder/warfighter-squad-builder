@@ -43,7 +43,7 @@ STAT_LABELS = {
 
 def build_gear_lookup():
     """Return {lowercase_name: card_obj} for all gear-category cards."""
-    cards = Card.query.filter(Card.card_category.in_(GEAR_CATEGORIES)).all()
+    cards = Card.query.filter(Card.card_type.in_(GEAR_CATEGORIES)).all()
     return {c.name.lower(): c for c in cards}
 
 
@@ -149,7 +149,7 @@ def main():
         lookup = build_gear_lookup()
         print(f'  {len(lookup)} gear/skill cards indexed.')
 
-        soldiers = Card.query.filter_by(card_category='Soldier').all()
+        soldiers = Card.query.filter_by(card_type='Soldier').all()
         print(f'  {len(soldiers)} soldier cards to process.')
 
         inserted = 0

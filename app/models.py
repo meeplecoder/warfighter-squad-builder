@@ -15,7 +15,7 @@ class Card(db.Model):
     number = db.Column(db.Text, unique=True, nullable=False)
     name = db.Column(db.Text, nullable=False)
     raw_type = db.Column(db.Text, nullable=False)
-    card_category = db.Column(db.Text, nullable=False, index=True)
+    card_type = db.Column(db.Text, nullable=False, index=True)
     card_subtype = db.Column(db.Text)
     nation = db.Column(db.Text, index=True)
     module = db.Column(db.Text, nullable=False, index=True)
@@ -30,7 +30,7 @@ class Card(db.Model):
     entrance_cost = db.Column(db.Integer)
     resources = db.Column(db.Integer)
     time = db.Column(db.Integer)
-    objective_location = db.Column(db.Integer)
+    objective_position = db.Column(db.Integer)
     loadout_modifier = db.Column(db.Integer)
     reinforcements = db.Column(db.Text)
     xp_value = db.Column(db.Integer)
@@ -47,13 +47,23 @@ class Card(db.Model):
     cx = db.Column('combat_xp', db.Integer, nullable=False, default=0)  # CX = Combat Experience (pre-printed)
     xp = db.Column('soldier_xp', db.Integer, nullable=False, default=0)  # XP = Experience Points (pre-printed)
 
+    def _objective_mechanic(self) -> str:
+        """Extract mechanic from combined card_subtype, e.g. 'Shore / Eliminate Hostiles' → 'Eliminate Hostiles'."""
+        family = self.objective_family or ''
+        combined = self.card_subtype or ''
+        if family and combined.startswith(family + ' / '):
+            return combined[len(family) + 3:]
+        if not family:
+            return combined
+        return ''  # structural (Fallback / Right Flank — no mechanic)
+
     def to_card_object(self):
         image_url = f'/static/card_images/{self.number}.jpg' if self.has_image else None
-        return {
+        d = {
             'id': self.id,
             'number': self.number,
             'name': self.name,
-            'card_category': self.card_category,
+            'card_type': self.card_type,
             'card_subtype': self.card_subtype,
             'nation': self.nation,
             'module': self.module,
@@ -67,7 +77,7 @@ class Card(db.Model):
             'actions': self.actions,
             'resources': self.resources,
             'time': self.time,
-            'objective_location': self.objective_location,
+            'objective_position': self.objective_position,
             'entrance_cost': self.entrance_cost,
             'action_cost_hth': self.action_cost_hth,
             'objective_family': self.objective_family,
@@ -75,23 +85,19 @@ class Card(db.Model):
             'cx': self.cx or 0,
             'xp': self.xp or 0,
         }
+        if self.card_type == 'Mission':
+            d['mission_type'] = self.card_subtype
+        elif self.card_type == 'Objective':
+            d['objective_mechanic'] = self._objective_mechanic()
+        return d
 
     def to_card_detail(self):
         d = self.to_card_object()
-        if self.card_category == 'Objective':
-            family = self.objective_family or ''
-            combined = self.card_subtype or ''
-            # Extract mechanic from "Family / Mechanic" combined subtype
-            if family and combined.startswith(family + ' / '):
-                mechanic = combined[len(family) + 3:]
-            elif not family:
-                mechanic = combined
-            else:
-                mechanic = ''  # structural objective (Fallback / Right Flank)
-            d['objective_type'] = mechanic
-            d['objective_family'] = family
+        if self.card_type == 'Objective':
+            d['objective_mechanic'] = self._objective_mechanic()
+            d['objective_family'] = self.objective_family or ''
             d['theater'] = theater_from_raw_type(self.raw_type or '')
-        elif self.card_category == 'Mission':
+        elif self.card_type == 'Mission':
             d['mission_type'] = self.card_subtype
             d['theater'] = theater_from_raw_type(self.raw_type or '')
         d.update({
@@ -100,7 +106,7 @@ class Card(db.Model):
             'loadout_modifier': self.loadout_modifier,
             'resources': self.resources,
             'time': self.time,
-            'objective_location': self.objective_location,
+            'objective_position': self.objective_position,
             'entrance_cost': self.entrance_cost,
             'action_cost_hth': self.action_cost_hth,
             'reinforcements': self.reinforcements,

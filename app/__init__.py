@@ -76,7 +76,7 @@ def create_app():
                 conn.commit()
                 import re as _re2
                 rows2 = conn.execute(db.text(
-                    "SELECT id, notes FROM cards WHERE card_category='Soldier' AND notes IS NOT NULL"
+                    "SELECT id, notes FROM cards WHERE card_type='Soldier' AND notes IS NOT NULL"
                 )).fetchall()
                 updates2 = []
                 for row in rows2:
@@ -101,7 +101,7 @@ def create_app():
                 conn.commit()
                 import re as _re
                 rows = conn.execute(db.text(
-                    "SELECT id, notes FROM cards WHERE card_category='Soldier' AND notes IS NOT NULL"
+                    "SELECT id, notes FROM cards WHERE card_type='Soldier' AND notes IS NOT NULL"
                 )).fetchall()
                 updates = []
                 for row in rows:

@@ -146,7 +146,7 @@ KEY_MAP = {
     'ACHtH': 'action_cost_hth',
     'R': 'resources',
     'T': 'time',
-    'OB': 'objective_location',
+    'OB': 'objective_position',
     'LM': 'loadout_modifier',
     'REIN': 'reinforcements',
     'XP': 'xp_value',
@@ -320,7 +320,7 @@ def main():
                 if existing:
                     existing.name = name
                     existing.raw_type = raw_type
-                    existing.card_category = category
+                    existing.card_type = category
                     existing.card_subtype = subtype
                     existing.objective_family = obj_family
                     existing.nation = nation
@@ -338,7 +338,7 @@ def main():
                         number=number,
                         name=name,
                         raw_type=raw_type,
-                        card_category=category,
+                        card_type=category,
                         card_subtype=subtype,
                         objective_family=obj_family,
                         nation=nation,

@@ -137,7 +137,7 @@ function chipForCategory(cat) {
   return `<span class="chip ${map[cat] || ''}">${esc(cat)}</span>`;
 }
 
-// Categories where card_subtype is a real type label (not a theater name)
+// card_types where card_subtype is a real type label (not a theater name)
 const SUBTYPE_CATS = new Set(['Soldier','Hostile','Weapon','Skill','Equipment','Clergy','Objective','Mission']);
 
 function chipForSubtype(subtype, category) {
@@ -427,8 +427,8 @@ async function refreshCardsTable() {
     <tr class="clickable" data-id="${c.id}">
       <td><span class="text-muted" style="font-size:11px">${esc(c.number)}</span></td>
       <td><span ${cardImageAttr(c)}>${esc(c.name)}</span></td>
-      <td>${chipForCategory(c.card_category)}</td>
-      <td>${SUBTYPE_CATS.has(c.card_category) ? esc(c.card_subtype || '') : ''}</td>
+      <td>${chipForCategory(c.card_type)}</td>
+      <td>${SUBTYPE_CATS.has(c.card_type) ? esc(c.card_subtype || '') : ''}</td>
       <td>${esc(c.nation || '—')}</td>
       <td>${esc(c.module)}</td>
       <td style="text-align:right">${c.resource_cost != null ? c.resource_cost : ''}</td>
@@ -497,7 +497,7 @@ async function showCardDetail(idOrNumber) {
     return;
   }
 
-  const isSoldier = card.card_category === 'Soldier';
+  const isSoldier = card.card_type === 'Soldier';
   const stats = isSoldier ? [
     ['RP Cost',   card.resource_cost],
     ['Health',    card.health],
@@ -517,7 +517,7 @@ async function showCardDetail(idOrNumber) {
     ['Actions', card.actions],
     ['Budget (RP)', card.resources],
     ['Turns', card.time],
-    ['Obj. at #', card.objective_location],
+    ['Obj. at #', card.objective_position],
     ['Loadout Mod', card.loadout_modifier != null ? (card.loadout_modifier >= 0 ? '+' : '') + card.loadout_modifier : null],
     ['Entrance Cost', card.entrance_cost],
     ['HtH Cost', card.action_cost_hth],
@@ -559,7 +559,7 @@ async function showCardDetail(idOrNumber) {
             <tr class="clickable" data-id="${a.card.id}">
               <td class="text-muted" style="font-size:11px">${esc(a.card.number)}</td>
               <td><span ${cardImageAttr(a.card)}>${esc(a.card.name)}</span></td>
-              <td>${chipForCategory(a.card.card_category)}</td>
+              <td>${chipForCategory(a.card.card_type)}</td>
               <td>${a.quantity}</td>
             </tr>`).join('')}
         </tbody>
@@ -585,7 +585,7 @@ async function showCardDetail(idOrNumber) {
     <div class="card-detail-layout">
       <div class="card-stats-panel">
         <div class="card-header-bar">
-          ${esc(card.number)} · ${chipForCategory(card.card_category)} ${chipForSubtype(card.card_subtype, card.card_category)}
+          ${esc(card.number)} · ${chipForCategory(card.card_type)} ${chipForSubtype(card.card_subtype, card.card_type)}
           ${card.nation ? `· <span class="chip">${esc(card.nation)}</span>` : ''}
           · <span class="text-muted" style="font-size:12px">${esc(card.module)}</span>
         </div>
@@ -823,7 +823,7 @@ async function showSquadDetail(squadId) {
   const soldiersHtml = squad.soldiers.map(ss => {
     const c = ss.card;
     const isPS = c.card_subtype === 'Player';
-    const badgeHtml = chipForSubtype(c.card_subtype, c.card_category);
+    const badgeHtml = chipForSubtype(c.card_subtype, c.card_type);
 
     const loadoutBar = (() => {
       if (!isPS || ss.effective_loadout == null) return '';
@@ -845,7 +845,7 @@ async function showSquadDetail(squadId) {
           ps_gear.map(g => `
             <tr>
               <td><span ${cardImageAttr(g.card)}>${esc(g.card.name)}</span></td>
-              <td class="text-muted">${esc(g.card.card_category)}</td>
+              <td class="text-muted">${esc(g.card.card_type)}</td>
               <td class="text-muted">${g.card.resource_cost != null ? g.card.resource_cost + ' RP' : ''}</td>
               <td class="text-muted">${g.loadout_weight != null ? 'L' + g.loadout_weight : '(no load)'}</td>
               ${g.quantity > 1 ? `<td>×${g.quantity}</td>` : '<td></td>'}
@@ -858,7 +858,7 @@ async function showSquadDetail(squadId) {
           nps_gear.map(g => `
             <tr>
               <td><span ${cardImageAttr(g.card)}>${esc(g.card.name)}</span></td>
-              <td class="text-muted">${esc(g.card.card_category)}</td>
+              <td class="text-muted">${esc(g.card.card_type)}</td>
             </tr>`).join('') +
           `</table>`;
       }
@@ -939,7 +939,7 @@ async function showSquadDetail(squadId) {
           const subtitle = m.module ? esc(m.module) : null;
           const attrDefs = [
             m.time != null              ? ['Turns',   m.time] : null,
-            m.objective_location != null ? ['Obj.Loc', m.objective_location] : null,
+            m.objective_position != null ? ['Obj.Loc', m.objective_position] : null,
             m.loadout_modifier != null  ? ['Loadout', (m.loadout_modifier >= 0 ? '+' : '') + m.loadout_modifier] : null,
             m.action_cost_hth != null   ? ['HtH Cost',m.action_cost_hth] : null,
           ].filter(Boolean);
@@ -994,7 +994,7 @@ async function showSquadDetail(squadId) {
             'Airborne':      '#3730a3',
             'Embedded':      '#4a044e',
           };
-          const typeColor = OBJ_TYPE_COLOR[o.objective_type] || 'var(--text-muted)';
+          const typeColor = OBJ_TYPE_COLOR[o.objective_mechanic] || 'var(--text-muted)';
           const familyColor = o.objective_family ? (OBJ_FAMILY_COLOR[o.objective_family] || 'var(--text-muted)') : null;
           const attrDefs = [
             o.theater         != null ? ['Theater',    o.theater]       : null,
@@ -1005,7 +1005,7 @@ async function showSquadDetail(squadId) {
             `<span class="mission-attr">${k} <strong>${v}</strong></span>`).join('');
           return `
             <div class="mission-name">
-              ${o.objective_type ? `<span class="obj-type-badge" style="background:${typeColor}">${esc(o.objective_type)}</span>` : ''}
+              ${o.objective_mechanic ? `<span class="obj-type-badge" style="background:${typeColor}">${esc(o.objective_mechanic)}</span>` : ''}
               ${familyColor ? `<span class="obj-type-badge" style="background:${familyColor}">${esc(o.objective_family)}</span>` : ''}
               <span ${cardImageAttr(o)}>${esc(o.name)}</span>
               ${o.nation ? `<span class="chip chip-mission" style="margin-left:6px;vertical-align:middle">${esc(o.nation)}</span>` : ''}
@@ -1126,8 +1126,8 @@ async function showSquadDetail(squadId) {
 const CARD_TABLE_COLS = {
   number:            { header: '#', render: c => esc(c.number), sortKey: 'number' },
   name:              { header: 'Name', render: c => `<span ${cardImageAttr(c)}>${esc(c.name)}</span>`, sortKey: 'name' },
-  subtype:           { header: 'Type', render: c => chipForSubtype(c.card_subtype, c.card_category) },
-  category:          { header: 'Category', render: c => chipForCategory(c.card_category) },
+  subtype:           { header: 'Type', render: c => chipForSubtype(c.card_subtype, c.card_type) },
+  category:          { header: 'Category', render: c => chipForCategory(c.card_type) },
   nation:            { header: 'Nation', render: c => esc(c.nation || '—'), sortKey: 'nation' },
   module:            { header: 'Module', render: c => esc(c.module), sortKey: 'module' },
   rp:                { header: 'RP', render: c => c.resource_cost != null ? String(c.resource_cost) : '', sortKey: 'resource_cost' },
@@ -1140,14 +1140,14 @@ const CARD_TABLE_COLS = {
   hth:               { header: 'HtH', render: c => c.hth != null ? (c.hth >= 0 ? '+' : '') + c.hth : '' },
   resources:         { header: 'Budget', render: c => c.resources != null ? c.resources + ' RPs' : '' },
   time:              { header: 'Turns', render: c => c.time != null ? String(c.time) : '' },
-  objective_location:{ header: 'Obj@', render: c => c.objective_location != null ? String(c.objective_location) : '' },
+  objective_position:{ header: 'Obj@', render: c => c.objective_position != null ? String(c.objective_position) : '' },
   loadout_modifier:  { header: 'LOADOUT', render: c => c.loadout_modifier != null ? (c.loadout_modifier >= 0 ? '+' : '') + c.loadout_modifier : '' },
   entrance_cost:     { header: 'Entry Cost', render: c => c.entrance_cost != null ? String(c.entrance_cost) : '', sortKey: 'entrance_cost' },
   action_cost_hth:   { header: 'HtH Cost', render: c => c.action_cost_hth != null ? String(c.action_cost_hth) : '', sortKey: 'action_cost_hth' },
 };
 
 const MODE_COLS = {
-  mission:   ['number', 'name', 'module', 'resources', 'time', 'objective_location', 'loadout_modifier'],
+  mission:   ['number', 'name', 'module', 'resources', 'time', 'objective_position', 'loadout_modifier'],
   objective: ['number', 'name', 'module', 'entrance_cost', 'action_cost_hth'],
   situation: ['number', 'name', 'module', 'rp'],
   soldier:   ['number', 'name', 'subtype', 'nation', 'module', 'rp', 'cx', 'xp', 'health', 'loadout', 'movement', 'cover', 'hth'],
@@ -1304,7 +1304,7 @@ function renderBuilder() {
     const isPS = c.card_subtype === 'Player';
     const effectiveLoadout = isPS ? (c.loadout || 0) + lm : null;
     const gearLoadout = isPS ? s.gear.reduce((acc, g) => {
-      if (['Weapon', 'Equipment'].includes(g.card.card_category)) {
+      if (['Weapon', 'Equipment'].includes(g.card.card_type)) {
         return acc + (g.card.loadout != null ? g.card.loadout : (g.card.resource_cost || 0)) * g.quantity;
       }
       return acc;
@@ -1331,7 +1331,7 @@ function renderBuilder() {
           <div class="gear-item gear-item-default">
             ${g.quantity > 1 ? `<span class="gear-qty">${g.quantity}×</span>` : ''}
             <span ${cardImageAttr(g.card)}>${esc(g.card.name)}</span>
-            <span class="text-muted" style="font-size:11px">${g.card.card_category}</span>
+            <span class="text-muted" style="font-size:11px">${g.card.card_type}</span>
           </div>`).join('')}
       </div>` : '';
 
@@ -1339,7 +1339,7 @@ function renderBuilder() {
       <div class="soldier-slot">
         <div class="soldier-slot-header">
           <span>
-            ${chipForSubtype(c.card_subtype, c.card_category)}
+            ${chipForSubtype(c.card_subtype, c.card_type)}
             <span class="soldier-slot-name" ${cardImageAttr(c)}>${esc(c.name)}</span>
             ${c.cx ? `<span class="badge-cx" title="Combat Experience: grants extra Action cards per turn">${c.cx} CX</span>` : ''}
             ${c.xp ? `<span class="badge-xp" title="Experience Points (pre-printed)">${c.xp} XP</span>` : ''}
@@ -1414,7 +1414,7 @@ function renderBuilder() {
                 <div class="text-muted" style="font-size:12px;margin-top:4px">${[
                   mc.resources != null ? `${mc.resources} RP` : null,
                   mc.time != null ? `${mc.time} Turns` : null,
-                  mc.objective_location != null ? `Obj.Loc: ${mc.objective_location}` : null,
+                  mc.objective_position != null ? `Obj.Loc: ${mc.objective_position}` : null,
                   mc.loadout_modifier != null ? `Loadout: ${mc.loadout_modifier >= 0 ? '+' : ''}${mc.loadout_modifier}` : null,
                 ].filter(Boolean).join(' · ')}</div>`;
               })()
