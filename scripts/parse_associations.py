@@ -62,9 +62,9 @@ def is_stat_line(candidate: str) -> bool:
     return False
 
 
-def extract_refs(notes: str, soldier_nation: str, lookup: dict) -> list:
+def extract_refs(notes: str, soldier_nation: str, lookup: dict) -> tuple:
     """
-    Return list of (child_card, quantity) for each card reference found in notes.
+    Return (refs, matched_lines) for card references found in notes.
 
     Parameters
     ----------
@@ -74,19 +74,21 @@ def extract_refs(notes: str, soldier_nation: str, lookup: dict) -> list:
 
     Returns
     -------
-    list of (Card, int) — unique, ordered as encountered
+    refs          : list of (Card, int) — unique, ordered as encountered
+    matched_lines : set of original stripped line strings that resolved to a card
     """
     if not notes:
-        return []
+        return [], set()
 
     refs = []
     seen_ids = set()
+    matched_lines = set()
     soldier_nation_low = (soldier_nation or '').lower()
 
     lines = [l.strip() for l in re.split(r'\n', notes) if l.strip()]
 
-    for line in lines:
-        line = line.rstrip('.')
+    for original_line in lines:
+        line = original_line.rstrip('.')
 
         # Extract leading quantity
         quantity = 1
@@ -135,11 +137,12 @@ def extract_refs(notes: str, soldier_nation: str, lookup: dict) -> list:
         if card is None:
             continue
 
+        matched_lines.add(original_line)
         if card.id not in seen_ids:
             refs.append((card, quantity))
             seen_ids.add(card.id)
 
-    return refs
+    return refs, matched_lines
 
 
 def main():
@@ -154,10 +157,11 @@ def main():
 
         inserted = 0
         updated = 0
+        notes_cleaned = 0
         soldier_with_assoc = 0
 
         for soldier in soldiers:
-            refs = extract_refs(soldier.notes, soldier.nation, lookup)
+            refs, matched_lines = extract_refs(soldier.notes, soldier.nation, lookup)
             if not refs:
                 continue
             soldier_with_assoc += 1
@@ -178,6 +182,17 @@ def main():
                     ))
                     inserted += 1
 
+            # Strip matched association lines from notes
+            if matched_lines and soldier.notes:
+                cleaned_lines = [
+                    l for l in soldier.notes.split('\n')
+                    if l.strip() not in matched_lines
+                ]
+                cleaned = '\n'.join(cleaned_lines).strip() or None
+                if cleaned != soldier.notes:
+                    soldier.notes = cleaned
+                    notes_cleaned += 1
+
         db.session.commit()
 
         total = CardAssociation.query.count()
@@ -185,6 +200,7 @@ def main():
         print(f'  Soldiers with associations : {soldier_with_assoc}/{len(soldiers)}')
         print(f'  New rows inserted          : {inserted}')
         print(f'  Existing rows updated      : {updated}')
+        print(f'  Notes cleaned              : {notes_cleaned}')
         print(f'  Total rows in DB           : {total}')
 
 
