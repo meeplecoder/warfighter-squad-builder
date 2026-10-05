@@ -1124,7 +1124,8 @@ async function showSquadDetail(squadId) {
       const modSet = new Set();
       for (const ss of squad.soldiers) {
         if (ss.card?.module) modSet.add(ss.card.module);
-        for (const g of [...(ss.gear || []), ...(ss.default_gear || [])]) {
+        // Only explicitly added gear — default_gear is intrinsic to the soldier card
+        for (const g of (ss.gear || [])) {
           if (g.card?.module) modSet.add(g.card.module);
         }
       }
