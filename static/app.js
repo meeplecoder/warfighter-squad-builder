@@ -296,7 +296,7 @@ function sortedNations(nations) {
   const rest = nations.filter(n => !NATION_PINNED.includes(n));
   return [...pinned, ...rest];
 }
-let allCategories = ['Soldier','Mission','Objective','Weapon','Equipment','Skill'];
+let allCategories = ['Soldier','Mission','Objective','Weapon','Equipment','Skill','Service Record'];
 
 register('cards', async function(subId) {
   if (subId) { await showCardDetail(subId); return; }
