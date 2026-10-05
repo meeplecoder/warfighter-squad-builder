@@ -1024,7 +1024,12 @@ async function showSquadDetail(squadId) {
     <h2 style="margin-bottom:12px">Soldiers</h2>
     <div class="soldiers-grid">${soldiersHtml || '<p class="text-muted">No soldiers.</p>'}</div>
 
-    ${squad.notes ? `<div class="card-notes mt-3"><strong>Notes</strong><br>${esc(squad.notes)}</div>` : ''}
+    <div class="squad-author-notes">
+      <h2 style="margin-bottom:8px">Strategy Notes</h2>
+      ${squad.notes
+        ? `<div class="card-notes">${esc(squad.notes)}</div>`
+        : `<p class="text-muted" style="font-size:13px;margin:0">No strategy notes provided.</p>`}
+    </div>
 
     <div class="comments-section">
       <h2 style="margin-bottom:10px">Comments (${comments.length})</h2>
@@ -1492,8 +1497,9 @@ function renderBuilder() {
         </div>
 
         <div class="builder-section">
-          <div class="builder-section-title">Notes</div>
-          <textarea id="squad-notes" style="width:100%;min-height:60px">${esc(builderState.notes)}</textarea>
+          <div class="builder-section-title">Strategy Notes</div>
+          <div class="text-muted" style="font-size:12px;margin-bottom:6px">Strategy tips, card choices rationale, play advice…</div>
+          <textarea id="squad-notes" style="width:100%;min-height:100px;resize:vertical">${esc(builderState.notes)}</textarea>
         </div>
       </div>
 

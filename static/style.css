@@ -466,6 +466,9 @@ h3 { font-size: 1rem; font-weight: 600; }
 .like-btn.liked { background: #3a1a1a; border-color: var(--danger); color: var(--danger); }
 .like-btn:disabled { opacity: 0.5; cursor: default; }
 
+/* ---- Author notes -------------------------------------------------- */
+.squad-author-notes { margin-top: 28px; }
+
 /* ---- Comments ------------------------------------------------------ */
 .comments-section { margin-top: 24px; }
 .comment-item {
