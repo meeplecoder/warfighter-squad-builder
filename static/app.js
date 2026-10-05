@@ -592,7 +592,6 @@ async function showCardDetail(idOrNumber) {
         ${card.health_actions_table ? (() => {
           const { headers, rows } = card.health_actions_table;
           return `<div class="spawn-table-wrap" style="margin-bottom:8px">
-            <div class="spawn-table-title">Health / Actions</div>
             <table class="spawn-table">
               <thead><tr>${headers.map(h => `<th class="spawn-rp">${esc(h)}</th>`).join('')}</tr></thead>
               <tbody>
