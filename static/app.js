@@ -929,8 +929,8 @@ async function showSquadDetail(squadId) {
         if (ta !== tb) return ta - tb;
         return a.card.name.localeCompare(b.card.name);
       };
-      const ps_gear = (isPS ? ss.gear : []).slice().sort(_gearSort);
-      const nps_gear = (isPS ? [] : ss.gear).slice().sort(_gearSort);
+      const sortedGear = ss.gear.slice().sort(_gearSort);
+      const defaultGear = (ss.default_gear || []).slice().sort(_gearSort);
       const _gearRow = (g, showCost) => `
         <tr>
           <td><span ${cardImageAttr(g.card)}>${esc(g.card.name)}</span></td>
@@ -940,16 +940,16 @@ async function showSquadDetail(squadId) {
           ${g.quantity > 1 ? `<td>×${g.quantity}</td>` : '<td></td>'}` : ''}
         </tr>`;
       let out = '';
-      if (ps_gear.length) {
+      if (sortedGear.length) {
         out += `<div class="default-gear-section">
           <div class="default-gear-label">Gear</div>
-          <table class="gear-table">${ps_gear.map(g => _gearRow(g, true)).join('')}</table>
+          <table class="gear-table">${sortedGear.map(g => _gearRow(g, isPS)).join('')}</table>
         </div>`;
       }
-      if (nps_gear.length) {
+      if (defaultGear.length) {
         out += `<div class="default-gear-section">
-          <div class="default-gear-label">Default gear</div>
-          <table class="gear-table">${nps_gear.map(g => _gearRow(g, false)).join('')}</table>
+          <div class="default-gear-label">Included</div>
+          <table class="gear-table">${defaultGear.map(g => _gearRow(g, false)).join('')}</table>
         </div>`;
       }
       return out;
