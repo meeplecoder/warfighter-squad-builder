@@ -339,6 +339,14 @@ def main():
                         kept.append(line)
                     notes = '\n'.join(kept).strip() or None
 
+                # Squad soldiers are always ranged — strip the redundant line
+                if notes and category == 'Soldier' and subtype == 'Squad':
+                    lines_out = [
+                        l for l in notes.split('\n')
+                        if not re.match(r'^Ranged Attacks?\.?$', l.strip(), re.IGNORECASE)
+                    ]
+                    notes = '\n'.join(lines_out).strip() or None
+
                 existing = Card.query.filter_by(number=number).first()
                 if existing:
                     existing.name = name
