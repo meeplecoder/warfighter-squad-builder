@@ -956,13 +956,30 @@ async function showSquadDetail(squadId) {
         })() : '<span class="text-muted">—</span>'}
       </div>
       <div class="squad-mission-box">
-        <div class="squad-box-label">Objective &amp; Situation</div>
-        ${squad.objective
-          ? `<div><span ${cardImageAttr(squad.objective)}>${esc(squad.objective.name)}</span></div>`
-          : `<div class="text-muted" style="font-size:13px">No objective</div>`}
-        ${squad.situation
-          ? `<div style="margin-top:6px"><span class="text-muted" style="font-size:12px">Situation: </span><span ${cardImageAttr(squad.situation)}>${esc(squad.situation.name)}</span></div>`
-          : ''}
+        <div class="squad-box-label">Objective</div>
+        ${squad.objective ? (() => {
+          const o = squad.objective;
+          const attrDefs = [
+            o.entrance_cost != null   ? ['Entry Cost', o.entrance_cost] : null,
+            o.action_cost_hth != null ? ['HtH Cost',   o.action_cost_hth] : null,
+          ].filter(Boolean);
+          const chips = attrDefs.map(([k,v]) =>
+            `<span class="mission-attr">${k} <strong>${v}</strong></span>`).join('');
+          return `
+            <div class="mission-name">
+              <span ${cardImageAttr(o)}>${esc(o.name)}</span>
+              ${o.nation ? `<span class="chip chip-mission" style="margin-left:6px;vertical-align:middle">${esc(o.nation)}</span>` : ''}
+            </div>
+            ${o.module ? `<div class="mission-subtitle">${esc(o.module)}</div>` : ''}
+            ${chips ? `<div class="mission-attrs" style="margin-top:8px">${chips}</div>` : ''}
+            ${squad.situation ? `
+              <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
+                <div class="squad-box-label" style="margin-bottom:4px">Situation</div>
+                <div style="font-size:13px"><span ${cardImageAttr(squad.situation)}>${esc(squad.situation.name)}</span>
+                ${squad.situation.nation ? `<span class="chip chip-mission" style="margin-left:6px;vertical-align:middle">${esc(squad.situation.nation)}</span>` : ''}</div>
+                ${squad.situation.module ? `<div class="mission-subtitle" style="margin-top:2px">${esc(squad.situation.module)}</div>` : ''}
+              </div>` : ''}`;
+        })() : `<div class="text-muted" style="font-size:13px;margin-top:4px">No objective selected</div>`}
       </div>
     </div>
 

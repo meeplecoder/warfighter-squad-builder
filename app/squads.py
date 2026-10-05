@@ -35,8 +35,17 @@ def _build_soldiers_data(payload_soldiers):
 
 def _squad_detail(squad, liked_by_me=False):
     base = squad.to_summary(liked_by_me=liked_by_me)
-    situation = {'id': squad.situation_card.id, 'name': squad.situation_card.name} if squad.situation_card else None
+    sc_card = squad.situation_card
+    situation = {'id': sc_card.id, 'name': sc_card.name, 'nation': sc_card.nation, 'module': sc_card.module} if sc_card else None
     base['situation'] = situation
+    if base['objective'] and squad.objective_card:
+        oc = squad.objective_card
+        base['objective'].update({
+            'nation': oc.nation,
+            'module': oc.module,
+            'entrance_cost': oc.entrance_cost,
+            'action_cost_hth': oc.action_cost_hth,
+        })
     base['notes'] = squad.notes
     # Enrich mission with full card attributes for the detail view
     mc = squad.mission_card
