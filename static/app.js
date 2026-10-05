@@ -1006,10 +1006,10 @@ const CARD_TABLE_COLS = {
   movement:          { header: 'Move', render: c => c.movement != null ? String(c.movement) : '' },
   cover:             { header: 'Cover', render: c => c.cover != null ? String(c.cover) : '' },
   hth:               { header: 'HtH', render: c => c.hth != null ? (c.hth >= 0 ? '+' : '') + c.hth : '' },
-  resources:         { header: 'Budget', render: c => c.resources != null ? String(c.resources) : '' },
+  resources:         { header: 'Budget', render: c => c.resources != null ? c.resources + ' RPs' : '' },
   time:              { header: 'Turns', render: c => c.time != null ? String(c.time) : '' },
   objective_location:{ header: 'Obj@', render: c => c.objective_location != null ? String(c.objective_location) : '' },
-  loadout_modifier:  { header: 'LM', render: c => c.loadout_modifier != null ? (c.loadout_modifier >= 0 ? '+' : '') + c.loadout_modifier : '' },
+  loadout_modifier:  { header: 'LOADOUT', render: c => c.loadout_modifier != null ? (c.loadout_modifier >= 0 ? '+' : '') + c.loadout_modifier : '' },
   entrance_cost:     { header: 'EN', render: c => c.entrance_cost != null ? String(c.entrance_cost) : '', sortKey: 'entrance_cost' },
   action_cost_hth:   { header: 'ACHtH', render: c => c.action_cost_hth != null ? String(c.action_cost_hth) : '', sortKey: 'action_cost_hth' },
 };
