@@ -248,6 +248,17 @@ def main():
 
         print(f'Importing from: {csv_path}')
 
+        # Pre-scan to build prefix→module fallback for rows with empty Module
+        prefix_to_module = {}
+        with open(csv_path, newline='', encoding='utf-8') as f:
+            for _row in csv.DictReader(f):
+                _num = (_row.get('Number') or '').strip()
+                _mod = (_row.get('Module') or '').strip()
+                if _num and _mod and '-' in _num:
+                    _pfx = _num.split('-')[0]
+                    if _pfx not in prefix_to_module:
+                        prefix_to_module[_pfx] = _mod
+
         images_dir = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
             'static', 'card_images'
@@ -270,6 +281,8 @@ def main():
                 stats_str = row.get('Stats') or ''
                 notes = (row.get('Notes') or '').strip() or None
                 module = (row.get('Module') or '').strip()
+                if not module and '-' in number:
+                    module = prefix_to_module.get(number.split('-')[0], '')
                 vassal_module = (row.get('Vassal Module') or '').strip() or None
 
                 if not number or not name:
