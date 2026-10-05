@@ -922,8 +922,15 @@ async function showSquadDetail(squadId) {
     })();
 
     const gearHtml = (() => {
-      const ps_gear = isPS ? ss.gear : [];
-      const nps_gear = isPS ? [] : ss.gear;
+      const _GEAR_TYPE_ORDER = { 'Weapon': 0, 'Equipment': 1, 'Skill': 2, 'Service Record': 3 };
+      const _gearSort = (a, b) => {
+        const ta = _GEAR_TYPE_ORDER[a.card.card_type] ?? 99;
+        const tb = _GEAR_TYPE_ORDER[b.card.card_type] ?? 99;
+        if (ta !== tb) return ta - tb;
+        return a.card.name.localeCompare(b.card.name);
+      };
+      const ps_gear = (isPS ? ss.gear : []).slice().sort(_gearSort);
+      const nps_gear = (isPS ? [] : ss.gear).slice().sort(_gearSort);
       let out = '';
       if (ps_gear.length) {
         out += `<div class="gear-section-label">Gear</div>
