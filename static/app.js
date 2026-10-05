@@ -1170,12 +1170,24 @@ function builderRpTotal() {
   return total;
 }
 
+const SUBTYPE_ORDER = { 'Player': 0, 'NPS': 1, 'Squad': 2, 'Team': 3, 'Vehicle': 4 };
+
+function sortSoldiers() {
+  builderState.soldiers.sort((a, b) => {
+    const ao = SUBTYPE_ORDER[a.card.card_subtype] ?? 99;
+    const bo = SUBTYPE_ORDER[b.card.card_subtype] ?? 99;
+    if (ao !== bo) return ao - bo;
+    return (b.card.resource_cost || 0) - (a.card.resource_cost || 0);
+  });
+}
+
 function addSoldierToBuilder(card) {
   if (builderState.soldiers.some(s => s.card.id === card.id)) {
     alert(card.name + ' is already in this squad.');
     return false;
   }
   builderState.soldiers.push({ card, gear: [], defaultGear: card.associations || [] });
+  sortSoldiers();
   return true;
 }
 
@@ -1533,7 +1545,13 @@ async function loadPickerResults() {
             builderState.pickerMode = null;
             break;
           case 'soldier':
-            addSoldierToBuilder(fullCard);
+            if (addSoldierToBuilder(fullCard)) {
+              renderBuilder();
+              const newIdx = builderState.soldiers.findIndex(s => s.card.id === fullCard.id);
+              const slots = document.querySelectorAll('.soldier-slot');
+              if (slots[newIdx]) slots[newIdx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+              return;
+            }
             break;
           case 'gear':
             addGearToBuilder(fullCard, builderState.pickerTarget);
