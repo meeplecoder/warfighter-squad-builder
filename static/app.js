@@ -929,8 +929,9 @@ async function showSquadDetail(squadId) {
         if (ta !== tb) return ta - tb;
         return a.card.name.localeCompare(b.card.name);
       };
-      const sortedGear = ss.gear.slice().sort(_gearSort);
       const defaultGear = (ss.default_gear || []).slice().sort(_gearSort);
+      const defaultGearNames = new Set(defaultGear.map(g => g.card.name.toLowerCase()));
+      const sortedGear = ss.gear.slice().sort(_gearSort).filter(g => !defaultGearNames.has(g.card.name.toLowerCase()));
       const _gearRow = (g, showCost) => `
         <tr>
           <td><span ${cardImageAttr(g.card)}>${esc(g.card.name)}</span></td>

@@ -27,7 +27,7 @@ except ImportError:
 
 from werkzeug.security import generate_password_hash
 from app import create_app, db
-from app.models import Card, Squad, SquadSoldier, SquadGear, SquadObjective, User
+from app.models import Card, CardAssociation, Squad, SquadSoldier, SquadGear, SquadObjective, User
 
 DEFAULT_NATION = 'US'
 ADMIN_USERNAME = 'admin'
@@ -393,9 +393,14 @@ def main():
                     ss = SquadSoldier(squad_id=squad.id, card_id=entry['card'].id, sort_order=j)
                     db.session.add(ss)
                     db.session.flush()
+                    # Pre-printed card names for this soldier (skip to avoid duplication)
+                    preprinted_names = {
+                        a.child_card.name.lower() for a in
+                        CardAssociation.query.filter_by(parent_card_id=entry['card'].id).all()
+                    }
                     for g in entry['gear']:
                         gc = find_gear_card(g['name'])
-                        if gc:
+                        if gc and gc.name.lower() not in preprinted_names:
                             db.session.add(SquadGear(
                                 squad_soldier_id=ss.id,
                                 card_id=gc.id,
