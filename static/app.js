@@ -870,7 +870,7 @@ async function showSquadDetail(squadId) {
           ${c.cover != null ? `<span>Cover ${c.cover}</span>` : ''}
           ${c.movement != null ? `<span>Move ${c.movement}</span>` : ''}
           ${c.hth != null ? `<span>HtH ${c.hth >= 0 ? '+' : ''}${c.hth}</span>` : ''}
-          ${c.loadout != null ? `<span>Loadout ${c.loadout}</span>` : ''}
+          ${!isPS && c.loadout != null ? `<span>Loadout ${c.loadout}</span>` : ''}
         </div>
         ${loadoutBar}
         ${gearHtml}
