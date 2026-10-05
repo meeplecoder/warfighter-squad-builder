@@ -824,11 +824,11 @@ async function showSquadDetail(squadId) {
     const loadoutBar = (() => {
       if (!isPS || ss.effective_loadout == null) return '';
       const lm = ss.effective_loadout - (c.loadout || 0);
-      const tip = lm !== 0
-        ? `Base: ${c.loadout}, Mission modifier: ${lm >= 0 ? '+' : ''}${lm}`
-        : `Base loadout: ${c.loadout}`;
       const color = lm !== 0 ? ' color:var(--danger);' : '';
-      return `<div class="text-muted" style="font-size:12px;margin-bottom:6px;${color}" data-tooltip="${tip}">Loadout: ${ss.gear_loadout_used}/${ss.effective_loadout}</div>`;
+      const tip = lm !== 0
+        ? `data-tooltip="Base: ${c.loadout}, Mission modifier: ${lm >= 0 ? '+' : ''}${lm}"`
+        : '';
+      return `<div class="text-muted" style="font-size:12px;margin-bottom:6px;${color}" ${tip}>Loadout: ${ss.gear_loadout_used}/${ss.effective_loadout}</div>`;
     })();
 
     const gearHtml = (() => {
