@@ -821,16 +821,9 @@ async function showSquadDetail(squadId) {
     const isPS = c.card_subtype === 'Player';
     const badgeHtml = chipForSubtype(c.card_subtype);
 
-    const loadoutBar = isPS ? (() => {
-      const pct = ss.effective_loadout > 0
-        ? Math.min(100, Math.round(ss.gear_loadout_used / ss.effective_loadout * 100)) : 0;
-      const cls = pct > 100 ? 'over' : pct >= 80 ? 'warn' : '';
-      return `
-        <div class="bar-wrapper">
-          <div class="bar-label">Loadout: ${ss.gear_loadout_used}/${ss.effective_loadout}</div>
-          <div class="bar-track"><div class="bar-fill ${cls}" style="width:${pct}%"></div></div>
-        </div>`;
-    })() : '';
+    const loadoutBar = isPS && ss.effective_loadout != null
+      ? `<div class="text-muted" style="font-size:12px;margin-bottom:6px">Loadout: ${ss.gear_loadout_used}/${ss.effective_loadout}</div>`
+      : '';
 
     const gearHtml = (() => {
       const ps_gear = isPS ? ss.gear : [];
@@ -940,7 +933,7 @@ async function showSquadDetail(squadId) {
     </div>
 
     <h2 style="margin-bottom:12px">Soldiers</h2>
-    ${soldiersHtml || '<p class="text-muted">No soldiers.</p>'}
+    <div class="soldiers-grid">${soldiersHtml || '<p class="text-muted">No soldiers.</p>'}</div>
 
     ${squad.notes ? `<div class="card-notes mt-3"><strong>Notes</strong><br>${esc(squad.notes)}</div>` : ''}
 
