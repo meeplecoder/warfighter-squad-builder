@@ -21,7 +21,8 @@ except ImportError:
 
 from app import create_app, db
 from app.models import Card
-from app.utils import classify_objective_type, classify_objective_family, build_objective_subtype, classify_mission_type
+import json
+from app.utils import classify_objective_type, classify_objective_family, build_objective_subtype, classify_mission_type, parse_hostile_spawn_table
 
 
 # ---------------------------------------------------------------------------
@@ -308,6 +309,8 @@ def main():
                     subtype = classify_mission_type(notes or '', raw_type)
                 stats = parse_stats(stats_str)
                 has_image = check_has_image(images_dir, number)
+                spawn_table = parse_hostile_spawn_table(notes or '')
+                spawn_table_json = json.dumps(spawn_table) if spawn_table else None
 
                 # Parse pre-printed CX (combat experience) and XP from notes
                 combat_xp = 0
@@ -336,6 +339,7 @@ def main():
                     existing.notes = notes
                     existing.vassal_module = vassal_module
                     existing.has_image = has_image
+                    existing.hostile_spawn_table = spawn_table_json
                     existing.cx = combat_xp
                     existing.xp = soldier_xp
                     for col, val in stats.items():
@@ -354,6 +358,7 @@ def main():
                         notes=notes,
                         vassal_module=vassal_module,
                         has_image=has_image,
+                        hostile_spawn_table=spawn_table_json,
                         cx=combat_xp,
                         xp=soldier_xp,
                         **{k: v for k, v in stats.items()},

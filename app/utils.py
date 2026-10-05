@@ -280,3 +280,40 @@ def theater_from_raw_type(raw_type: str) -> str:
     if m:
         return m.group(1).strip()
     return ''
+
+
+# ---------------------------------------------------------------------------
+# Hostile spawn table
+# ---------------------------------------------------------------------------
+
+def parse_hostile_spawn_table(notes: str) -> list | None:
+    """Extract the Hostiles spawn table from card notes.
+
+    Looks for a line containing only 'Hostiles' then reads subsequent
+    lines of the form '<range> <count>' (e.g. '29-  4', '30-49  5', '125+  12').
+
+    Returns a list of {'range': str, 'count': int} dicts, or None if not found.
+    """
+    if not notes:
+        return None
+    lines = notes.split('\n')
+    rows = []
+    in_table = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped == 'Hostiles':
+            in_table = True
+            continue
+        if not in_table:
+            continue
+        if not stripped:
+            if rows:
+                break
+            continue
+        # Match patterns: '29-', '30-49', '125+'  followed by whitespace and a digit
+        m = re.match(r'^(\d+[-+]\d*)\s+(\d+)$', stripped)
+        if m:
+            rows.append({'range': m.group(1), 'count': int(m.group(2))})
+        elif rows:
+            break  # non-matching line after we've started = end of table
+    return rows if rows else None

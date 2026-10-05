@@ -590,6 +590,27 @@ async function showCardDetail(idOrNumber) {
         <div class="card-name">${esc(card.name)}</div>
         <div class="stat-grid">${statItems || '<span class="text-muted">No numeric stats.</span>'}</div>
         ${card.notes ? `<div class="card-notes">${esc(card.notes)}</div>` : ''}
+        ${card.hostile_spawn_table ? (() => {
+          const rows = card.hostile_spawn_table;
+          const maxCount = Math.max(...rows.map(r => r.count));
+          return `<div class="spawn-table-wrap">
+            <div class="spawn-table-title">Hostiles Spawn Table</div>
+            <table class="spawn-table">
+              <thead><tr><th>Team RP</th><th>Hostiles</th><th></th></tr></thead>
+              <tbody>
+                ${rows.map(r => {
+                  const pct = Math.round((r.count / maxCount) * 100);
+                  const label = r.range.endsWith('-') ? '≤ ' + r.range.slice(0, -1) : r.range;
+                  return `<tr>
+                    <td class="spawn-rp">${label}</td>
+                    <td class="spawn-count">${r.count}</td>
+                    <td class="spawn-bar-cell"><div class="spawn-bar" style="width:${pct}%"></div></td>
+                  </tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>`;
+        })() : ''}
         ${assocTable}
         ${addBtn}
       </div>

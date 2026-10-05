@@ -71,6 +71,14 @@ def create_app():
             except Exception:
                 pass  # Column already exists
 
+            try:
+                conn.execute(db.text(
+                    "ALTER TABLE cards ADD COLUMN hostile_spawn_table TEXT"
+                ))
+                conn.commit()
+            except Exception:
+                pass  # Column already exists
+
             # Add soldier_xp column and populate from notes (XP lines)
             try:
                 conn.execute(db.text(
