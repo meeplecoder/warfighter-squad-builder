@@ -959,14 +959,24 @@ async function showSquadDetail(squadId) {
         <div class="squad-box-label">Objective</div>
         ${squad.objective ? (() => {
           const o = squad.objective;
+          const OBJ_TYPE_COLOR = {
+            Eliminate: 'var(--danger)',
+            Destroy:   '#b45309',
+            Hold:      'var(--accent)',
+            Escape:    '#7c3aed',
+            Rescue:    '#0e7490',
+          };
+          const typeColor = OBJ_TYPE_COLOR[o.objective_type] || 'var(--text-muted)';
           const attrDefs = [
-            o.entrance_cost != null   ? ['Entry Cost', o.entrance_cost] : null,
+            o.theater         != null ? ['Theater',    o.theater]       : null,
+            o.entrance_cost   != null ? ['Entry Cost', o.entrance_cost] : null,
             o.action_cost_hth != null ? ['HtH Cost',   o.action_cost_hth] : null,
           ].filter(Boolean);
           const chips = attrDefs.map(([k,v]) =>
             `<span class="mission-attr">${k} <strong>${v}</strong></span>`).join('');
           return `
             <div class="mission-name">
+              ${o.objective_type ? `<span class="obj-type-badge" style="background:${typeColor}">${esc(o.objective_type)}</span>` : ''}
               <span ${cardImageAttr(o)}>${esc(o.name)}</span>
               ${o.nation ? `<span class="chip chip-mission" style="margin-left:6px;vertical-align:middle">${esc(o.nation)}</span>` : ''}
             </div>
@@ -1373,14 +1383,24 @@ function renderBuilder() {
         <div class="builder-section">
           <div class="builder-section-title">Objective <span class="text-muted">(optional)</span></div>
           ${builderState.objectiveCard
-            ? `<div class="flex justify-between items-center">
-                <span ${cardImageAttr(builderState.objectiveCard)}>${esc(builderState.objectiveCard.name)}</span>
-                <button class="btn btn-sm btn-ghost" id="change-obj-btn">Change</button>
-               </div>
-               <div class="text-muted" style="font-size:12px;margin-top:4px">${[
-                 builderState.objectiveCard.entrance_cost != null ? `Entry Cost: ${builderState.objectiveCard.entrance_cost}` : null,
-                 builderState.objectiveCard.action_cost_hth != null ? `HtH Cost: ${builderState.objectiveCard.action_cost_hth}` : null,
-               ].filter(Boolean).join(' · ')}</div>`
+            ? (() => {
+                const oc = builderState.objectiveCard;
+                const OBJ_TYPE_COLOR = { Eliminate:'var(--danger)', Destroy:'#b45309', Hold:'var(--accent)', Escape:'#7c3aed', Rescue:'#0e7490' };
+                const tc = OBJ_TYPE_COLOR[oc.objective_type] || 'var(--text-muted)';
+                const attrs = [
+                  oc.theater          ? `${oc.theater}` : null,
+                  oc.entrance_cost != null ? `Entry: ${oc.entrance_cost}` : null,
+                  oc.action_cost_hth != null ? `HtH: ${oc.action_cost_hth}` : null,
+                ].filter(Boolean).join(' · ');
+                return `<div class="flex justify-between items-center">
+                  <span>
+                    ${oc.objective_type ? `<span class="obj-type-badge" style="background:${tc}">${esc(oc.objective_type)}</span>` : ''}
+                    <span ${cardImageAttr(oc)}>${esc(oc.name)}</span>
+                  </span>
+                  <button class="btn btn-sm btn-ghost" id="change-obj-btn">Change</button>
+                </div>
+                ${attrs ? `<div class="text-muted" style="font-size:12px;margin-top:4px">${attrs}</div>` : ''}`;
+              })()
             : builderState.missionCard
               ? `<button class="btn btn-ghost" id="pick-obj-btn">Select an Objective…</button>`
               : `<span class="text-muted">Select a mission first.</span>`}

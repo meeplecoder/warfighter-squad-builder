@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from flask_login import UserMixin
 from app import db
+from app.utils import classify_objective_type
 
 
 def now_utc():
@@ -75,6 +76,9 @@ class Card(db.Model):
 
     def to_card_detail(self):
         d = self.to_card_object()
+        if self.card_category == 'Objective':
+            d['objective_type'] = classify_objective_type(self.notes or '')
+            d['theater'] = self.card_subtype
         d.update({
             'notes': self.notes,
             'raw_type': self.raw_type,

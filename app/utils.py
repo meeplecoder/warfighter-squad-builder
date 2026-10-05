@@ -91,3 +91,70 @@ def nation_filter_clause(nation_base: str, nation_col):
             clauses.append(nation_col.startswith(p + ' '))
 
     return or_(*clauses)
+
+
+# Objective type classification from notes text
+_SKIP_LINES = frozenset({
+    'structure', 'nature', 'elevated', 'isolated', 'on site',
+    'collateral damage', 'close quarters combat', 'fallback position',
+    'right flank', 'always reinforces', 'protected', 'fearless',
+    'wire', 'inanimate',
+})
+
+def classify_objective_type(notes: str) -> str:
+    """Derive objective mission type from notes text.
+    Returns one of: 'Escape', 'Hold', 'Destroy', 'Rescue', 'Eliminate'.
+    """
+    if not notes:
+        return 'Eliminate'
+
+    text = notes.lower()
+
+    # Escape Mission (highest priority)
+    if 'escape mission' in text:
+        return 'Escape'
+
+    # Holding / Hold the Line missions
+    if 'holding action mission' in text or 'hold the line mission' in text:
+        return 'Hold'
+
+    # Rescue: capture VIP via HtH
+    if re.search(r'capture the .{1,40}?: inflict', text):
+        return 'Rescue'
+    # Rescue: deliver item/person to objective
+    if re.search(r'\bdeliver\b.{0,50}\bthis objective\b', text):
+        return 'Rescue'
+    # Rescue: escort/protect a specific person
+    if re.search(r'protecting the (?:vip|fugitive|pilot|general|minister)\b', text):
+        return 'Rescue'
+    # Rescue: find named item/person ("Find: Agent Z", "Find: 'Manuscript'")
+    # Exclude "Find: 2 RP of Grenades" (gear rewards that start with a digit)
+    if re.search(r'find:\s*["\']?[^\d\s]', text):
+        return 'Rescue'
+
+    # Line-by-line scan for primary objective
+    for line in notes.split('\n'):
+        ll = line.strip().lower().rstrip('.')
+        if not ll:
+            continue
+        if ll in _SKIP_LINES:
+            continue
+        if ll.startswith(('environ', 'hostiles', 'cold ', 'hot ', 'fever ', '+', 'add ', 'subtract ', 'always ')):
+            continue
+        if re.match(r'\d+[-+]', ll):  # hostile table
+            break
+
+        if ll.startswith('keep clear'):
+            return 'Hold'
+        if ll.startswith('at any time, have no hostiles'):
+            return 'Hold'
+        if ll.startswith('destroy') or (ll.startswith('clear the ') and ':' in ll):
+            return 'Destroy'
+        if 'defuse' in ll or 'explosives (pick' in ll or 'pumps (pick' in ll:
+            return 'Destroy'
+        if 'eliminate' in ll or 'eliminated' in ll:
+            return 'Eliminate'
+        if 'have no hostiles in play' in ll or 'have no hostiles in this' in ll:
+            return 'Eliminate'
+
+    return 'Eliminate'

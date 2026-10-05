@@ -391,6 +391,18 @@ h3 { font-size: 1rem; font-weight: 600; }
   font-size: 11px; color: var(--text-muted);
 }
 .mission-attr strong { color: var(--text); font-weight: 600; }
+.obj-type-badge {
+  display: inline-block;
+  color: #fff;
+  border-radius: 3px;
+  padding: 1px 7px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  vertical-align: middle;
+  margin-right: 6px;
+}
 .soldiers-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
