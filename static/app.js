@@ -1450,7 +1450,7 @@ function renderBuilder() {
     const dg = s.defaultGear || [];
     const defaultGearHtml = dg.length > 0 ? `
       <div class="default-gear-section">
-        <div class="default-gear-label">Pre-printed (included)</div>
+        <div class="default-gear-label">Included:</div>
         ${dg.map(g => `
           <div class="gear-item gear-item-default">
             ${g.quantity > 1 ? `<span class="gear-qty">${g.quantity}×</span>` : ''}
