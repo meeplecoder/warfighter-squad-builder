@@ -1392,6 +1392,7 @@ function renderBuilder() {
   }
 
   const _savedScrollY = document.querySelector('.builder-left')?.scrollTop ?? 0;
+  const _savedPickerScrollY = document.querySelector('.builder-right')?.scrollTop ?? 0;
   const budget = builderState.missionCard?.resources || 0;
   const rpTotal = builderRpTotal();
   const rpRemaining = budget - rpTotal;
@@ -1554,7 +1555,7 @@ function renderBuilder() {
                     </div>`;
                   }
                 }).join('');
-                const addMoreBtn = !isSingle && builderState.missionCard
+                const addMoreBtn = builderState.missionCard
                   ? `<button class="btn btn-ghost btn-sm" id="add-obj-btn" style="margin-top:6px">+ Add another…</button>`
                   : '';
                 return rows + addMoreBtn;
@@ -1681,8 +1682,13 @@ function renderBuilder() {
   const _leftPanel = document.querySelector('.builder-left');
   if (_leftPanel) _leftPanel.scrollTop = _savedScrollY;
 
-  // Load picker results
-  if (builderState.pickerMode) loadPickerResults();
+  // Load picker results and restore picker panel scroll after results render
+  if (builderState.pickerMode) {
+    loadPickerResults().then(() => {
+      const _rightPanel = document.querySelector('.builder-right');
+      if (_rightPanel) _rightPanel.scrollTop = _savedPickerScrollY;
+    });
+  }
 }
 
 function _pickerTitle(mode) {
