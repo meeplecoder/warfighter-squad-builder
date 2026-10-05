@@ -931,29 +931,26 @@ async function showSquadDetail(squadId) {
       };
       const ps_gear = (isPS ? ss.gear : []).slice().sort(_gearSort);
       const nps_gear = (isPS ? [] : ss.gear).slice().sort(_gearSort);
+      const _gearRow = (g, showCost) => `
+        <tr>
+          <td><span ${cardImageAttr(g.card)}>${esc(g.card.name)}</span></td>
+          <td class="text-muted">${esc(g.card.card_type)}</td>
+          ${showCost ? `<td class="text-muted">${g.card.resource_cost != null ? g.card.resource_cost + ' RP' : ''}</td>
+          <td class="text-muted">${g.loadout_weight != null ? 'L' + g.loadout_weight : ''}</td>
+          ${g.quantity > 1 ? `<td>×${g.quantity}</td>` : '<td></td>'}` : ''}
+        </tr>`;
       let out = '';
       if (ps_gear.length) {
-        out += `<div class="gear-section-label">Gear</div>
-          <table class="gear-table">` +
-          ps_gear.map(g => `
-            <tr>
-              <td><span ${cardImageAttr(g.card)}>${esc(g.card.name)}</span></td>
-              <td class="text-muted">${esc(g.card.card_type)}</td>
-              <td class="text-muted">${g.card.resource_cost != null ? g.card.resource_cost + ' RP' : ''}</td>
-              <td class="text-muted">${g.loadout_weight != null ? 'L' + g.loadout_weight : ''}</td>
-              ${g.quantity > 1 ? `<td>×${g.quantity}</td>` : '<td></td>'}
-            </tr>`).join('') +
-          `</table>`;
+        out += `<div class="default-gear-section">
+          <div class="default-gear-label">Gear</div>
+          <table class="gear-table">${ps_gear.map(g => _gearRow(g, true)).join('')}</table>
+        </div>`;
       }
       if (nps_gear.length) {
-        out += `<div class="gear-section-label">Default gear</div>
-          <table class="gear-table">` +
-          nps_gear.map(g => `
-            <tr>
-              <td><span ${cardImageAttr(g.card)}>${esc(g.card.name)}</span></td>
-              <td class="text-muted">${esc(g.card.card_type)}</td>
-            </tr>`).join('') +
-          `</table>`;
+        out += `<div class="default-gear-section">
+          <div class="default-gear-label">Default gear</div>
+          <table class="gear-table">${nps_gear.map(g => _gearRow(g, false)).join('')}</table>
+        </div>`;
       }
       return out;
     })();
