@@ -940,7 +940,7 @@ async function showSquadDetail(squadId) {
               <td><span ${cardImageAttr(g.card)}>${esc(g.card.name)}</span></td>
               <td class="text-muted">${esc(g.card.card_type)}</td>
               <td class="text-muted">${g.card.resource_cost != null ? g.card.resource_cost + ' RP' : ''}</td>
-              <td class="text-muted">${g.loadout_weight != null ? 'L' + g.loadout_weight : '(no load)'}</td>
+              <td class="text-muted">${g.loadout_weight != null ? 'L' + g.loadout_weight : ''}</td>
               ${g.quantity > 1 ? `<td>×${g.quantity}</td>` : '<td></td>'}
             </tr>`).join('') +
           `</table>`;
