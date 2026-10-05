@@ -468,50 +468,29 @@ h3 { font-size: 1rem; font-weight: 600; }
 
 /* ---- Hostile spawn table ------------------------------------------- */
 .spawn-table-wrap {
-  margin-top: 16px;
+  display: inline-block;
+  margin-top: 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
 }
 .spawn-table-title {
-  background: var(--surface2);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: .06em;
   text-transform: uppercase;
   color: var(--text-muted);
-  padding: 6px 12px;
+  padding: 4px 10px;
   border-bottom: 1px solid var(--border);
+  background: var(--surface2);
 }
 .spawn-table {
-  width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 12px;
 }
-.spawn-table thead th {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  padding: 6px 12px;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
-}
-.spawn-table thead th:last-child { width: 50%; }
 .spawn-table tbody tr:not(:last-child) { border-bottom: 1px solid var(--border); }
-.spawn-table tbody tr:hover { background: var(--surface2); }
-.spawn-rp  { padding: 6px 12px; color: var(--text-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.spawn-count { padding: 6px 8px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.spawn-bar-cell { padding: 6px 12px 6px 4px; width: 50%; }
-.spawn-bar {
-  height: 10px;
-  border-radius: 3px;
-  background: var(--danger, #ef4444);
-  opacity: .7;
-  min-width: 4px;
-  transition: width .2s;
-}
+.spawn-rp    { padding: 3px 10px 3px 8px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.spawn-count { padding: 3px 8px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
 
 /* ---- Author notes -------------------------------------------------- */
 .squad-author-notes { margin-top: 28px; }
