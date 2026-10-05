@@ -415,3 +415,50 @@ def strip_health_actions_table(notes: str) -> str | None:
         result.append(line)
     cleaned = '\n'.join(result).strip()
     return cleaned or None
+
+
+# ---------------------------------------------------------------------------
+# Hardy markers
+# ---------------------------------------------------------------------------
+
+_HARDY_RE = re.compile(
+    r'^(\+?\d*)\s*Hardy\s*\((\w+)\)\.?$',
+    re.IGNORECASE,
+)
+
+
+def parse_hardy_markers(notes: str) -> list | None:
+    """Extract Hardy marker lines from soldier notes.
+
+    Handles:
+      '2 Hardy (Cold).'   → {'count': 2, 'type': 'Cold'}
+      'Hardy (Hot).'      → {'count': 1, 'type': 'Hot'}
+      '+4 Hardy (Hot).'   → {'count': 4, 'type': 'Hot', 'modifier': '+'}
+
+    Returns a list of dicts, or None if none found.
+    """
+    if not notes or 'Hardy' not in notes:
+        return None
+    results = []
+    for line in notes.split('\n'):
+        m = _HARDY_RE.match(line.strip())
+        if not m:
+            continue
+        raw_count, env_type = m.group(1), m.group(2)
+        entry = {'type': env_type.capitalize()}
+        if raw_count.startswith('+'):
+            entry['count'] = int(raw_count[1:]) if raw_count[1:] else 1
+            entry['modifier'] = '+'
+        else:
+            entry['count'] = int(raw_count) if raw_count else 1
+        results.append(entry)
+    return results if results else None
+
+
+def strip_hardy_markers(notes: str) -> str | None:
+    """Remove Hardy marker lines from notes text."""
+    if not notes or 'Hardy' not in notes:
+        return notes
+    kept = [l for l in notes.split('\n') if not _HARDY_RE.match(l.strip())]
+    cleaned = '\n'.join(kept).strip()
+    return cleaned or None

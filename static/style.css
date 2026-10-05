@@ -503,6 +503,18 @@ h3 { font-size: 1rem; font-weight: 600; }
 .spawn-rp    { padding: 3px 10px 3px 8px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .spawn-count { padding: 3px 8px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
 
+/* ---- Hardy markers ------------------------------------------------- */
+.hardy-badge {
+  display: inline-block;
+  margin: 6px 6px 0 0;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--hardy-color, var(--text-muted));
+}
+
 /* ---- Author notes -------------------------------------------------- */
 .squad-author-notes { margin-top: 28px; }
 

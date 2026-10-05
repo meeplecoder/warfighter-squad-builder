@@ -22,7 +22,7 @@ except ImportError:
 from app import create_app, db
 from app.models import Card
 import json
-from app.utils import classify_objective_type, classify_objective_family, build_objective_subtype, classify_mission_type, parse_hostile_spawn_table, strip_hostile_spawn_table, parse_health_actions_table, strip_health_actions_table
+from app.utils import classify_objective_type, classify_objective_family, build_objective_subtype, classify_mission_type, parse_hostile_spawn_table, strip_hostile_spawn_table, parse_health_actions_table, strip_health_actions_table, parse_hardy_markers, strip_hardy_markers
 
 
 # ---------------------------------------------------------------------------
@@ -339,6 +339,12 @@ def main():
                         kept.append(line)
                     notes = '\n'.join(kept).strip() or None
 
+                # Hardy markers
+                hardy = parse_hardy_markers(notes or '')
+                hardy_json = json.dumps(hardy) if hardy else None
+                if hardy:
+                    notes = strip_hardy_markers(notes)
+
                 # Squad soldiers are always ranged — strip the redundant line
                 if notes and category == 'Soldier' and subtype == 'Squad':
                     lines_out = [
@@ -361,6 +367,7 @@ def main():
                     existing.has_image = has_image
                     existing.hostile_spawn_table = spawn_table_json
                     existing.health_actions_table = ha_table_json
+                    existing.hardy_markers = hardy_json
                     existing.cx = combat_xp
                     existing.xp = soldier_xp
                     for col, val in stats.items():
@@ -381,6 +388,7 @@ def main():
                         has_image=has_image,
                         hostile_spawn_table=spawn_table_json,
                         health_actions_table=ha_table_json,
+                        hardy_markers=hardy_json,
                         cx=combat_xp,
                         xp=soldier_xp,
                         **{k: v for k, v in stats.items()},

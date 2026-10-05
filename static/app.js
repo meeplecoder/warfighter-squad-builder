@@ -589,6 +589,14 @@ async function showCardDetail(idOrNumber) {
         </div>
         <div class="card-name">${esc(card.name)}</div>
         <div class="stat-grid">${statItems || '<span class="text-muted">No numeric stats.</span>'}</div>
+        ${card.hardy_markers ? (() => {
+          const ENV_COLOR = { Cold: '#0369a1', Hot: '#b45309' };
+          return card.hardy_markers.map(h => {
+            const color = ENV_COLOR[h.type] || 'var(--text-muted)';
+            const label = h.modifier === '+' ? `+${h.count}` : `${h.count}×`;
+            return `<span class="hardy-badge" style="--hardy-color:${color}">${label} Hardy (${esc(h.type)})</span>`;
+          }).join('');
+        })() : ''}
         ${card.health_actions_table ? (() => {
           const { headers, rows } = card.health_actions_table;
           return `<div class="spawn-table-wrap" style="margin-bottom:8px">
