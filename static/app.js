@@ -1197,6 +1197,7 @@ function renderBuilder() {
     return;
   }
 
+  const _savedScrollY = window.scrollY;
   const budget = builderState.missionCard?.resources || 0;
   const rpTotal = builderRpTotal();
   const rpRemaining = budget - rpTotal;
@@ -1423,6 +1424,9 @@ function renderBuilder() {
   main.querySelector('#save-draft-btn')?.addEventListener('click', () => saveSquad('draft'));
   main.querySelector('#publish-squad-btn')?.addEventListener('click', () => saveSquad('published'));
   main.querySelector('#validate-btn')?.addEventListener('click', validateSquad);
+
+  // Restore scroll position (re-render must not jump the user back to the top)
+  window.scrollTo(0, _savedScrollY);
 
   // Load picker results
   if (builderState.pickerMode) loadPickerResults();
