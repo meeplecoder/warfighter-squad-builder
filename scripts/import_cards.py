@@ -254,6 +254,8 @@ def main():
             for _row in csv.DictReader(f):
                 _num = (_row.get('Number') or '').strip()
                 _mod = (_row.get('Module') or '').strip()
+                if _mod.startswith('Extension#'):
+                    _mod = _mod[len('Extension'):]
                 if _num and _mod and '-' in _num:
                     _pfx = _num.split('-')[0]
                     if _pfx not in prefix_to_module:
@@ -281,6 +283,8 @@ def main():
                 stats_str = row.get('Stats') or ''
                 notes = (row.get('Notes') or '').strip() or None
                 module = (row.get('Module') or '').strip()
+                if module.startswith('Extension#'):
+                    module = module[len('Extension'):]
                 if not module and '-' in number:
                     module = prefix_to_module.get(number.split('-')[0], '')
                 vassal_module = (row.get('Vassal Module') or '').strip() or None
