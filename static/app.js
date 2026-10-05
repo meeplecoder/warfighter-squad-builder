@@ -1433,7 +1433,18 @@ function renderBuilder() {
                   'Escape':                '#7c3aed',
                   'Kill Specified Hostile':'#0e7490',
                 };
-                const tc = OBJ_TYPE_COLOR[oc.objective_type] || 'var(--text-muted)';
+                const OBJ_FAMILY_COLOR2 = {
+                  'Fallback':'#92400e','Right Flank':'#166534','Shore':'#075985',
+                  'Fortification':'#7f1d1d','Airborne':'#3730a3','Embedded':'#4a044e',
+                };
+                // card_subtype = "Family / Mechanic" or just one of them
+                const ocFamily = oc.objective_family || '';
+                const ocSubtype = oc.card_subtype || '';
+                const ocMechanic = ocFamily && ocSubtype.startsWith(ocFamily + ' / ')
+                  ? ocSubtype.slice(ocFamily.length + 3)
+                  : (ocFamily ? '' : ocSubtype);
+                const tc = OBJ_TYPE_COLOR[ocMechanic] || 'var(--text-muted)';
+                const ocFamilyColor = OBJ_FAMILY_COLOR2[ocFamily];
                 const attrs = [
                   oc.theater          ? `${oc.theater}` : null,
                   oc.entrance_cost != null ? `Entry: ${oc.entrance_cost}` : null,
@@ -1441,7 +1452,8 @@ function renderBuilder() {
                 ].filter(Boolean).join(' · ');
                 return `<div class="flex justify-between items-center">
                   <span>
-                    ${oc.objective_type ? `<span class="obj-type-badge" style="background:${tc}">${esc(oc.objective_type)}</span>` : ''}
+                    ${ocFamily && ocFamilyColor ? `<span class="obj-type-badge" style="background:${ocFamilyColor}">${esc(ocFamily)}</span>` : ''}
+                    ${ocMechanic ? `<span class="obj-type-badge" style="background:${tc}">${esc(ocMechanic)}</span>` : ''}
                     <span ${cardImageAttr(oc)}>${esc(oc.name)}</span>
                   </span>
                   <span style="display:flex;gap:4px">

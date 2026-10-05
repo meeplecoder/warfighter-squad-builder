@@ -202,6 +202,20 @@ def classify_objective_family(notes: str, raw_type: str, module: str) -> str:
     return ''
 
 
+def build_objective_subtype(mechanic: str, family: str) -> str:
+    """Combine objective family and mechanic into the canonical card_subtype string.
+
+    Examples:
+      ('Eliminate Hostiles', '')        → 'Eliminate Hostiles'
+      ('Eliminate Hostiles', 'Shore')   → 'Shore / Eliminate Hostiles'
+      ('', 'Fallback')                  → 'Fallback'
+      ('Kill Specified Hostile', 'Fortification') → 'Fortification / Kill Specified Hostile'
+    """
+    if family and mechanic:
+        return f"{family} / {mechanic}"
+    return family or mechanic or ''
+
+
 def classify_mission_type(notes: str, raw_type: str = '') -> str:
     """Derive mission structure type from notes and raw_type.
 

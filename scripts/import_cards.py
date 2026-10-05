@@ -21,7 +21,7 @@ except ImportError:
 
 from app import create_app, db
 from app.models import Card
-from app.utils import classify_objective_type, classify_objective_family, classify_mission_type
+from app.utils import classify_objective_type, classify_objective_family, build_objective_subtype, classify_mission_type
 
 
 # ---------------------------------------------------------------------------
@@ -293,8 +293,9 @@ def main():
                 obj_family = None
                 # Derive semantic subtype from notes (overrides raw_type-based subtype)
                 if category == 'Objective':
-                    subtype = classify_objective_type(notes or '')
+                    mechanic = classify_objective_type(notes or '')
                     obj_family = classify_objective_family(notes or '', raw_type, module)
+                    subtype = build_objective_subtype(mechanic, obj_family)
                 elif category == 'Mission':
                     subtype = classify_mission_type(notes or '', raw_type)
                 stats = parse_stats(stats_str)

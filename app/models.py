@@ -79,8 +79,17 @@ class Card(db.Model):
     def to_card_detail(self):
         d = self.to_card_object()
         if self.card_category == 'Objective':
-            d['objective_type'] = self.card_subtype
-            d['objective_family'] = self.objective_family
+            family = self.objective_family or ''
+            combined = self.card_subtype or ''
+            # Extract mechanic from "Family / Mechanic" combined subtype
+            if family and combined.startswith(family + ' / '):
+                mechanic = combined[len(family) + 3:]
+            elif not family:
+                mechanic = combined
+            else:
+                mechanic = ''  # structural objective (Fallback / Right Flank)
+            d['objective_type'] = mechanic
+            d['objective_family'] = family
             d['theater'] = theater_from_raw_type(self.raw_type or '')
         elif self.card_category == 'Mission':
             d['mission_type'] = self.card_subtype

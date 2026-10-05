@@ -41,12 +41,20 @@ def _squad_detail(squad, liked_by_me=False):
     base['situation'] = situation
     if base['objective'] and squad.objective_card:
         oc = squad.objective_card
+        family = oc.objective_family or ''
+        combined = oc.card_subtype or ''
+        if family and combined.startswith(family + ' / '):
+            mechanic = combined[len(family) + 3:]
+        elif not family:
+            mechanic = combined
+        else:
+            mechanic = ''
         base['objective'].update({
             'nation': oc.nation,
             'module': oc.module,
             'theater': theater_from_raw_type(oc.raw_type or ''),
-            'objective_type': oc.card_subtype,
-            'objective_family': oc.objective_family,
+            'objective_type': mechanic,
+            'objective_family': family,
             'entrance_cost': oc.entrance_cost,
             'action_cost_hth': oc.action_cost_hth,
         })
