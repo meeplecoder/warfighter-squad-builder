@@ -932,7 +932,7 @@ async function showSquadDetail(squadId) {
           const rem = squad.computed.rp_remaining;
           const over = rem < 0;
           const pct = budget > 0 ? Math.min(100, Math.round(rp / budget * 100)) : 0;
-          const subtitle = [m.nation ? esc(m.nation) : null, m.module ? esc(m.module) : null].filter(Boolean).join(' · ');
+          const subtitle = m.module ? esc(m.module) : null;
           const attrDefs = [
             m.time != null              ? ['Turns',   m.time] : null,
             m.objective_location != null ? ['Obj.Loc', m.objective_location] : null,
@@ -942,8 +942,11 @@ async function showSquadDetail(squadId) {
           const chips = attrDefs.map(([k,v]) =>
             `<span class="mission-attr">${k} <strong>${v}</strong></span>`).join('');
           return `
-            <div class="mission-name"><span ${cardImageAttr(m)}>${esc(m.name)}</span></div>
-            ${subtitle ? `<div class="mission-subtitle">${subtitle}</div>` : ''}
+            <div class="mission-name">
+              <span ${cardImageAttr(m)}>${esc(m.name)}</span>
+              ${m.nation ? `<span class="chip chip-mission" style="margin-left:6px;vertical-align:middle">${esc(m.nation)}</span>` : ''}
+            </div>
+            ${m.module ? `<div class="mission-subtitle">${esc(m.module)}</div>` : ''}
             <div class="mission-rp-track"><div class="mission-rp-fill ${over ? 'over' : ''}" style="width:${pct}%"></div></div>
             <div class="mission-rp-row">
               <span class="${over ? 'text-danger' : ''}">${rp} / ${budget} RP</span>
