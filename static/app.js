@@ -1197,7 +1197,7 @@ function renderBuilder() {
     return;
   }
 
-  const _savedScrollY = window.scrollY;
+  const _savedScrollY = document.querySelector('.builder-left')?.scrollTop ?? 0;
   const budget = builderState.missionCard?.resources || 0;
   const rpTotal = builderRpTotal();
   const rpRemaining = budget - rpTotal;
@@ -1426,7 +1426,8 @@ function renderBuilder() {
   main.querySelector('#validate-btn')?.addEventListener('click', validateSquad);
 
   // Restore scroll position (re-render must not jump the user back to the top)
-  window.scrollTo(0, _savedScrollY);
+  const _leftPanel = document.querySelector('.builder-left');
+  if (_leftPanel) _leftPanel.scrollTop = _savedScrollY;
 
   // Load picker results
   if (builderState.pickerMode) loadPickerResults();
