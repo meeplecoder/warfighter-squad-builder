@@ -1061,7 +1061,7 @@ async function showSquadDetail(squadId) {
         })() : '<span class="text-muted">—</span>'}
       </div>
       <div class="squad-mission-box">
-        <div class="squad-box-label">Objective${squad.objectives?.length > 1 ? 's' : ''}</div>
+        <div class="squad-box-label">Suggested Objective${squad.objectives?.length > 1 ? 's' : ''}</div>
         ${(() => {
           const OBJ_TYPE_COLOR = {
             'Eliminate Hostiles':     'var(--danger)',
@@ -1524,7 +1524,7 @@ function renderBuilder() {
         </div>
 
         <div class="builder-section">
-          <div class="builder-section-title">Objectives <span class="text-muted">(optional)</span></div>
+          <div class="builder-section-title">Suggested Objectives <span class="text-muted">(optional)</span></div>
           ${builderState.objectiveCards.length > 0
             ? (() => {
                 const isSingle = builderState.objectiveCards.length === 1;
