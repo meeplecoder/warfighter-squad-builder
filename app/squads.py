@@ -11,6 +11,7 @@ squads_bp = Blueprint('squads', __name__)
 
 SORT_COLS = {
     'created_at': 'squads.created_at',
+    'updated_at': 'squads.updated_at',
     'name': 'squads.name',
     'rp_total': 'squads.rp_total',
     'likes_count': 'squads.likes_count',
@@ -192,6 +193,7 @@ def _save_squad(squad, data, soldiers_payload):
 @squads_bp.route('/', methods=['GET'])
 def list_squads():
     user_id = request.args.get('user_id', type=int)
+    q = request.args.get('q', '').strip()
     nation = request.args.get('nation', '').strip()
     mission_id = request.args.get('mission_id', type=int)
     liked = request.args.get('liked', 'false').lower() == 'true'
@@ -213,6 +215,8 @@ def list_squads():
         # Everyone else only sees published squads
         query = query.filter(Squad.status == 'published')
 
+    if q:
+        query = query.filter(Squad.name.ilike(f'%{q}%'))
     if user_id:
         query = query.filter(Squad.user_id == user_id)
     if nation:
@@ -225,6 +229,7 @@ def list_squads():
 
     sort_attr = {
         'created_at': Squad.created_at,
+        'updated_at': Squad.updated_at,
         'name': Squad.name,
         'rp_total': Squad.rp_total,
         'likes_count': Squad.likes_count,

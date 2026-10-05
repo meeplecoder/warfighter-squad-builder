@@ -681,8 +681,8 @@ async function showCardDetail(idOrNumber) {
 // VIEW: Squads List
 // ---------------------------------------------------------------------------
 let squadsActiveTab = 'community';  // 'my' | 'community'
-let mySquadFilters = { sort: 'created_at', order: 'desc', page: 1 };
-let communityFilters = { liked: false, sort: 'created_at', order: 'desc', page: 1 };
+let mySquadFilters = { q: '', sort: 'updated_at', order: 'desc', page: 1 };
+let communityFilters = { q: '', liked: false, sort: 'created_at', order: 'desc', page: 1 };
 
 register('squads', async function(subId) {
   if (subId === 'new') { renderBuilder(null); return; }
@@ -737,6 +737,12 @@ async function loadSquadsTab() {
   }
 }
 
+function _squadSortTh(label, col, f) {
+  const active = f.sort === col;
+  const arrow = active ? (f.order === 'asc' ? ' ▲' : ' ▼') : '';
+  return `<th class="sort-header${active ? ' sort-active' : ''}" data-sort="${col}">${esc(label)}${arrow}</th>`;
+}
+
 async function renderMySquads(containerEl) {
   const f = mySquadFilters;
   const params = new URLSearchParams();
@@ -744,6 +750,7 @@ async function renderMySquads(containerEl) {
   params.set('sort', f.sort);
   params.set('order', f.order);
   params.set('page', f.page);
+  if (f.q) params.set('q', f.q);
 
   let data;
   try { data = await API.get('/squads?' + params.toString()); }
@@ -762,26 +769,36 @@ async function renderMySquads(containerEl) {
 
   containerEl.innerHTML = `
     <div class="filter-bar" style="margin-bottom:8px">
-      <select id="my-sort-select">
-        <option value="created_at" ${f.sort==='created_at'?'selected':''}>Newest</option>
-        <option value="updated_at" ${f.sort==='updated_at'?'selected':''}>Recently edited</option>
-        <option value="name" ${f.sort==='name'?'selected':''}>Name A–Z</option>
-        <option value="rp_total" ${f.sort==='rp_total'?'selected':''}>RP Total</option>
-      </select>
+      <input type="text" id="my-q" placeholder="Search squads…" value="${esc(f.q)}" style="flex:1;min-width:160px">
     </div>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">${total} squad${total!==1?'s':''}</div>
     <table class="data-table">
-      <thead><tr><th>Name</th><th>Nation</th><th>Mission</th><th>RP</th><th>Status</th><th>Updated</th></tr></thead>
+      <thead><tr>
+        ${_squadSortTh('Name', 'name', f)}
+        <th>Nation</th><th>Mission</th>
+        ${_squadSortTh('RP', 'rp_total', f)}
+        <th>Status</th>
+        ${_squadSortTh('Updated', 'updated_at', f)}
+      </tr></thead>
       <tbody>${rows||'<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">No squads yet. Build one!</td></tr>'}</tbody>
     </table>
     ${paginationHtml(page, pages)}`;
 
-  containerEl.querySelector('#my-sort-select')?.addEventListener('change', e => {
-    f.sort = e.target.value;
-    f.order = e.target.value === 'name' ? 'asc' : 'desc';
-    f.page = 1;
-    renderMySquads(containerEl);
-  });
+  const qInput = containerEl.querySelector('#my-q');
+  if (qInput) {
+    qInput.addEventListener('input', e => {
+      clearTimeout(qInput._t);
+      qInput._t = setTimeout(() => { f.q = e.target.value; f.page = 1; renderMySquads(containerEl); }, 300);
+    });
+  }
+  containerEl.querySelectorAll('th.sort-header[data-sort]').forEach(th =>
+    th.addEventListener('click', () => {
+      const col = th.dataset.sort;
+      if (f.sort === col) f.order = f.order === 'asc' ? 'desc' : 'asc';
+      else { f.sort = col; f.order = col === 'name' ? 'asc' : 'desc'; }
+      f.page = 1; renderMySquads(containerEl);
+    })
+  );
   containerEl.querySelectorAll('tr[data-id]').forEach(row =>
     row.addEventListener('click', () => navigate('squads/' + row.dataset.id)));
   containerEl.querySelectorAll('[data-pg]').forEach(btn =>
@@ -795,6 +812,7 @@ async function renderCommunitySquads(containerEl) {
   params.set('sort', f.sort);
   params.set('order', f.order);
   params.set('page', f.page);
+  if (f.q) params.set('q', f.q);
 
   let data;
   try { data = await API.get('/squads?' + params.toString()); }
@@ -817,30 +835,41 @@ async function renderCommunitySquads(containerEl) {
 
   containerEl.innerHTML = `
     <div class="filter-bar" style="margin-bottom:8px">
+      <input type="text" id="comm-q" placeholder="Search squads…" value="${esc(f.q)}" style="flex:1;min-width:160px">
       ${likedBtn}
-      <select id="comm-sort-select">
-        <option value="created_at" ${f.sort==='created_at'?'selected':''}>Newest</option>
-        <option value="likes_count" ${f.sort==='likes_count'?'selected':''}>Most Liked</option>
-        <option value="rp_total" ${f.sort==='rp_total'?'selected':''}>RP Total</option>
-        <option value="name" ${f.sort==='name'?'selected':''}>Name A–Z</option>
-      </select>
     </div>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">${total} published squad${total!==1?'s':''}</div>
     <table class="data-table">
-      <thead><tr><th>Name</th><th>Nation</th><th>Mission</th><th>RP</th><th>Likes</th><th>Owner</th><th>Date</th></tr></thead>
+      <thead><tr>
+        ${_squadSortTh('Name', 'name', f)}
+        <th>Nation</th><th>Mission</th>
+        ${_squadSortTh('RP', 'rp_total', f)}
+        ${_squadSortTh('Likes', 'likes_count', f)}
+        <th>Owner</th>
+        ${_squadSortTh('Date', 'created_at', f)}
+      </tr></thead>
       <tbody>${rows||'<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">No published squads yet.</td></tr>'}</tbody>
     </table>
     ${paginationHtml(page, pages)}`;
 
+  const qInput = containerEl.querySelector('#comm-q');
+  if (qInput) {
+    qInput.addEventListener('input', e => {
+      clearTimeout(qInput._t);
+      qInput._t = setTimeout(() => { f.q = e.target.value; f.page = 1; renderCommunitySquads(containerEl); }, 300);
+    });
+  }
   containerEl.querySelector('#liked-filter')?.addEventListener('click', () => {
     f.liked = !f.liked; f.page = 1; renderCommunitySquads(containerEl);
   });
-  containerEl.querySelector('#comm-sort-select')?.addEventListener('change', e => {
-    f.sort = e.target.value;
-    f.order = e.target.value === 'name' ? 'asc' : 'desc';
-    f.page = 1;
-    renderCommunitySquads(containerEl);
-  });
+  containerEl.querySelectorAll('th.sort-header[data-sort]').forEach(th =>
+    th.addEventListener('click', () => {
+      const col = th.dataset.sort;
+      if (f.sort === col) f.order = f.order === 'asc' ? 'desc' : 'asc';
+      else { f.sort = col; f.order = col === 'name' ? 'asc' : 'desc'; }
+      f.page = 1; renderCommunitySquads(containerEl);
+    })
+  );
   containerEl.querySelectorAll('tr[data-id]').forEach(row =>
     row.addEventListener('click', () => navigate('squads/' + row.dataset.id)));
   containerEl.querySelectorAll('[data-pg]').forEach(btn =>
