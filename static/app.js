@@ -1010,8 +1010,8 @@ const CARD_TABLE_COLS = {
   time:              { header: 'Turns', render: c => c.time != null ? String(c.time) : '' },
   objective_location:{ header: 'Obj@', render: c => c.objective_location != null ? String(c.objective_location) : '' },
   loadout_modifier:  { header: 'LOADOUT', render: c => c.loadout_modifier != null ? (c.loadout_modifier >= 0 ? '+' : '') + c.loadout_modifier : '' },
-  entrance_cost:     { header: 'EN', render: c => c.entrance_cost != null ? String(c.entrance_cost) : '', sortKey: 'entrance_cost' },
-  action_cost_hth:   { header: 'ACHtH', render: c => c.action_cost_hth != null ? String(c.action_cost_hth) : '', sortKey: 'action_cost_hth' },
+  entrance_cost:     { header: 'Entry Cost', render: c => c.entrance_cost != null ? String(c.entrance_cost) : '', sortKey: 'entrance_cost' },
+  action_cost_hth:   { header: 'HtH Cost', render: c => c.action_cost_hth != null ? String(c.action_cost_hth) : '', sortKey: 'action_cost_hth' },
 };
 
 const MODE_COLS = {
