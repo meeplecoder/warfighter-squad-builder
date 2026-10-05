@@ -1,8 +1,11 @@
 from flask import Blueprint, request, jsonify
-from sqlalchemy import or_
+from sqlalchemy import or_, case
 from app import db
 from app.models import Card
 from app.utils import nation_filter_clause
+
+# Put 'Core Europe' first when sorting by module
+_MODULE_PRIORITY = case((Card.module == 'Core Europe', 0), else_=1)
 
 cards_bp = Blueprint('cards', __name__)
 
@@ -55,8 +58,10 @@ def list_cards():
     primary = sort_col.desc() if order == 'desc' else sort_col.asc()
     if sort == 'number':
         query = query.order_by(primary)
+    elif sort == 'module':
+        query = query.order_by(_MODULE_PRIORITY, primary, Card.number.asc())
     else:
-        query = query.order_by(primary, Card.number.asc())
+        query = query.order_by(primary, _MODULE_PRIORITY, Card.module.asc(), Card.number.asc())
 
     total = query.count()
     cards = query.offset((page - 1) * per_page).limit(per_page).all()

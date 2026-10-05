@@ -41,12 +41,15 @@ def create_app():
     @app.route('/api/modules')
     def get_modules():
         from app.models import Card
-        modules = [
+        all_mods = [
             r[0] for r in
             db.session.query(Card.module).distinct().order_by(Card.module).all()
             if r[0]
         ]
-        return jsonify(modules=modules)
+        # Core Europe always first
+        pinned = [m for m in all_mods if m == 'Core Europe']
+        rest = [m for m in all_mods if m != 'Core Europe']
+        return jsonify(modules=pinned + rest)
 
     @app.route('/api/nations')
     def get_nations():
