@@ -828,7 +828,7 @@ async function showSquadDetail(squadId) {
         ? `Base: ${c.loadout}, Mission modifier: ${lm >= 0 ? '+' : ''}${lm}`
         : `Base loadout: ${c.loadout}`;
       const color = lm !== 0 ? ' color:var(--danger);' : '';
-      return `<div class="text-muted" style="font-size:12px;margin-bottom:6px;${color}" title="${tip}">Loadout: ${ss.gear_loadout_used}/${ss.effective_loadout}</div>`;
+      return `<div class="text-muted" style="font-size:12px;margin-bottom:6px;${color}" data-tooltip="${tip}">Loadout: ${ss.gear_loadout_used}/${ss.effective_loadout}</div>`;
     })();
 
     const gearHtml = (() => {
