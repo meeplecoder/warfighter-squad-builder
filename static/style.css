@@ -468,7 +468,7 @@ h3 { font-size: 1rem; font-weight: 600; }
 
 /* ---- Hostile spawn table ------------------------------------------- */
 .spawn-table-wrap {
-  display: inline-block;
+  display: table;
   margin-top: 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
