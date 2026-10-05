@@ -22,7 +22,7 @@ except ImportError:
 from app import create_app, db
 from app.models import Card
 import json
-from app.utils import classify_objective_type, classify_objective_family, build_objective_subtype, classify_mission_type, parse_hostile_spawn_table
+from app.utils import classify_objective_type, classify_objective_family, build_objective_subtype, classify_mission_type, parse_hostile_spawn_table, strip_hostile_spawn_table
 
 
 # ---------------------------------------------------------------------------
@@ -311,6 +311,8 @@ def main():
                 has_image = check_has_image(images_dir, number)
                 spawn_table = parse_hostile_spawn_table(notes or '')
                 spawn_table_json = json.dumps(spawn_table) if spawn_table else None
+                if spawn_table:
+                    notes = strip_hostile_spawn_table(notes)
 
                 # Parse pre-printed CX (combat experience) and XP from notes
                 combat_xp = 0

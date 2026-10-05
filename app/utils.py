@@ -317,3 +317,30 @@ def parse_hostile_spawn_table(notes: str) -> list | None:
         elif rows:
             break  # non-matching line after we've started = end of table
     return rows if rows else None
+
+
+def strip_hostile_spawn_table(notes: str) -> str:
+    """Remove the Hostiles spawn table block from notes text.
+
+    Strips the 'Hostiles' header line and all following range-count rows,
+    then cleans up extra blank lines left behind.
+    Returns the cleaned notes string (or original if no table found).
+    """
+    if not notes or 'Hostiles' not in notes:
+        return notes
+    lines = notes.split('\n')
+    result = []
+    skip = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped == 'Hostiles':
+            skip = True
+            continue
+        if skip:
+            if re.match(r'^(\d+[-+]\d*)\s+(\d+)$', stripped) or (not stripped):
+                continue  # drop table rows and blank lines inside the block
+            else:
+                skip = False  # non-table line resumes normal output
+        result.append(line)
+    cleaned = '\n'.join(result).strip()
+    return cleaned or None
