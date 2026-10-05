@@ -43,7 +43,8 @@ class Card(db.Model):
     gain = db.Column(db.Integer)
     loss = db.Column(db.Integer)
     objective_family = db.Column(db.Text)
-    hostile_spawn_table = db.Column(db.Text)  # JSON: [{'range': str, 'count': int}]
+    hostile_spawn_table = db.Column(db.Text)   # JSON: [{'range': str, 'count': int}]
+    health_actions_table = db.Column(db.Text)  # JSON: {'headers': [...], 'rows': [[int,...]]}
     vassal_module = db.Column(db.Text)
     has_image = db.Column(db.Integer, nullable=False, default=0)
     cx = db.Column('combat_xp', db.Integer, nullable=False, default=0)  # CX = Combat Experience (pre-printed)
@@ -115,6 +116,7 @@ class Card(db.Model):
             'xp_value': self.xp_value,
             'hostile_count': self.hostile_count,
             'hostile_spawn_table': json.loads(self.hostile_spawn_table) if self.hostile_spawn_table else None,
+            'health_actions_table': json.loads(self.health_actions_table) if self.health_actions_table else None,
             'noise': self.noise,
             'support_cost': self.support_cost,
             'covert_cost': self.covert_cost,

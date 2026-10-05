@@ -22,7 +22,7 @@ except ImportError:
 from app import create_app, db
 from app.models import Card
 import json
-from app.utils import classify_objective_type, classify_objective_family, build_objective_subtype, classify_mission_type, parse_hostile_spawn_table, strip_hostile_spawn_table
+from app.utils import classify_objective_type, classify_objective_family, build_objective_subtype, classify_mission_type, parse_hostile_spawn_table, strip_hostile_spawn_table, parse_health_actions_table, strip_health_actions_table
 
 
 # ---------------------------------------------------------------------------
@@ -314,6 +314,11 @@ def main():
                 if spawn_table:
                     notes = strip_hostile_spawn_table(notes)
 
+                ha_table = parse_health_actions_table(notes or '')
+                ha_table_json = json.dumps(ha_table) if ha_table else None
+                if ha_table:
+                    notes = strip_health_actions_table(notes)
+
                 # Parse pre-printed CX (combat experience) and XP from notes
                 combat_xp = 0
                 soldier_xp = 0
@@ -342,6 +347,7 @@ def main():
                     existing.vassal_module = vassal_module
                     existing.has_image = has_image
                     existing.hostile_spawn_table = spawn_table_json
+                    existing.health_actions_table = ha_table_json
                     existing.cx = combat_xp
                     existing.xp = soldier_xp
                     for col, val in stats.items():
@@ -361,6 +367,7 @@ def main():
                         vassal_module=vassal_module,
                         has_image=has_image,
                         hostile_spawn_table=spawn_table_json,
+                        health_actions_table=ha_table_json,
                         cx=combat_xp,
                         xp=soldier_xp,
                         **{k: v for k, v in stats.items()},

@@ -344,3 +344,74 @@ def strip_hostile_spawn_table(notes: str) -> str:
         result.append(line)
     cleaned = '\n'.join(result).strip()
     return cleaned or None
+
+
+# ---------------------------------------------------------------------------
+# Health/Actions table (NPS / Squad soldiers)
+# ---------------------------------------------------------------------------
+
+def parse_health_actions_table(notes: str) -> dict | None:
+    """Extract health/actions table from NPS/Squad soldier card notes.
+
+    Header line starts with 'Health' and contains 'Actions', optionally
+    followed by Range columns (Range2, Range1, Range0).
+    Data rows are all-integer lines with the same column count as the header.
+
+    Returns {'headers': [...], 'rows': [[int, ...], ...]} or None.
+    """
+    if not notes:
+        return None
+    lines = notes.split('\n')
+    header_idx = None
+    headers = None
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if re.match(r'Health', stripped, re.IGNORECASE) and 'Actions' in stripped:
+            parts = [p for p in re.split(r'\s{2,}|\t', stripped) if p.strip()]
+            headers = [p.strip() for p in parts]
+            header_idx = i
+            break
+    if header_idx is None:
+        return None
+    rows = []
+    for line in lines[header_idx + 1:]:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        parts = re.split(r'\s+', stripped)
+        if len(parts) == len(headers) and all(re.match(r'^\d+$', p) for p in parts):
+            rows.append([int(p) for p in parts])
+        else:
+            break
+    return {'headers': headers, 'rows': rows} if rows else None
+
+
+def strip_health_actions_table(notes: str) -> str | None:
+    """Remove the health/actions table block from notes text.
+
+    Removes the header line and all following all-integer rows,
+    then strips extra blank lines. Returns cleaned string or None.
+    """
+    if not notes or 'Health' not in notes:
+        return notes
+    lines = notes.split('\n')
+    result = []
+    skip = False
+    n_cols = 0
+    for line in lines:
+        stripped = line.strip()
+        if not skip and re.match(r'Health', stripped, re.IGNORECASE) and 'Actions' in stripped:
+            parts = [p for p in re.split(r'\s{2,}|\t', stripped) if p.strip()]
+            n_cols = len(parts)
+            skip = True
+            continue
+        if skip:
+            if not stripped:
+                continue
+            parts = re.split(r'\s+', stripped)
+            if len(parts) == n_cols and all(re.match(r'^\d+$', p) for p in parts):
+                continue
+            skip = False
+        result.append(line)
+    cleaned = '\n'.join(result).strip()
+    return cleaned or None

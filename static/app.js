@@ -589,6 +589,20 @@ async function showCardDetail(idOrNumber) {
         </div>
         <div class="card-name">${esc(card.name)}</div>
         <div class="stat-grid">${statItems || '<span class="text-muted">No numeric stats.</span>'}</div>
+        ${card.health_actions_table ? (() => {
+          const { headers, rows } = card.health_actions_table;
+          return `<div class="spawn-table-wrap" style="margin-bottom:8px">
+            <div class="spawn-table-title">Health / Actions</div>
+            <table class="spawn-table">
+              <thead><tr>${headers.map(h => `<th class="spawn-rp">${esc(h)}</th>`).join('')}</tr></thead>
+              <tbody>
+                ${rows.map(row =>
+                  `<tr>${row.map((v, i) => `<td class="${i === 0 ? 'spawn-rp' : 'spawn-count'}">${v}</td>`).join('')}</tr>`
+                ).join('')}
+              </tbody>
+            </table>
+          </div>`;
+        })() : ''}
         ${card.notes ? `<div class="card-notes">${esc(card.notes)}</div>` : ''}
         ${card.hostile_spawn_table ? (() => {
           const rows = card.hostile_spawn_table;
