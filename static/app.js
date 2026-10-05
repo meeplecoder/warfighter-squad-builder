@@ -1246,11 +1246,11 @@ function renderBuilder() {
                 <button class="btn btn-sm btn-ghost" id="change-mission-btn">Change</button>
                </div>
                <div class="text-muted" style="font-size:12px;margin-top:4px">${[
-                 builderState.missionCard.resources != null ? `B: ${builderState.missionCard.resources} RPs` : null,
-                 builderState.missionCard.time != null ? `T: ${builderState.missionCard.time}` : null,
-                 builderState.missionCard.objective_location != null ? `Obj@: ${builderState.missionCard.objective_location}` : null,
-                 builderState.missionCard.loadout_modifier != null ? `LM: ${builderState.missionCard.loadout_modifier >= 0 ? '+' : ''}${builderState.missionCard.loadout_modifier}` : null,
-               ].filter(Boolean).join(' | ')}</div>`
+                 builderState.missionCard.resources != null ? `${builderState.missionCard.resources} RP` : null,
+                 builderState.missionCard.time != null ? `${builderState.missionCard.time} Turns` : null,
+                 builderState.missionCard.objective_location != null ? `Obj.Loc: ${builderState.missionCard.objective_location}` : null,
+                 builderState.missionCard.loadout_modifier != null ? `Loadout: ${builderState.missionCard.loadout_modifier >= 0 ? '+' : ''}${builderState.missionCard.loadout_modifier}` : null,
+               ].filter(Boolean).join(' · ')}</div>`
             : `<button class="btn btn-ghost" id="pick-mission-btn">Select a Mission…</button>`}
         </div>
 
@@ -1260,7 +1260,11 @@ function renderBuilder() {
             ? `<div class="flex justify-between items-center">
                 <span ${cardImageAttr(builderState.objectiveCard)}>${esc(builderState.objectiveCard.name)}</span>
                 <button class="btn btn-sm btn-ghost" id="change-obj-btn">Change</button>
-               </div>`
+               </div>
+               <div class="text-muted" style="font-size:12px;margin-top:4px">${[
+                 builderState.objectiveCard.entrance_cost != null ? `Entry Cost: ${builderState.objectiveCard.entrance_cost}` : null,
+                 builderState.objectiveCard.action_cost_hth != null ? `HtH Cost: ${builderState.objectiveCard.action_cost_hth}` : null,
+               ].filter(Boolean).join(' · ')}</div>`
             : builderState.missionCard
               ? `<button class="btn btn-ghost" id="pick-obj-btn">Select an Objective…</button>`
               : `<span class="text-muted">Select a mission first.</span>`}
