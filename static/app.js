@@ -1586,7 +1586,7 @@ function renderBuilder() {
           </div>
           ${soldiersHtml}
           ${builderState.missionCard
-            ? `<button class="btn btn-ghost" id="add-soldier-btn">+ Add Soldier</button>`
+            ? `<button class="btn btn-ghost" id="add-soldier-btn" ${!builderState.nation ? 'disabled title="Select a nation first"' : ''}>+ Add Soldier</button>`
             : ''}
         </div>
 
