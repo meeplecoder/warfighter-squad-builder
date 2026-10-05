@@ -21,6 +21,7 @@ except ImportError:
 
 from app import create_app, db
 from app.models import Card
+from app.utils import classify_objective_type
 
 
 # ---------------------------------------------------------------------------
@@ -276,6 +277,9 @@ def main():
                     continue
 
                 category, subtype = normalize_type(raw_type)
+                # For objectives, derive the mission-type subtype from notes
+                if category == 'Objective':
+                    subtype = classify_objective_type(notes or '')
                 stats = parse_stats(stats_str)
                 has_image = check_has_image(images_dir, number)
 

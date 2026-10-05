@@ -5,7 +5,7 @@ from app import db
 from app.models import Card, Squad, SquadSoldier, SquadGear, SquadLike, SquadComment, CardAssociation
 from app.models import now_utc
 from app import rules as rules_module
-from app.utils import classify_objective_type
+from app.utils import classify_objective_type, theater_from_raw_type
 
 squads_bp = Blueprint('squads', __name__)
 
@@ -44,8 +44,8 @@ def _squad_detail(squad, liked_by_me=False):
         base['objective'].update({
             'nation': oc.nation,
             'module': oc.module,
-            'theater': oc.card_subtype,
-            'objective_type': classify_objective_type(oc.notes or ''),
+            'theater': theater_from_raw_type(oc.raw_type or ''),
+            'objective_type': oc.card_subtype,  # now stored directly in DB
             'entrance_cost': oc.entrance_cost,
             'action_cost_hth': oc.action_cost_hth,
         })

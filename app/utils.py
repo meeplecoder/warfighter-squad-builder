@@ -158,3 +158,27 @@ def classify_objective_type(notes: str) -> str:
             return 'Eliminate'
 
     return 'Eliminate'
+
+
+def theater_from_raw_type(raw_type: str) -> str:
+    """Extract the theater/campaign label from an objective raw_type string.
+
+    Examples:
+      'Objective Europe'                → 'Europe'
+      'Objective - Assault - Europe'    → 'Assault'
+      'Objective-Shore Invasion Europe' → 'Shore Invasion'
+      'Objective Embedded ...'          → 'Embedded'
+    """
+    if not raw_type:
+        return ''
+    r = raw_type.strip()
+    if re.match(r'Objective\s*-\s*Assault', r, re.IGNORECASE):
+        return 'Assault'
+    if re.match(r'Objective Embedded', r, re.IGNORECASE):
+        return 'Embedded'
+    if re.match(r'Objective[-\s]Shore Invasion', r, re.IGNORECASE):
+        return 'Shore Invasion'
+    m = re.match(r'Objective\s+(.+)', r, re.IGNORECASE)
+    if m:
+        return m.group(1).strip()
+    return ''
