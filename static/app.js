@@ -1119,6 +1119,27 @@ async function showSquadDetail(squadId) {
       </div>
     </div>
 
+    ${(() => {
+      // Collect modules from soldiers + all gear (not mission/objectives)
+      const modSet = new Set();
+      for (const ss of squad.soldiers) {
+        if (ss.card?.module) modSet.add(ss.card.module);
+        for (const g of [...(ss.gear || []), ...(ss.default_gear || [])]) {
+          if (g.card?.module) modSet.add(g.card.module);
+        }
+      }
+      if (!modSet.size) return '';
+      // Core Europe first, rest alphabetical
+      const sorted = [
+        ...[...modSet].filter(m => m === 'Core Europe'),
+        ...[...modSet].filter(m => m !== 'Core Europe').sort(),
+      ];
+      return `<div class="required-modules">
+        <span class="required-modules-label">Required modules</span>
+        ${sorted.map(m => `<span class="chip">${esc(m)}</span>`).join('')}
+      </div>`;
+    })()}
+
     <h2 style="margin-bottom:12px">Soldiers</h2>
     <div class="soldiers-grid">${soldiersHtml || '<p class="text-muted">No soldiers.</p>'}</div>
 
