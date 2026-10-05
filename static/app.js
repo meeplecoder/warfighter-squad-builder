@@ -1401,7 +1401,10 @@ function renderBuilder() {
                     ${oc.objective_type ? `<span class="obj-type-badge" style="background:${tc}">${esc(oc.objective_type)}</span>` : ''}
                     <span ${cardImageAttr(oc)}>${esc(oc.name)}</span>
                   </span>
-                  <button class="btn btn-sm btn-ghost" id="change-obj-btn">Change</button>
+                  <span style="display:flex;gap:4px">
+                    <button class="btn btn-sm btn-ghost" id="change-obj-btn">Change</button>
+                    <button class="btn btn-sm btn-ghost" id="clear-obj-btn" title="Remove objective" style="color:var(--text-muted)">✕</button>
+                  </span>
                 </div>
                 ${attrs ? `<div class="text-muted" style="font-size:12px;margin-top:4px">${attrs}</div>` : ''}`;
               })()
@@ -1466,6 +1469,7 @@ function renderBuilder() {
   main.querySelector('#change-mission-btn')?.addEventListener('click', () => { setPickerMode('mission'); renderBuilder(); });
   main.querySelector('#pick-obj-btn')?.addEventListener('click', () => { setPickerMode('objective'); renderBuilder(); });
   main.querySelector('#change-obj-btn')?.addEventListener('click', () => { setPickerMode('objective'); renderBuilder(); });
+  main.querySelector('#clear-obj-btn')?.addEventListener('click', () => { builderState.objectiveCard = null; renderBuilder(); });
   main.querySelector('#add-soldier-btn')?.addEventListener('click', () => { setPickerMode('soldier'); renderBuilder(); });
 
   // Gear buttons (delegated)
