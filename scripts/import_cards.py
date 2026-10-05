@@ -319,20 +319,25 @@ def main():
                 if ha_table:
                     notes = strip_health_actions_table(notes)
 
-                # Parse pre-printed CX (combat experience) and XP from notes
+                # Parse pre-printed CX (combat experience) and XP from notes, then strip
                 combat_xp = 0
                 soldier_xp = 0
                 if notes and category == 'Soldier':
+                    kept = []
                     for line in notes.split('\n'):
                         stripped = line.strip()
                         if not combat_xp:
                             m = re.match(r'^(\d+)\s+CX\.?$', stripped, re.IGNORECASE)
                             if m:
                                 combat_xp = int(m.group(1))
+                                continue
                         if not soldier_xp:
                             m = re.match(r'^(\d+)\s+XP\.?$', stripped, re.IGNORECASE)
                             if m:
                                 soldier_xp = int(m.group(1))
+                                continue
+                        kept.append(line)
+                    notes = '\n'.join(kept).strip() or None
 
                 existing = Card.query.filter_by(number=number).first()
                 if existing:
