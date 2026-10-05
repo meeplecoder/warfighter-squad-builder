@@ -38,6 +38,16 @@ def _squad_detail(squad, liked_by_me=False):
     situation = {'id': squad.situation_card.id, 'name': squad.situation_card.name} if squad.situation_card else None
     base['situation'] = situation
     base['notes'] = squad.notes
+    # Enrich mission with full card attributes for the detail view
+    mc = squad.mission_card
+    base['mission'].update({
+        'nation': mc.nation,
+        'module': mc.module,
+        'time': mc.time,
+        'objective_location': mc.objective_location,
+        'loadout_modifier': mc.loadout_modifier,
+        'action_cost_hth': mc.action_cost_hth,
+    })
 
     soldiers_out = []
     for ss in squad.soldiers:

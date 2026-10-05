@@ -925,18 +925,27 @@ async function showSquadDetail(squadId) {
     <div class="squad-info-row">
       <div class="squad-mission-box">
         <div class="squad-box-label">Mission</div>
-        <div><span ${cardImageAttr(squad.mission)}>${esc(squad.mission ? squad.mission.name : '—')}</span></div>
-        ${squad.mission ? `<div class="text-muted" style="font-size:12px;margin-top:4px">${[
-          squad.mission.resources != null ? `Budget: ${squad.mission.resources} RP` : null,
-          squad.mission.time != null ? `${squad.mission.time} Turns` : null,
-        ].filter(Boolean).join(' · ')}</div>` : ''}
-        <div style="margin-top:8px;font-size:13px">
-          <strong>Squad RP:</strong> ${squad.computed.rp_total}
-          &nbsp;·&nbsp; <strong>Remaining:</strong>
-          <span class="${squad.computed.rp_remaining < 0 ? 'text-danger' : 'text-success'}">
-            ${squad.computed.rp_remaining} RP
-          </span>
-        </div>
+        ${squad.mission ? (() => {
+          const m = squad.mission;
+          const subtitle = [m.nation ? `(${esc(m.nation)})` : null, m.module ? esc(m.module) : null].filter(Boolean).join(' · ');
+          const attrs = [
+            m.time != null             ? `Turns ${m.time}` : null,
+            m.objective_location != null ? `Obj.Loc ${m.objective_location}` : null,
+            m.loadout_modifier != null ? `Loadout ${m.loadout_modifier >= 0 ? '+' : ''}${m.loadout_modifier}` : null,
+            m.action_cost_hth != null  ? `HtH Cost ${m.action_cost_hth}` : null,
+          ].filter(Boolean).join('  ');
+          const rem = squad.computed.rp_remaining;
+          return `
+            <div><span ${cardImageAttr(m)}><strong>${esc(m.name)}</strong></span></div>
+            ${subtitle ? `<div class="text-muted" style="font-size:12px;margin-top:2px">${subtitle}</div>` : ''}
+            <div style="margin-top:6px;font-size:13px">
+              RPs: <strong>${squad.computed.rp_total} / ${m.resources}</strong>
+              <span class="${rem < 0 ? 'text-danger' : 'text-muted'}" style="font-size:12px">
+                (${rem >= 0 ? rem + ' remaining' : Math.abs(rem) + ' over'})
+              </span>
+            </div>
+            ${attrs ? `<div class="text-muted" style="font-size:12px;margin-top:4px">${attrs}</div>` : ''}`;
+        })() : '<span class="text-muted">—</span>'}
       </div>
       <div class="squad-mission-box">
         <div class="squad-box-label">Objective &amp; Situation</div>
