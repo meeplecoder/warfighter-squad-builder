@@ -1185,6 +1185,12 @@ function addSoldierToBuilder(card) {
 function addGearToBuilder(card, soldierIdx) {
   const soldier = builderState.soldiers[soldierIdx];
   if (!soldier) return false;
+  // Block if already in pre-printed list (match by name, case-insensitive)
+  const nameLower = card.name.toLowerCase();
+  if ((soldier.defaultGear || []).some(g => g.card.name.toLowerCase() === nameLower)) {
+    alert(`"${card.name}" is already pre-printed on ${soldier.card.name}.`);
+    return false;
+  }
   const existing = soldier.gear.find(g => g.card.id === card.id);
   if (existing) {
     existing.quantity += 1;
