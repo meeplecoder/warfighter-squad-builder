@@ -271,14 +271,27 @@ const NATION_FLAGS = {
 };
 
 const NATION_DISPLAY_NAMES = {
+  'Australian':   'Australia',
+  'German':       'Germany',
+  'Italian':      'Italy',
+  'Russian':      'Russia',
   'North Korean': 'North Korea',
   'South Korean': 'South Korea',
 };
+
+// Nations always shown first in selectors
+const NATION_PINNED = ['US', 'German'];
 
 function nationLabel(n) {
   const flag = NATION_FLAGS[n] || '';
   const display = NATION_DISPLAY_NAMES[n] || n;
   return flag ? `${flag} ${display}` : display;
+}
+
+function sortedNations(nations) {
+  const pinned = NATION_PINNED.filter(p => nations.includes(p));
+  const rest = nations.filter(n => !NATION_PINNED.includes(n));
+  return [...pinned, ...rest];
 }
 let allCategories = ['Soldier','Weapon','Equipment','Skill','Service Record','Mission',
   'Objective','Situation','Hostile','Action','Event','Location','Fortification','Other'];
@@ -311,7 +324,7 @@ function renderCardsShell() {
   const catOptions = ['', ...allCategories].map(c =>
     `<option value="${esc(c)}" ${cardFilters.category === c ? 'selected' : ''}>${c || 'All categories'}</option>`
   ).join('');
-  const nationOptions = ['', ...allNations].map(n =>
+  const nationOptions = ['', ...sortedNations(allNations)].map(n =>
     `<option value="${esc(n)}" ${cardFilters.nation === n ? 'selected' : ''}>${n ? nationLabel(n) : 'All nations'}</option>`
   ).join('');
   const moduleOptions = ['', ...allModules].map(m =>
@@ -1328,7 +1341,7 @@ function renderBuilder() {
           ${builderState.missionCard
             ? `<select id="nation-select" style="width:100%">
                 <option value="">— Select nation —</option>
-                ${allNations.map(n => `<option value="${esc(n)}" ${builderState.nation===n?'selected':''}>${esc(nationLabel(n))}</option>`).join('')}
+                ${sortedNations(allNations).map(n => `<option value="${esc(n)}" ${builderState.nation===n?'selected':''}>${esc(nationLabel(n))}</option>`).join('')}
                </select>`
             : `<span class="text-muted">Select a mission first.</span>`}
         </div>
