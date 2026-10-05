@@ -22,7 +22,7 @@ except ImportError:
 from app import create_app, db
 from app.models import Card
 import json
-from app.utils import classify_objective_type, classify_objective_family, build_objective_subtype, classify_mission_type, parse_hostile_spawn_table, strip_hostile_spawn_table, parse_health_actions_table, strip_health_actions_table, parse_hardy_markers, strip_hardy_markers
+from app.utils import classify_objective_type, classify_objective_family, build_objective_subtype, classify_mission_type, parse_hostile_spawn_table, strip_hostile_spawn_table, parse_health_actions_table, strip_health_actions_table, parse_hardy_markers, strip_hardy_markers, parse_weapon_tables, strip_weapon_tables
 
 
 # ---------------------------------------------------------------------------
@@ -345,6 +345,13 @@ def main():
                 if hardy:
                     notes = strip_hardy_markers(notes)
 
+                # Weapon stat tables
+                weapon_tables = parse_weapon_tables(notes or '') if category == 'Weapon' else None
+                weapon_range_json = json.dumps(weapon_tables['range']) if weapon_tables and 'range' in weapon_tables else None
+                weapon_mode_json = json.dumps(weapon_tables['mode']) if weapon_tables and 'mode' in weapon_tables else None
+                if weapon_tables:
+                    notes = strip_weapon_tables(notes)
+
                 # Squad soldiers are always ranged — strip the redundant line
                 if notes and category == 'Soldier' and subtype == 'Squad':
                     lines_out = [
@@ -368,6 +375,8 @@ def main():
                     existing.hostile_spawn_table = spawn_table_json
                     existing.health_actions_table = ha_table_json
                     existing.hardy_markers = hardy_json
+                    existing.weapon_range_table = weapon_range_json
+                    existing.weapon_mode_table = weapon_mode_json
                     existing.cx = combat_xp
                     existing.xp = soldier_xp
                     for col, val in stats.items():
@@ -389,6 +398,8 @@ def main():
                         hostile_spawn_table=spawn_table_json,
                         health_actions_table=ha_table_json,
                         hardy_markers=hardy_json,
+                        weapon_range_table=weapon_range_json,
+                        weapon_mode_table=weapon_mode_json,
                         cx=combat_xp,
                         xp=soldier_xp,
                         **{k: v for k, v in stats.items()},

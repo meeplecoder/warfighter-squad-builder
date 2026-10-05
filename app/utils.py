@@ -462,3 +462,95 @@ def strip_hardy_markers(notes: str) -> str | None:
     kept = [l for l in notes.split('\n') if not _HARDY_RE.match(l.strip())]
     cleaned = '\n'.join(kept).strip()
     return cleaned or None
+
+
+# ---------------------------------------------------------------------------
+# Weapon stat tables (Range/Reload/Hit and Mode/Rolls or Mode/Rs/St/H/P)
+# ---------------------------------------------------------------------------
+
+_MULTI_SPACE = re.compile(r'\s{2,}|\t')
+
+
+def _split_cols(line: str) -> list:
+    """Split a table row on 2+ spaces or tab."""
+    return [p.strip() for p in _MULTI_SPACE.split(line.strip()) if p.strip()]
+
+
+_TABLE_HEADER_RE = re.compile(r'^(Range|Mode)\b', re.IGNORECASE)
+
+
+def _parse_table_block(lines: list, start_idx: int) -> tuple:
+    """Parse a header + data rows starting at start_idx.
+
+    Returns (headers, rows, next_idx).
+    Stops on: blank line, a new Range/Mode header, or wrong column count.
+    Each cell is int if convertible, else str.
+    """
+    headers = _split_cols(lines[start_idx])
+    n = len(headers)
+    rows = []
+    i = start_idx + 1
+    while i < len(lines):
+        stripped = lines[i].strip()
+        if not stripped or _TABLE_HEADER_RE.match(stripped):
+            break
+        cols = _split_cols(lines[i])
+        if len(cols) != n:
+            break
+        parsed = []
+        for c in cols:
+            try:
+                parsed.append(int(c))
+            except ValueError:
+                parsed.append(c)
+        rows.append(parsed)
+        i += 1
+    return headers, rows, i
+
+
+def parse_weapon_tables(notes: str) -> dict | None:
+    """Extract Range and Mode stat tables from weapon card notes.
+
+    Returns {'range': {'headers': [...], 'rows': [...]},
+             'mode':  {'headers': [...], 'rows': [...]}}
+    or None if neither table is found.
+    """
+    if not notes:
+        return None
+    lines = notes.split('\n')
+    result = {}
+    i = 0
+    while i < len(lines):
+        stripped = lines[i].strip()
+        if re.match(r'^Range\b', stripped, re.IGNORECASE):
+            h, r, i = _parse_table_block(lines, i)
+            if r:
+                result['range'] = {'headers': h, 'rows': r}
+        elif re.match(r'^Mode\b', stripped, re.IGNORECASE):
+            h, r, i = _parse_table_block(lines, i)
+            if r:
+                result['mode'] = {'headers': h, 'rows': r}
+        else:
+            i += 1
+    return result if result else None
+
+
+def strip_weapon_tables(notes: str) -> str | None:
+    """Remove Range and Mode table blocks from weapon card notes."""
+    if not notes:
+        return notes
+    lines = notes.split('\n')
+    to_remove = set()
+    i = 0
+    while i < len(lines):
+        stripped = lines[i].strip()
+        if _TABLE_HEADER_RE.match(stripped):
+            _, _, end = _parse_table_block(lines, i)
+            for j in range(i, end):
+                to_remove.add(j)
+            i = end
+        else:
+            i += 1
+    kept = [l for idx, l in enumerate(lines) if idx not in to_remove]
+    cleaned = '\n'.join(kept).strip()
+    return cleaned or None

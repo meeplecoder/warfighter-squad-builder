@@ -591,10 +591,15 @@ async function showCardDetail(idOrNumber) {
         <div class="stat-grid">${statItems || '<span class="text-muted">No numeric stats.</span>'}</div>
         ${card.hardy_markers ? (() => {
           const ENV_COLOR = { Cold: '#0369a1', Hot: '#b45309' };
+          const HARDY_TIP = {
+            Cold: 'This soldier ignores Cold environment attack penalties.',
+            Hot:  'This soldier ignores Hot environment attack penalties.',
+          };
           return card.hardy_markers.map(h => {
             const color = ENV_COLOR[h.type] || 'var(--text-muted)';
             const label = h.modifier === '+' ? `+${h.count}` : `${h.count}×`;
-            return `<span class="hardy-badge" style="--hardy-color:${color}">${label} Hardy (${esc(h.type)})</span>`;
+            const tip = HARDY_TIP[h.type] || `This soldier ignores ${esc(h.type)} environment penalties.`;
+            return `<span class="hardy-badge" style="--hardy-color:${color}" title="${tip}">${label} Hardy (${esc(h.type)})</span>`;
           }).join('');
         })() : ''}
         ${card.health_actions_table ? (() => {
@@ -625,6 +630,25 @@ async function showCardDetail(idOrNumber) {
               </tbody>
             </table>
           </div>`;
+        })() : ''}
+        ${(card.weapon_range_table || card.weapon_mode_table) ? (() => {
+          const renderWeaponTable = (title, tbl) => {
+            if (!tbl) return '';
+            const { headers, rows } = tbl;
+            return `<div class="spawn-table-wrap" style="margin-top:10px">
+              <div class="spawn-table-title">${title}</div>
+              <table class="spawn-table">
+                <thead><tr>${headers.map(h => `<th class="spawn-rp">${esc(h)}</th>`).join('')}</tr></thead>
+                <tbody>
+                  ${rows.map(row =>
+                    `<tr>${row.map((v, i) => `<td class="${i === 0 ? 'spawn-rp' : 'spawn-count'}">${esc(String(v))}</td>`).join('')}</tr>`
+                  ).join('')}
+                </tbody>
+              </table>
+            </div>`;
+          };
+          return renderWeaponTable('Range / Reload / Hit', card.weapon_range_table) +
+                 renderWeaponTable('Fire Modes', card.weapon_mode_table);
         })() : ''}
         ${assocTable}
         ${addBtn}

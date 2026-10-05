@@ -46,6 +46,8 @@ class Card(db.Model):
     hostile_spawn_table = db.Column(db.Text)   # JSON: [{'range': str, 'count': int}]
     health_actions_table = db.Column(db.Text)  # JSON: {'headers': [...], 'rows': [[int,...],..]}
     hardy_markers = db.Column(db.Text)         # JSON: [{'type': str, 'count': int, 'modifier'?}]
+    weapon_range_table = db.Column(db.Text)   # JSON: {'headers': [...], 'rows': [...]}
+    weapon_mode_table = db.Column(db.Text)    # JSON: {'headers': [...], 'rows': [...]}
     vassal_module = db.Column(db.Text)
     has_image = db.Column(db.Integer, nullable=False, default=0)
     cx = db.Column('combat_xp', db.Integer, nullable=False, default=0)  # CX = Combat Experience (pre-printed)
@@ -119,6 +121,8 @@ class Card(db.Model):
             'hostile_spawn_table': json.loads(self.hostile_spawn_table) if self.hostile_spawn_table else None,
             'health_actions_table': json.loads(self.health_actions_table) if self.health_actions_table else None,
             'hardy_markers': json.loads(self.hardy_markers) if self.hardy_markers else None,
+            'weapon_range_table': json.loads(self.weapon_range_table) if self.weapon_range_table else None,
+            'weapon_mode_table': json.loads(self.weapon_mode_table) if self.weapon_mode_table else None,
             'noise': self.noise,
             'support_cost': self.support_cost,
             'covert_cost': self.covert_cost,
