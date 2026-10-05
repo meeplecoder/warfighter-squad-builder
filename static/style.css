@@ -488,6 +488,17 @@ h3 { font-size: 1rem; font-weight: 600; }
   border-collapse: collapse;
   font-size: 12px;
 }
+.spawn-table thead tr { border-bottom: 1px solid var(--border); }
+.spawn-table thead .spawn-rp,
+.spawn-table thead .spawn-count {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-muted);
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
 .spawn-table tbody tr:not(:last-child) { border-bottom: 1px solid var(--border); }
 .spawn-rp    { padding: 3px 10px 3px 8px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .spawn-count { padding: 3px 8px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }

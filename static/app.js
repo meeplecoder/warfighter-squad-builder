@@ -593,8 +593,9 @@ async function showCardDetail(idOrNumber) {
         ${card.hostile_spawn_table ? (() => {
           const rows = card.hostile_spawn_table;
           return `<div class="spawn-table-wrap">
-            <div class="spawn-table-title">Hostiles</div>
+            <div class="spawn-table-title">Hostiles Spawn Table</div>
             <table class="spawn-table">
+              <thead><tr><th class="spawn-rp">Team RP</th><th class="spawn-count">Hostiles</th></tr></thead>
               <tbody>
                 ${rows.map(r => {
                   const label = r.range.endsWith('-') ? '≤ ' + r.range.slice(0, -1) : r.range;
