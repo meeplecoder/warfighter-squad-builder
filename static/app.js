@@ -923,28 +923,33 @@ async function showSquadDetail(squadId) {
     </div>
 
     <div class="squad-info-row">
-      <div class="squad-mission-box">
+      <div class="squad-mission-box mission-primary">
         <div class="squad-box-label">Mission</div>
         ${squad.mission ? (() => {
           const m = squad.mission;
-          const subtitle = [m.nation ? `(${esc(m.nation)})` : null, m.module ? esc(m.module) : null].filter(Boolean).join(' · ');
-          const attrs = [
-            m.time != null             ? `Turns ${m.time}` : null,
-            m.objective_location != null ? `Obj.Loc ${m.objective_location}` : null,
-            m.loadout_modifier != null ? `Loadout ${m.loadout_modifier >= 0 ? '+' : ''}${m.loadout_modifier}` : null,
-            m.action_cost_hth != null  ? `HtH Cost ${m.action_cost_hth}` : null,
-          ].filter(Boolean).join('  ');
+          const rp = squad.computed.rp_total;
+          const budget = m.resources || 0;
           const rem = squad.computed.rp_remaining;
+          const over = rem < 0;
+          const pct = budget > 0 ? Math.min(100, Math.round(rp / budget * 100)) : 0;
+          const subtitle = [m.nation ? esc(m.nation) : null, m.module ? esc(m.module) : null].filter(Boolean).join(' · ');
+          const attrDefs = [
+            m.time != null              ? ['Turns',   m.time] : null,
+            m.objective_location != null ? ['Obj.Loc', m.objective_location] : null,
+            m.loadout_modifier != null  ? ['Loadout', (m.loadout_modifier >= 0 ? '+' : '') + m.loadout_modifier] : null,
+            m.action_cost_hth != null   ? ['HtH Cost',m.action_cost_hth] : null,
+          ].filter(Boolean);
+          const chips = attrDefs.map(([k,v]) =>
+            `<span class="mission-attr">${k} <strong>${v}</strong></span>`).join('');
           return `
-            <div><span ${cardImageAttr(m)}><strong>${esc(m.name)}</strong></span></div>
-            ${subtitle ? `<div class="text-muted" style="font-size:12px;margin-top:2px">${subtitle}</div>` : ''}
-            <div style="margin-top:6px;font-size:13px">
-              RPs: <strong>${squad.computed.rp_total} / ${m.resources}</strong>
-              <span class="${rem < 0 ? 'text-danger' : 'text-muted'}" style="font-size:12px">
-                (${rem >= 0 ? rem + ' remaining' : Math.abs(rem) + ' over'})
-              </span>
+            <div class="mission-name"><span ${cardImageAttr(m)}>${esc(m.name)}</span></div>
+            ${subtitle ? `<div class="mission-subtitle">${subtitle}</div>` : ''}
+            <div class="mission-rp-track"><div class="mission-rp-fill ${over ? 'over' : ''}" style="width:${pct}%"></div></div>
+            <div class="mission-rp-row">
+              <span class="${over ? 'text-danger' : ''}">${rp} / ${budget} RP</span>
+              <span class="${over ? 'text-danger' : 'text-muted'}">${over ? Math.abs(rem) + ' over budget' : rem + ' remaining'}</span>
             </div>
-            ${attrs ? `<div class="text-muted" style="font-size:12px;margin-top:4px">${attrs}</div>` : ''}`;
+            ${chips ? `<div class="mission-attrs">${chips}</div>` : ''}`;
         })() : '<span class="text-muted">—</span>'}
       </div>
       <div class="squad-mission-box">
