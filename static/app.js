@@ -1370,7 +1370,11 @@ function renderBuilder() {
 
   main.querySelector('#squad-name')?.addEventListener('input', e => { builderState.name = e.target.value; });
   main.querySelector('#squad-notes')?.addEventListener('input', e => { builderState.notes = e.target.value; });
-  main.querySelector('#nation-select')?.addEventListener('change', e => { builderState.nation = e.target.value; });
+  main.querySelector('#nation-select')?.addEventListener('change', e => {
+    builderState.nation = e.target.value;
+    builderState.soldiers = [];
+    renderBuilder();
+  });
   main.querySelector('#pick-mission-btn')?.addEventListener('click', () => { setPickerMode('mission'); renderBuilder(); });
   main.querySelector('#change-mission-btn')?.addEventListener('click', () => { setPickerMode('mission'); renderBuilder(); });
   main.querySelector('#pick-obj-btn')?.addEventListener('click', () => { setPickerMode('objective'); renderBuilder(); });
