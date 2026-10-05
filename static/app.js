@@ -245,6 +245,63 @@ let cardFilters = { q: '', category: '', subtype: '', nation: '', module: '', so
 let cardNavList = [];
 let allNations = [];
 let allModules = [];
+
+const NATION_FLAGS = {
+  'Australian':             '🇦🇺',
+  'Austria':                '🇦🇹',
+  'Canada':                 '🇨🇦',
+  'China':                  '🇨🇳',
+  'China (KW)':             '🇨🇳',
+  'Commonwealth':           '🇬🇧',
+  'Finland':                '🇫🇮',
+  'France':                 '🇫🇷',
+  'Free French':            '🇫🇷',
+  'German':                 '🇩🇪',
+  'German Afrika Korps':    '🇩🇪',
+  'German Airborne':        '🇩🇪',
+  'German Alpine':          '🇩🇪',
+  'German SS':              '🇩🇪',
+  'German Undead':          '🇩🇪',
+  'Greece':                 '🇬🇷',
+  'Italian':                '🇮🇹',
+  'Italian Airborne':       '🇮🇹',
+  'Italian Cavalry':        '🇮🇹',
+  'Italian Partisans':      '🇮🇹',
+  'Italian Regio Esercito': '🇮🇹',
+  'Japan':                  '🇯🇵',
+  'Japan SNLF':             '🇯🇵',
+  'Japan Undead':           '🇯🇵',
+  'New Zealand':            '🇳🇿',
+  'North Korean (KW)':      '🇰🇵',
+  'Norway':                 '🇳🇴',
+  'PO Clergy':              '🇵🇱',
+  'Poland':                 '🇵🇱',
+  'Poland Undead':          '🇵🇱',
+  'RU Clergy':              '🇷🇺',
+  'Russian':                '🇷🇺',
+  'Russian Undead':         '🇷🇺',
+  'South Korean (KW)':      '🇰🇷',
+  'UK':                     '🇬🇧',
+  'UK Airborne':            '🇬🇧',
+  'UK Clergy':              '🇬🇧',
+  'UK Desert Rats':         '🇬🇧',
+  'UK Gurkhas':             '🇬🇧',
+  'UK LRDG':                '🇬🇧',
+  'UK Med':                 '🇬🇧',
+  'UK Undead':              '🇬🇧',
+  'US':                     '🇺🇸',
+  'US Airborne':            '🇺🇸',
+  'US Clergy':              '🇺🇸',
+  'US Undead':              '🇺🇸',
+  'USMC':                   '🇺🇸',
+  'United Nations (KW)':    '🇺🇳',
+  'Vichy French':           '🇫🇷',
+};
+
+function nationLabel(n) {
+  const flag = NATION_FLAGS[n];
+  return flag ? `${flag} ${n}` : n;
+}
 let allCategories = ['Soldier','Weapon','Equipment','Skill','Service Record','Mission',
   'Objective','Situation','Hostile','Action','Event','Location','Fortification','Other'];
 
@@ -277,7 +334,7 @@ function renderCardsShell() {
     `<option value="${esc(c)}" ${cardFilters.category === c ? 'selected' : ''}>${c || 'All categories'}</option>`
   ).join('');
   const nationOptions = ['', ...allNations].map(n =>
-    `<option value="${esc(n)}" ${cardFilters.nation === n ? 'selected' : ''}>${n || 'All nations'}</option>`
+    `<option value="${esc(n)}" ${cardFilters.nation === n ? 'selected' : ''}>${n ? nationLabel(n) : 'All nations'}</option>`
   ).join('');
   const moduleOptions = ['', ...allModules].map(m =>
     `<option value="${esc(m)}" ${cardFilters.module === m ? 'selected' : ''}>${m || 'All modules'}</option>`
@@ -1275,7 +1332,7 @@ function renderBuilder() {
           ${builderState.missionCard
             ? `<select id="nation-select" style="width:100%">
                 <option value="">— Select nation —</option>
-                ${allNations.map(n => `<option value="${esc(n)}" ${builderState.nation===n?'selected':''}>${esc(n)}</option>`).join('')}
+                ${allNations.map(n => `<option value="${esc(n)}" ${builderState.nation===n?'selected':''}>${esc(nationLabel(n))}</option>`).join('')}
                </select>`
             : `<span class="text-muted">Select a mission first.</span>`}
         </div>
