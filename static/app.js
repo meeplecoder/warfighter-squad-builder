@@ -870,7 +870,13 @@ async function showSquadDetail(squadId) {
           ${c.cover != null ? `<span>Cover ${c.cover}</span>` : ''}
           ${c.movement != null ? `<span>Move ${c.movement}</span>` : ''}
           ${c.hth != null ? `<span>HtH ${c.hth >= 0 ? '+' : ''}${c.hth}</span>` : ''}
-          ${!isPS && c.loadout != null ? `<span>Loadout ${c.loadout}</span>` : ''}
+          ${isPS && ss.effective_loadout != null ? (() => {
+            const lm = ss.effective_loadout - (c.loadout || 0);
+            const tip = lm !== 0
+              ? `Base: ${c.loadout}, Mission modifier: ${lm >= 0 ? '+' : ''}${lm}`
+              : `Base loadout: ${c.loadout}`;
+            return `<span title="${tip}"${lm !== 0 ? ' style="color:var(--danger)"' : ''}>Loadout ${ss.effective_loadout}</span>`;
+          })() : (!isPS && c.loadout != null ? `<span>Loadout ${c.loadout}</span>` : '')}
         </div>
         ${loadoutBar}
         ${gearHtml}
