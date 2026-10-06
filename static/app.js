@@ -776,7 +776,9 @@ async function renderMySquads(containerEl) {
       <td class="text-muted">${fmtDate(s.updated_at)}</td>
     </tr>`).join('');
 
-  const hadFocus = document.activeElement?.id === 'my-q';
+  const _myActive = document.activeElement;
+  const hadFocus = _myActive?.id === 'my-q';
+  const savedSel = hadFocus ? [_myActive.selectionStart, _myActive.selectionEnd] : null;
   containerEl.innerHTML = `
     <div class="filter-bar" style="margin-bottom:8px">
       <input type="text" id="my-q" placeholder="Search squads…" value="${esc(f.q)}" style="flex:1;min-width:160px">
@@ -797,7 +799,7 @@ async function renderMySquads(containerEl) {
 
   const qInput = containerEl.querySelector('#my-q');
   if (qInput) {
-    if (hadFocus) qInput.focus();
+    if (hadFocus) { qInput.focus(); if (savedSel) qInput.setSelectionRange(savedSel[0], savedSel[1]); }
     qInput.addEventListener('input', e => {
       clearTimeout(qInput._t);
       qInput._t = setTimeout(() => { f.q = e.target.value; f.page = 1; renderMySquads(containerEl); }, 300);
@@ -846,7 +848,9 @@ async function renderCommunitySquads(containerEl) {
       <td class="text-muted">${fmtDate(s.created_at)}</td>
     </tr>`).join('');
 
-  const hadFocus = document.activeElement?.id === 'comm-q';
+  const _commActive = document.activeElement;
+  const hadFocus = _commActive?.id === 'comm-q';
+  const savedSel = hadFocus ? [_commActive.selectionStart, _commActive.selectionEnd] : null;
   containerEl.innerHTML = `
     <div class="filter-bar" style="margin-bottom:8px">
       <input type="text" id="comm-q" placeholder="Search squads…" value="${esc(f.q)}" style="flex:1;min-width:160px">
@@ -869,7 +873,7 @@ async function renderCommunitySquads(containerEl) {
 
   const qInput = containerEl.querySelector('#comm-q');
   if (qInput) {
-    if (hadFocus) qInput.focus();
+    if (hadFocus) { qInput.focus(); if (savedSel) qInput.setSelectionRange(savedSel[0], savedSel[1]); }
     qInput.addEventListener('input', e => {
       clearTimeout(qInput._t);
       qInput._t = setTimeout(() => { f.q = e.target.value; f.page = 1; renderCommunitySquads(containerEl); }, 300);
