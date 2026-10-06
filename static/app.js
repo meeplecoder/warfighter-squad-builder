@@ -763,7 +763,7 @@ async function renderMySquads(containerEl) {
     <tr class="clickable" data-id="${s.id}">
       <td><strong>${esc(s.name)}</strong></td>
       <td>${esc(s.nation)}</td>
-      <td>${esc(s.mission ? s.mission.name : '—')}</td>
+      <td>${s.mission ? `${esc(s.mission.name)} <span class="text-muted">· ${s.mission.resources} RP</span>` : '—'}</td>
       <td>${s.rp_total}</td>
       <td><span class="${s.status === 'draft' ? 'badge badge-draft' : 'badge badge-ok'}">${s.status}</span></td>
       <td class="text-muted">${fmtDate(s.updated_at)}</td>
@@ -778,7 +778,7 @@ async function renderMySquads(containerEl) {
       <thead><tr>
         ${_squadSortTh('Name', 'name', f)}
         <th>Nation</th><th>Mission</th>
-        ${_squadSortTh('RP', 'rp_total', f)}
+        ${_squadSortTh('Team RP', 'rp_total', f)}
         <th>Status</th>
         ${_squadSortTh('Updated', 'updated_at', f)}
       </tr></thead>
@@ -829,7 +829,7 @@ async function renderCommunitySquads(containerEl) {
     <tr class="clickable" data-id="${s.id}">
       <td><strong>${esc(s.name)}</strong></td>
       <td>${esc(s.nation)}</td>
-      <td>${esc(s.mission ? s.mission.name : '—')}</td>
+      <td>${s.mission ? `${esc(s.mission.name)} <span class="text-muted">· ${s.mission.resources} RP</span>` : '—'}</td>
       <td>${s.rp_total}</td>
       <td>${s.likes_count} ♥</td>
       <td>${esc(s.owner ? s.owner.username : '—')}</td>
@@ -846,7 +846,7 @@ async function renderCommunitySquads(containerEl) {
       <thead><tr>
         ${_squadSortTh('Name', 'name', f)}
         <th>Nation</th><th>Mission</th>
-        ${_squadSortTh('RP', 'rp_total', f)}
+        ${_squadSortTh('Team RP', 'rp_total', f)}
         ${_squadSortTh('Likes', 'likes_count', f)}
         <th>Owner</th>
         ${_squadSortTh('Date', 'created_at', f)}
