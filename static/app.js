@@ -282,8 +282,12 @@ const NATION_DISPLAY_NAMES = {
   'South Korean': 'South Korea',
 };
 
-// Nations always shown first in selectors
-const NATION_PINNED = ['US', 'German'];
+// Nations shown first in selectors, in this exact order
+const NATION_PINNED = [
+  'US', 'German', 'Russian', 'UK', 'Poland', 'Japan',
+  'Australian', 'France', 'China', 'North Korean', 'South Korean',
+  'Finland', 'Canada', 'Italian',
+];
 
 function nationLabel(n) {
   const flag = NATION_FLAGS[n] || '';
@@ -292,8 +296,11 @@ function nationLabel(n) {
 }
 
 function sortedNations(nations) {
+  const pinnedSet = new Set(NATION_PINNED);
   const pinned = NATION_PINNED.filter(p => nations.includes(p));
-  const rest = nations.filter(n => !NATION_PINNED.includes(n));
+  const rest = nations
+    .filter(n => !pinnedSet.has(n))
+    .sort((a, b) => (NATION_DISPLAY_NAMES[a] || a).localeCompare(NATION_DISPLAY_NAMES[b] || b));
   return [...pinned, ...rest];
 }
 let allCategories = ['Soldier','Mission','Objective','Weapon','Equipment','Skill','Service Record'];
