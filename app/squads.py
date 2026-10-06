@@ -15,6 +15,8 @@ SORT_COLS = {
     'name': 'squads.name',
     'rp_total': 'squads.rp_total',
     'likes_count': 'squads.likes_count',
+    'nation': 'squads.nation',
+    'mission_name': 'cards.name',
 }
 
 
@@ -227,13 +229,18 @@ def list_squads():
         liked_ids = [l.squad_id for l in SquadLike.query.filter_by(user_id=current_user.id).all()]
         query = query.filter(Squad.id.in_(liked_ids))
 
-    sort_attr = {
-        'created_at': Squad.created_at,
-        'updated_at': Squad.updated_at,
-        'name': Squad.name,
-        'rp_total': Squad.rp_total,
-        'likes_count': Squad.likes_count,
-    }.get(sort, Squad.created_at)
+    if sort == 'mission_name':
+        query = query.join(Card, Squad.mission_card_id == Card.id)
+        sort_attr = Card.name
+    else:
+        sort_attr = {
+            'created_at': Squad.created_at,
+            'updated_at': Squad.updated_at,
+            'name': Squad.name,
+            'rp_total': Squad.rp_total,
+            'likes_count': Squad.likes_count,
+            'nation': Squad.nation,
+        }.get(sort, Squad.created_at)
     query = query.order_by(sort_attr.desc() if order == 'desc' else sort_attr.asc())
 
     total = query.count()

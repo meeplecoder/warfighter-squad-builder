@@ -769,6 +769,7 @@ async function renderMySquads(containerEl) {
       <td class="text-muted">${fmtDate(s.updated_at)}</td>
     </tr>`).join('');
 
+  const hadFocus = document.activeElement?.id === 'my-q';
   containerEl.innerHTML = `
     <div class="filter-bar" style="margin-bottom:8px">
       <input type="text" id="my-q" placeholder="Search squads…" value="${esc(f.q)}" style="flex:1;min-width:160px">
@@ -777,7 +778,8 @@ async function renderMySquads(containerEl) {
     <table class="data-table">
       <thead><tr>
         ${_squadSortTh('Name', 'name', f)}
-        <th>Nation</th><th>Mission</th>
+        ${_squadSortTh('Nation', 'nation', f)}
+        ${_squadSortTh('Mission', 'mission_name', f)}
         ${_squadSortTh('Team RP', 'rp_total', f)}
         <th>Status</th>
         ${_squadSortTh('Updated', 'updated_at', f)}
@@ -788,6 +790,7 @@ async function renderMySquads(containerEl) {
 
   const qInput = containerEl.querySelector('#my-q');
   if (qInput) {
+    if (hadFocus) qInput.focus();
     qInput.addEventListener('input', e => {
       clearTimeout(qInput._t);
       qInput._t = setTimeout(() => { f.q = e.target.value; f.page = 1; renderMySquads(containerEl); }, 300);
@@ -797,7 +800,7 @@ async function renderMySquads(containerEl) {
     th.addEventListener('click', () => {
       const col = th.dataset.sort;
       if (f.sort === col) f.order = f.order === 'asc' ? 'desc' : 'asc';
-      else { f.sort = col; f.order = col === 'name' ? 'asc' : 'desc'; }
+      else { f.sort = col; f.order = ['name', 'nation', 'mission_name'].includes(col) ? 'asc' : 'desc'; }
       f.page = 1; renderMySquads(containerEl);
     })
   );
@@ -836,6 +839,7 @@ async function renderCommunitySquads(containerEl) {
       <td class="text-muted">${fmtDate(s.created_at)}</td>
     </tr>`).join('');
 
+  const hadFocus = document.activeElement?.id === 'comm-q';
   containerEl.innerHTML = `
     <div class="filter-bar" style="margin-bottom:8px">
       <input type="text" id="comm-q" placeholder="Search squads…" value="${esc(f.q)}" style="flex:1;min-width:160px">
@@ -845,7 +849,8 @@ async function renderCommunitySquads(containerEl) {
     <table class="data-table">
       <thead><tr>
         ${_squadSortTh('Name', 'name', f)}
-        <th>Nation</th><th>Mission</th>
+        ${_squadSortTh('Nation', 'nation', f)}
+        ${_squadSortTh('Mission', 'mission_name', f)}
         ${_squadSortTh('Team RP', 'rp_total', f)}
         ${_squadSortTh('Likes', 'likes_count', f)}
         <th>Owner</th>
@@ -857,6 +862,7 @@ async function renderCommunitySquads(containerEl) {
 
   const qInput = containerEl.querySelector('#comm-q');
   if (qInput) {
+    if (hadFocus) qInput.focus();
     qInput.addEventListener('input', e => {
       clearTimeout(qInput._t);
       qInput._t = setTimeout(() => { f.q = e.target.value; f.page = 1; renderCommunitySquads(containerEl); }, 300);
@@ -869,7 +875,7 @@ async function renderCommunitySquads(containerEl) {
     th.addEventListener('click', () => {
       const col = th.dataset.sort;
       if (f.sort === col) f.order = f.order === 'asc' ? 'desc' : 'asc';
-      else { f.sort = col; f.order = col === 'name' ? 'asc' : 'desc'; }
+      else { f.sort = col; f.order = ['name', 'nation', 'mission_name'].includes(col) ? 'asc' : 'desc'; }
       f.page = 1; renderCommunitySquads(containerEl);
     })
   );
