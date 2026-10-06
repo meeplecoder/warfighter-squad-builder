@@ -772,6 +772,7 @@ async function renderMySquads(containerEl) {
       <td>${esc(s.nation)}</td>
       <td>${s.mission ? `${esc(s.mission.name)} <span class="text-muted">· ${s.mission.resources} RP</span>` : '—'}</td>
       <td>${s.rp_total}</td>
+      <td>${s.likes_count} ♥</td>
       <td><span class="${s.status === 'draft' ? 'badge badge-draft' : 'badge badge-ok'}">${s.status}</span></td>
       <td class="text-muted">${fmtDate(s.updated_at)}</td>
     </tr>`).join('');
@@ -790,10 +791,11 @@ async function renderMySquads(containerEl) {
         ${_squadSortTh('Nation', 'nation', f)}
         ${_squadSortTh('Mission', 'mission_name', f)}
         ${_squadSortTh('Team RP', 'rp_total', f)}
+        ${_squadSortTh('Likes', 'likes_count', f)}
         <th>Status</th>
         ${_squadSortTh('Updated', 'updated_at', f)}
       </tr></thead>
-      <tbody>${rows||'<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">No squads yet. Build one!</td></tr>'}</tbody>
+      <tbody>${rows||'<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">No squads yet. Build one!</td></tr>'}</tbody>
     </table>
     ${paginationHtml(page, pages)}`;
 

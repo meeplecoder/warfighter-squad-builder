@@ -216,6 +216,9 @@ def list_squads():
     else:
         # Everyone else only sees published squads
         query = query.filter(Squad.status == 'published')
+        # Exclude the logged-in user's own squads from community view
+        if current_user.is_authenticated:
+            query = query.filter(Squad.user_id != current_user.id)
 
     if q:
         query = query.filter(Squad.name.ilike(f'%{q}%'))
