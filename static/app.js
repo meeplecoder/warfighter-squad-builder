@@ -683,6 +683,8 @@ async function showCardDetail(idOrNumber) {
 let squadsActiveTab = 'community';  // 'my' | 'community'
 let mySquadFilters = { q: '', sort: 'updated_at', order: 'desc', page: 1 };
 let communityFilters = { q: '', liked: false, sort: 'created_at', order: 'desc', page: 1 };
+// IDs of squads currently visible in the browser list (for prev/next navigation)
+let squadNavList = [];
 
 register('squads', async function(subId) {
   if (subId === 'new') { renderBuilder(null); return; }
@@ -799,6 +801,7 @@ async function renderMySquads(containerEl) {
       f.page = 1; renderMySquads(containerEl);
     })
   );
+  squadNavList = items.map(s => s.id);
   containerEl.querySelectorAll('tr[data-id]').forEach(row =>
     row.addEventListener('click', () => navigate('squads/' + row.dataset.id)));
   containerEl.querySelectorAll('[data-pg]').forEach(btn =>
@@ -870,6 +873,7 @@ async function renderCommunitySquads(containerEl) {
       f.page = 1; renderCommunitySquads(containerEl);
     })
   );
+  squadNavList = items.map(s => s.id);
   containerEl.querySelectorAll('tr[data-id]').forEach(row =>
     row.addEventListener('click', () => navigate('squads/' + row.dataset.id)));
   containerEl.querySelectorAll('[data-pg]').forEach(btn =>
@@ -1003,10 +1007,22 @@ async function showSquadDetail(squadId) {
       </div>
     </div>` : `<p class="text-muted mt-2"><a href="#/login">Log in</a> to comment.</p>`;
 
+  // Build prev/next navigation from the current squad browser list
+  const squadNavIdx = squadNavList.indexOf(squad.id);
+  const prevSqId = squadNavIdx > 0 ? squadNavList[squadNavIdx - 1] : null;
+  const nextSqId = squadNavIdx >= 0 && squadNavIdx < squadNavList.length - 1 ? squadNavList[squadNavIdx + 1] : null;
+  const prevSqBtn = prevSqId ? `<a href="#/squads/${prevSqId}" class="btn btn-ghost btn-sm">← Prev</a>` : `<span class="btn btn-ghost btn-sm" style="opacity:.35;cursor:default">← Prev</span>`;
+  const nextSqBtn = nextSqId ? `<a href="#/squads/${nextSqId}" class="btn btn-ghost btn-sm">Next →</a>` : `<span class="btn btn-ghost btn-sm" style="opacity:.35;cursor:default">Next →</span>`;
+  const squadNavPos = squadNavIdx >= 0 ? `<span class="text-muted" style="font-size:12px">${squadNavIdx + 1} / ${squadNavList.length}</span>` : '';
+
   setMain(`
-    <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center">
+    <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <a href="#/squads" class="btn btn-ghost btn-sm">← Squads</a>
       ${editBtn} ${deleteBtn} ${publishBtn}
+      <span style="flex:1"></span>
+      ${squadNavPos}
+      ${prevSqBtn}
+      ${nextSqBtn}
     </div>
 
     <div class="squad-header">
