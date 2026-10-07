@@ -202,6 +202,36 @@ function cardImageAttr(card) {
   return `data-card-image-url="${esc(card.image_url)}"`;
 }
 
+// ---------------------------------------------------------------------------
+// Smart search syntax help (backend: app/smart_filter.py)
+// ---------------------------------------------------------------------------
+const SMART_KEYS = ['t', 's', 'n', 'm', 'x', 'name', '#', 'rp', 'l', 'h', 'mv', 'cv', 'hth', 'a', 'cx', 'xp', 'b', 'tu'];
+
+function smartHelpButton(id) {
+  return `<button type="button" class="btn btn-ghost btn-sm smart-help-btn" data-help="${id}" title="${esc(t('smart.title'))}">?</button>`;
+}
+
+function smartHelpBox(id) {
+  return `<div class="smart-help" id="${id}" hidden>
+    <div class="smart-help-intro">${t('smart.intro_html')}</div>
+    <div class="smart-help-keys">${SMART_KEYS.map(k =>
+      `<div><code>${esc(k)}</code> ${esc(t('smart.key.' + (k === '#' ? 'number' : k)))}</div>`).join('')}</div>
+    <div class="smart-help-examples">${t('smart.examples_html')}</div>
+  </div>`;
+}
+
+function wireSmartHelp(root) {
+  root.querySelectorAll('.smart-help-btn').forEach(btn => btn.addEventListener('click', () => {
+    const box = document.getElementById(btn.dataset.help);
+    if (box) box.hidden = !box.hidden;
+  }));
+}
+
+function smartErrorsHtml(errors) {
+  if (!errors?.length) return '';
+  return `<span class="smart-errors">⚠ ${esc(t('smart.ignored', { tokens: errors.map(e => e.token).join(', ') }))}</span>`;
+}
+
 function paginationHtml(page, pages, onNav) {
   if (pages <= 1) return '';
   return `
@@ -383,11 +413,13 @@ function renderCardsShell() {
     <h1 style="margin-bottom:16px">${esc(t('cards.title'))}</h1>
     <div class="filter-bar" style="flex-wrap:wrap;gap:6px">
       <input type="text" id="q-input" placeholder="${esc(t('cards.search_placeholder'))}" value="${esc(cardFilters.q)}" style="min-width:200px;flex:1">
+      ${smartHelpButton('cards-smart-help')}
       <select id="cat-select">${catOptions}</select>
       <select id="nation-select">${nationOptions}</select>
       <select id="module-select">${moduleOptions}</select>
       <button class="btn btn-ghost btn-sm" id="reset-filters">${esc(t('common.reset'))}</button>
     </div>
+    ${smartHelpBox('cards-smart-help')}
     <div id="cards-count" style="font-size:12px;color:var(--text-muted);margin-bottom:8px"></div>
     <div id="cards-results"></div>
     <div id="cards-pagination"></div>
@@ -395,6 +427,7 @@ function renderCardsShell() {
 
   const main = document.getElementById('app-main');
   let debounce;
+  wireSmartHelp(main);
 
   main.querySelector('#q-input').addEventListener('input', e => {
     clearTimeout(debounce);
@@ -464,11 +497,11 @@ async function refreshCardsTable() {
   const { items, total, page, pages } = data;
   const s = cardFilters.sort, o = cardFilters.order;
 
-  if (countDiv) countDiv.textContent = t('cards.showing', {
+  if (countDiv) countDiv.innerHTML = esc(t('cards.showing', {
     from: fmtNumber(total === 0 ? 0 : (page-1)*cardFilters.per_page+1),
     to: fmtNumber(Math.min(page*cardFilters.per_page,total)),
     total: fmtNumber(total),
-  });
+  })) + ' ' + smartErrorsHtml(data.filter_errors);
 
   const rows = items.map(c => `
     <tr class="clickable" data-id="${c.id}">
@@ -1913,6 +1946,7 @@ function renderBuilder() {
   main.querySelector('#save-draft-btn')?.addEventListener('click', () => saveSquad('draft'));
   main.querySelector('#publish-squad-btn')?.addEventListener('click', () => saveSquad('published'));
   main.querySelector('#validate-btn')?.addEventListener('click', validateSquad);
+  wireSmartHelp(main);
 
   // Restore scroll position (re-render must not jump the user back to the top)
   const _leftPanel = document.querySelector('.builder-left');
@@ -1959,9 +1993,12 @@ function renderPickerSearch() {
   ).join('');
   return `
     <div class="filter-bar mb-2" style="flex-wrap:wrap;gap:6px">
-      <input type="text" id="picker-q" placeholder="${esc(t('common.search'))}" value="${esc(builderState.pickerQ)}" style="flex:1;min-width:120px">
+      <input type="text" id="picker-q" placeholder="${esc(t('cards.search_placeholder'))}" value="${esc(builderState.pickerQ)}" style="flex:1;min-width:120px">
+      ${smartHelpButton('picker-smart-help')}
       <select id="picker-module-select">${moduleOptions}</select>
-    </div>`;
+    </div>
+    ${smartHelpBox('picker-smart-help')}
+    <div id="picker-errors"></div>`;
 }
 
 async function loadPickerResults() {
@@ -1995,6 +2032,8 @@ async function loadPickerResults() {
     const data = await API.get('/cards?' + params.toString());
     const items = data.items;
     const cols = getModeColKeys();
+    const errDiv = document.getElementById('picker-errors');
+    if (errDiv) errDiv.innerHTML = smartErrorsHtml(data.filter_errors);
 
     renderCardTable(resultsDiv, items, {
       cols,

@@ -1015,3 +1015,11 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
 .tr-glossary { margin-top: 14px; padding: 8px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; }
 .tr-editor-target textarea { font-family: inherit; line-height: 1.5; }
 @media (max-width: 800px) { .tr-editor { grid-template-columns: 1fr; } }
+
+/* ---- Smart search help ---------------------------------------------- */
+.smart-help { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; margin: 0 0 10px; font-size: 12px; }
+.smart-help code { background: var(--surface2); padding: 0 4px; border-radius: 3px; }
+.smart-help-keys { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 2px 12px; margin: 8px 0; color: var(--text-muted); }
+.smart-help-keys code { color: var(--accent-light); }
+.smart-errors { color: var(--warning); margin-left: 8px; }
+#picker-errors { font-size: 12px; margin-bottom: 4px; }

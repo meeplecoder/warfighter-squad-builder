@@ -24,7 +24,7 @@ KEY_PATTERNS = [
 ]
 PLURAL_RE = re.compile(r"""\btn\(\s*['"]([a-z_]+\.[a-z0-9_.]+)['"]""")
 # Keys built at runtime — prefixes whose children are never flagged as unused
-DYNAMIC_PREFIXES = ('enum.', 'tr.status.', 'tr.marker.')
+DYNAMIC_PREFIXES = ('enum.', 'tr.status.', 'tr.marker.', 'smart.key.')
 
 
 def used_keys():
