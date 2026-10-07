@@ -1,11 +1,15 @@
 from flask import Blueprint, request, jsonify
 from flask_login import current_user, login_required
-from sqlalchemy import or_
+from sqlalchemy import or_, and_, func
+from sqlalchemy.orm import aliased
 from app import db
+from app.models import CardTranslation
 from app.models import Card, Squad, SquadSoldier, SquadGear, SquadLike, SquadComment, CardAssociation, SquadObjective
 from app.models import now_utc
 from app import rules as rules_module
 from app.utils import classify_objective_type, theater_from_raw_type
+from app import i18n
+from app.i18n import _
 
 squads_bp = Blueprint('squads', __name__)
 
@@ -26,12 +30,12 @@ def _build_soldiers_data(payload_soldiers):
     for s in payload_soldiers:
         card = db.session.get(Card, s['card_id'])
         if not card:
-            return None, f"Card {s['card_id']} not found."
+            return None, _('Card {id} not found.', id=s['card_id'])
         gear_data = []
         for g in s.get('gear', []):
             gc = db.session.get(Card, g['card_id'])
             if not gc:
-                return None, f"Gear card {g['card_id']} not found."
+                return None, _('Gear card {id} not found.', id=g['card_id'])
             gear_data.append({'card': gc.to_card_detail(), 'quantity': g.get('quantity', 1)})
         soldiers_data.append({'card': card.to_card_detail(), 'gear': gear_data})
     return soldiers_data, None
@@ -48,7 +52,7 @@ def _objective_detail(oc):
         mechanic = ''
     return {
         'id': oc.id,
-        'name': oc.name,
+        'name': oc.display_name(),
         'nation': oc.nation,
         'module': oc.module,
         'theater': theater_from_raw_type(oc.raw_type or ''),
@@ -62,7 +66,7 @@ def _objective_detail(oc):
 def _squad_detail(squad, liked_by_me=False):
     base = squad.to_summary(liked_by_me=liked_by_me)
     sc_card = squad.situation_card
-    situation = {'id': sc_card.id, 'name': sc_card.name, 'nation': sc_card.nation, 'module': sc_card.module} if sc_card else None
+    situation = {'id': sc_card.id, 'name': sc_card.display_name(), 'nation': sc_card.nation, 'module': sc_card.module} if sc_card else None
     base['situation'] = situation
     base['objectives'] = [_objective_detail(so.card) for so in squad.objectives]
     base['notes'] = squad.notes
@@ -135,15 +139,15 @@ def _parse_and_validate(data):
     """Parse payload and run validation. Returns (mission_card, payload, soldiers_data, validation)."""
     mission_card_id = data.get('mission_card_id')
     if not mission_card_id:
-        return None, None, None, None, 'mission_card_id is required.'
+        return None, None, None, None, _('mission_card_id is required.')
 
     mission_card = db.session.get(Card, mission_card_id)
     if not mission_card or mission_card.card_type != 'Mission':
-        return None, None, None, None, 'Invalid mission card.'
+        return None, None, None, None, _('Invalid mission card.')
 
     nation = (data.get('nation') or '').strip()
     if not nation:
-        return None, None, None, None, 'nation is required.'
+        return None, None, None, None, _('nation is required.')
 
     soldiers_payload = data.get('soldiers', [])
     soldiers_data, err = _build_soldiers_data(soldiers_payload)
@@ -153,9 +157,10 @@ def _parse_and_validate(data):
     # Vehicle gear check
     for i, s in enumerate(soldiers_data):
         if s['card'].get('card_subtype') == 'Vehicle' and s.get('gear'):
-            return None, None, None, None, 'Vehicle soldiers cannot carry gear.'
+            return None, None, None, None, _('Vehicle soldiers cannot carry gear.')
 
-    validation = rules_module.validate_squad(data, mission_card.to_card_detail(), soldiers_data)
+    validation = i18n.localize_validation(
+        rules_module.validate_squad(data, mission_card.to_card_detail(), soldiers_data))
     return mission_card, data, soldiers_data, validation, None
 
 
@@ -274,7 +279,13 @@ def list_squads():
 
     if sort == 'mission_name':
         query = query.join(Card, Squad.mission_card_id == Card.id)
-        sort_attr = Card.name
+        name_col = Card.name
+        lang = i18n.get_lang()
+        if lang != i18n.DEFAULT_LANG:
+            tr = aliased(CardTranslation)
+            query = query.outerjoin(tr, and_(tr.card_number == Card.number, tr.lang == lang, tr.field == 'name'))
+            name_col = func.coalesce(tr.value, Card.name)
+        sort_attr = func.fold(name_col)
     else:
         sort_attr = {
             'created_at': Squad.created_at,
@@ -310,7 +321,7 @@ def list_squads():
 def get_squad(squad_id):
     squad = db.session.get(Squad, squad_id)
     if not squad:
-        return jsonify(error='Squad not found.'), 404
+        return jsonify(error=_('Squad not found.')), 404
     liked_by_me = False
     if current_user.is_authenticated:
         liked_by_me = SquadLike.query.filter_by(squad_id=squad_id, user_id=current_user.id).first() is not None
@@ -340,7 +351,7 @@ def create_squad():
         return jsonify(error=err), 400
 
     if target_status == 'published' and not validation['valid']:
-        return jsonify(error='Squad has validation errors.', validation=validation), 422
+        return jsonify(error=_('Squad has validation errors.'), validation=validation), 422
 
     objective_ids = [int(i) for i in (data.get('objective_card_ids') or []) if i]
     squad = Squad(
@@ -367,9 +378,9 @@ def create_squad():
 def update_squad(squad_id):
     squad = db.session.get(Squad, squad_id)
     if not squad:
-        return jsonify(error='Squad not found.'), 404
+        return jsonify(error=_('Squad not found.')), 404
     if squad.user_id != current_user.id:
-        return jsonify(error='Not authorized.'), 403
+        return jsonify(error=_('Not authorized.')), 403
 
     data = request.get_json(silent=True) or {}
     target_status = data.get('status', squad.status)
@@ -381,7 +392,7 @@ def update_squad(squad_id):
         return jsonify(error=err), 400
 
     if target_status == 'published' and not validation['valid']:
-        return jsonify(error='Squad has validation errors.', validation=validation), 422
+        return jsonify(error=_('Squad has validation errors.'), validation=validation), 422
 
     objective_ids = [int(i) for i in (data.get('objective_card_ids') or []) if i]
     squad.name = (data.get('name') or '').strip() or squad.name
@@ -405,9 +416,9 @@ def update_squad(squad_id):
 def publish_squad(squad_id):
     squad = db.session.get(Squad, squad_id)
     if not squad:
-        return jsonify(error='Squad not found.'), 404
+        return jsonify(error=_('Squad not found.')), 404
     if squad.user_id != current_user.id:
-        return jsonify(error='Not authorized.'), 403
+        return jsonify(error=_('Not authorized.')), 403
 
     # Re-validate against current saved state
     soldiers_payload = [
@@ -429,7 +440,7 @@ def publish_squad(squad_id):
     if err:
         return jsonify(error=err), 400
     if not validation['valid']:
-        return jsonify(error='Squad has validation errors.', validation=validation), 422
+        return jsonify(error=_('Squad has validation errors.'), validation=validation), 422
 
     squad.status = 'published'
     squad.is_valid = 1
@@ -443,9 +454,9 @@ def publish_squad(squad_id):
 def delete_squad(squad_id):
     squad = db.session.get(Squad, squad_id)
     if not squad:
-        return jsonify(error='Squad not found.'), 404
+        return jsonify(error=_('Squad not found.')), 404
     if squad.user_id != current_user.id:
-        return jsonify(error='Not authorized.'), 403
+        return jsonify(error=_('Not authorized.')), 403
     db.session.delete(squad)
     db.session.commit()
     return jsonify(ok=True)
@@ -458,7 +469,7 @@ def delete_squad(squad_id):
 def like_squad(squad_id):
     squad = db.session.get(Squad, squad_id)
     if not squad:
-        return jsonify(error='Squad not found.'), 404
+        return jsonify(error=_('Squad not found.')), 404
     existing = SquadLike.query.filter_by(squad_id=squad_id, user_id=current_user.id).first()
     if not existing:
         like = SquadLike(squad_id=squad_id, user_id=current_user.id)
@@ -473,7 +484,7 @@ def like_squad(squad_id):
 def unlike_squad(squad_id):
     squad = db.session.get(Squad, squad_id)
     if not squad:
-        return jsonify(error='Squad not found.'), 404
+        return jsonify(error=_('Squad not found.')), 404
     existing = SquadLike.query.filter_by(squad_id=squad_id, user_id=current_user.id).first()
     if existing:
         db.session.delete(existing)
@@ -488,7 +499,7 @@ def unlike_squad(squad_id):
 def list_comments(squad_id):
     squad = db.session.get(Squad, squad_id)
     if not squad:
-        return jsonify(error='Squad not found.'), 404
+        return jsonify(error=_('Squad not found.')), 404
     page = max(1, int(request.args.get('page', 1)))
     per_page = min(50, max(1, int(request.args.get('per_page', 20))))
     query = SquadComment.query.filter_by(squad_id=squad_id).order_by(SquadComment.created_at.asc())
@@ -508,13 +519,13 @@ def list_comments(squad_id):
 def add_comment(squad_id):
     squad = db.session.get(Squad, squad_id)
     if not squad:
-        return jsonify(error='Squad not found.'), 404
+        return jsonify(error=_('Squad not found.')), 404
     data = request.get_json(silent=True) or {}
     body = (data.get('body') or '').strip()
     if not body:
-        return jsonify(error='Comment body is required.'), 400
+        return jsonify(error=_('Comment body is required.')), 400
     if len(body) > 2000:
-        return jsonify(error='Comment too long (max 2000 chars).'), 400
+        return jsonify(error=_('Comment too long (max 2000 chars).')), 400
     comment = SquadComment(squad_id=squad_id, user_id=current_user.id, body=body)
     db.session.add(comment)
     db.session.commit()
@@ -526,14 +537,14 @@ def add_comment(squad_id):
 def edit_comment(squad_id, comment_id):
     comment = db.session.get(SquadComment, comment_id)
     if not comment or comment.squad_id != squad_id:
-        return jsonify(error='Comment not found.'), 404
+        return jsonify(error=_('Comment not found.')), 404
     squad = db.session.get(Squad, squad_id)
     if comment.user_id != current_user.id and squad.user_id != current_user.id:
-        return jsonify(error='Not authorized.'), 403
+        return jsonify(error=_('Not authorized.')), 403
     data = request.get_json(silent=True) or {}
     body = (data.get('body') or '').strip()
     if not body:
-        return jsonify(error='Comment body is required.'), 400
+        return jsonify(error=_('Comment body is required.')), 400
     comment.body = body
     comment.updated_at = now_utc()
     db.session.commit()
@@ -545,10 +556,10 @@ def edit_comment(squad_id, comment_id):
 def delete_comment(squad_id, comment_id):
     comment = db.session.get(SquadComment, comment_id)
     if not comment or comment.squad_id != squad_id:
-        return jsonify(error='Comment not found.'), 404
+        return jsonify(error=_('Comment not found.')), 404
     squad = db.session.get(Squad, squad_id)
     if comment.user_id != current_user.id and squad.user_id != current_user.id:
-        return jsonify(error='Not authorized.'), 403
+        return jsonify(error=_('Not authorized.')), 403
     db.session.delete(comment)
     db.session.commit()
     return jsonify(ok=True)

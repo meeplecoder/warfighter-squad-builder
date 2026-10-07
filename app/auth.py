@@ -4,6 +4,7 @@ from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.security import generate_password_hash, check_password_hash
 from app import db
 from app.models import User
+from app.i18n import _
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -18,6 +19,8 @@ def user_obj(user):
         'full_name': user.full_name,
         'avatar_url': user.avatar_url,
         'created_at': user.created_at,
+        'language': user.language,
+        'is_admin': bool(user.is_admin),
     }
 
 
@@ -30,16 +33,16 @@ def register():
     full_name = (data.get('full_name') or '').strip() or None
 
     if not USERNAME_RE.match(username):
-        return jsonify(error='Username must be 3–30 chars, letters/digits/underscore only.'), 400
+        return jsonify(error=_('Username must be 3–30 chars, letters/digits/underscore only.')), 400
     if not email or '@' not in email:
-        return jsonify(error='A valid email is required.'), 400
+        return jsonify(error=_('A valid email is required.')), 400
     if len(password) < 8:
-        return jsonify(error='Password must be at least 8 characters.'), 400
+        return jsonify(error=_('Password must be at least 8 characters.')), 400
 
     if User.query.filter_by(username=username).first():
-        return jsonify(error='Username already taken.'), 409
+        return jsonify(error=_('Username already taken.')), 409
     if User.query.filter_by(email=email).first():
-        return jsonify(error='Email already registered.'), 409
+        return jsonify(error=_('Email already registered.')), 409
 
     user = User(
         username=username,
@@ -61,7 +64,7 @@ def login():
 
     user = User.query.filter_by(username=username).first()
     if not user or not user.password_hash or not check_password_hash(user.password_hash, password):
-        return jsonify(error='Invalid credentials.'), 401
+        return jsonify(error=_('Invalid credentials.')), 401
 
     login_user(user, remember=True)
     return jsonify(user=user_obj(user)), 200
@@ -76,5 +79,5 @@ def logout():
 @auth_bp.route('/me', methods=['GET'])
 def me():
     if not current_user.is_authenticated:
-        return jsonify(error='Not authenticated.'), 401
+        return jsonify(error=_('Not authenticated.')), 401
     return jsonify(user=user_obj(current_user)), 200

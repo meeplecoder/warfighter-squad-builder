@@ -3,6 +3,7 @@ from flask_login import UserMixin
 from app import db
 import json
 from app.utils import classify_objective_type, classify_objective_family, theater_from_raw_type
+from app import i18n
 
 
 def now_utc():
@@ -63,13 +64,18 @@ class Card(db.Model):
             return combined
         return ''  # structural (Fallback / Right Flank — no mechanic)
 
+    def display_name(self):
+        """Card name in the request language (falls back to English)."""
+        return i18n.card_text(self.number, 'name', self.name)
+
     def to_card_object(self):
         prefix = self.number.split('-')[0]
         image_url = f'/api/cards/images/{prefix}/{self.number}.jpg' if self.has_image else None
         d = {
             'id': self.id,
             'number': self.number,
-            'name': self.name,
+            'name': self.display_name(),
+            'name_en': self.name,
             'card_type': self.card_type,
             'card_subtype': self.card_subtype,
             'nation': self.nation,
@@ -92,6 +98,9 @@ class Card(db.Model):
             'cx': self.cx or 0,
             'xp': self.xp or 0,
         }
+        tr_status = i18n.card_status_for_admin(self.number)
+        if tr_status is not None:
+            d['translation_status'] = tr_status
         if self.card_type == 'Mission':
             d['mission_type'] = self.card_subtype
         elif self.card_type == 'Objective':
@@ -108,7 +117,8 @@ class Card(db.Model):
             d['mission_type'] = self.card_subtype
             d['theater'] = theater_from_raw_type(self.raw_type or '')
         d.update({
-            'notes': self.notes,
+            'notes': i18n.card_text(self.number, 'notes', self.notes),
+            'notes_en': self.notes,
             'raw_type': self.raw_type,
             'loadout_modifier': self.loadout_modifier,
             'resources': self.resources,
@@ -144,6 +154,8 @@ class User(UserMixin, db.Model):
     full_name = db.Column(db.Text)
     avatar_url = db.Column(db.Text)
     created_at = db.Column(db.Text, nullable=False, default=now_utc)
+    language = db.Column(db.Text)                                  # preferred UI language; NULL = browser default
+    is_admin = db.Column(db.Integer, nullable=False, default=0)    # set manually; grants translation editor
 
     modules = db.relationship('UserModule', backref='user', cascade='all, delete-orphan')
     squads = db.relationship('Squad', foreign_keys='Squad.user_id', backref='owner', cascade='all, delete-orphan')
@@ -158,6 +170,8 @@ class User(UserMixin, db.Model):
             'full_name': self.full_name,
             'avatar_url': self.avatar_url,
             'created_at': self.created_at,
+            'language': self.language,
+            'is_admin': bool(self.is_admin),
         }
 
 
@@ -213,11 +227,11 @@ class Squad(db.Model):
             'owner': {'id': self.owner.id, 'username': self.owner.username},
             'mission': {
                 'id': self.mission_card.id,
-                'name': self.mission_card.name,
+                'name': self.mission_card.display_name(),
                 'resources': self.mission_card.resources,
             },
             'objectives': [
-                {'id': so.card.id, 'name': so.card.name}
+                {'id': so.card.id, 'name': so.card.display_name()}
                 for so in self.objectives
             ],
             'soldier_count': len(self.soldiers),
@@ -311,3 +325,22 @@ class SquadComment(db.Model):
             'created_at': self.created_at,
             'updated_at': self.updated_at,
         }
+
+
+class CardTranslation(db.Model):
+    """Translated card text (display only — English in `cards` stays canonical).
+    Keyed by card number, which is stable across CSV re-imports. See spec/07_i18n.md."""
+    __tablename__ = 'card_translations'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    card_number = db.Column(db.Text, nullable=False, index=True)
+    lang = db.Column(db.Text, nullable=False)
+    field = db.Column(db.Text, nullable=False)                     # 'name' | 'notes'
+    value = db.Column(db.Text, nullable=False)
+    status = db.Column(db.Text, nullable=False, default='draft')   # 'draft' | 'reviewed'
+    stale = db.Column(db.Integer, nullable=False, default=0)       # English changed since translation
+    source_hash = db.Column(db.Text, nullable=False, default='')   # sha1 of the English text translated
+    updated_by = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'))
+    updated_at = db.Column(db.Text, nullable=False, default=i18n.now_precise)
+
+    __table_args__ = (db.UniqueConstraint('card_number', 'lang', 'field'),)

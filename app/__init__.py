@@ -22,7 +22,13 @@ def create_app():
     limiter.init_app(app)
     login_manager.login_view = None  # API-only; return 401 instead of redirect
 
-    from app.models import User, CardAssociation, SquadObjective  # noqa: F401 — ensure tables are registered
+    from app.models import User, CardAssociation, SquadObjective, CardTranslation  # noqa: F401 — ensure tables are registered
+    from app.i18n import register_sqlite_functions
+    from sqlalchemy import event
+
+    with app.app_context():
+        if db.engine.dialect.name == 'sqlite':
+            event.listen(db.engine, 'connect', register_sqlite_functions)
 
     @login_manager.user_loader
     def load_user(user_id):
@@ -30,17 +36,20 @@ def create_app():
 
     @login_manager.unauthorized_handler
     def unauthorized():
-        return jsonify(error='Not authenticated.'), 401
+        from app.i18n import _
+        return jsonify(error=_('Not authenticated.')), 401
 
     from app.auth import auth_bp
     from app.cards import cards_bp
     from app.squads import squads_bp
     from app.profile import profile_bp
+    from app.translations import translations_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(cards_bp, url_prefix='/api/cards')
     app.register_blueprint(squads_bp, url_prefix='/api/squads')
     app.register_blueprint(profile_bp, url_prefix='/api/profile')
+    app.register_blueprint(translations_bp, url_prefix='/api/translations')
 
     @app.route('/api/modules')
     def get_modules():
@@ -141,6 +150,17 @@ def create_app():
                 conn.commit()
             except Exception:
                 pass
+
+            # i18n: user language preference + admin flag (translation editor)
+            for ddl in (
+                "ALTER TABLE users ADD COLUMN language TEXT",
+                "ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0",
+            ):
+                try:
+                    conn.execute(db.text(ddl))
+                    conn.commit()
+                except Exception:
+                    pass  # Column already exists
 
             # Add soldier_xp column and populate from notes (XP lines)
             try:

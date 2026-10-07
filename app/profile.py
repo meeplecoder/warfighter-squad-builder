@@ -3,6 +3,7 @@ from flask_login import current_user, login_required
 from werkzeug.security import generate_password_hash, check_password_hash
 from app import db
 from app.models import Card, UserModule
+from app.i18n import _, normalize_lang
 
 profile_bp = Blueprint('profile', __name__)
 
@@ -44,6 +45,10 @@ def update_profile():
         current_user.full_name = (data['full_name'] or '').strip() or None
     if 'avatar_url' in data:
         current_user.avatar_url = (data['avatar_url'] or '').strip() or None
+    if 'language' in data:
+        if data['language'] and not normalize_lang(data['language']):
+            return jsonify(error=_('Unsupported language.')), 400
+        current_user.language = normalize_lang(data['language'])
     db.session.commit()
     return jsonify(user=current_user.to_dict())
 
@@ -56,9 +61,9 @@ def change_password():
     new_pw = data.get('new_password', '')
 
     if not current_user.password_hash or not check_password_hash(current_user.password_hash, current_pw):
-        return jsonify(error='Current password is incorrect.'), 400
+        return jsonify(error=_('Current password is incorrect.')), 400
     if len(new_pw) < 8:
-        return jsonify(error='New password too short.'), 400
+        return jsonify(error=_('New password too short.')), 400
 
     current_user.password_hash = generate_password_hash(new_pw)
     db.session.commit()

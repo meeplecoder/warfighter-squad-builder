@@ -3,9 +3,11 @@ import re
 from flask import Blueprint, request, jsonify, send_from_directory, current_app, abort
 from flask_login import login_required, current_user
 from flask_limiter.util import get_remote_address
-from sqlalchemy import or_, case
-from app import db, limiter
-from app.models import Card
+from sqlalchemy import or_, and_, case, func
+from sqlalchemy.orm import aliased
+from app import db, limiter, i18n
+from app.i18n import _
+from app.models import Card, CardTranslation
 from app.utils import nation_filter_clause
 
 
@@ -44,10 +46,21 @@ def list_cards():
     order = request.args.get('order', 'asc')
 
     query = Card.query
+    lang = i18n.get_lang()
 
     if q:
-        like = f'%{q}%'
-        query = query.filter(or_(Card.name.ilike(like), Card.notes.ilike(like)))
+        # Accent/case-insensitive; matches English and the current language's translation
+        like = f'%{i18n.fold(q)}%'
+        conds = [func.fold(Card.name).like(like), func.fold(Card.notes).like(like)]
+        if lang != i18n.DEFAULT_LANG:
+            conds.append(Card.number.in_(
+                db.session.query(CardTranslation.card_number).filter(
+                    CardTranslation.lang == lang,
+                    CardTranslation.field.in_(i18n.CARD_FIELDS),
+                    func.fold(CardTranslation.value).like(like),
+                )
+            ))
+        query = query.filter(or_(*conds))
     if category:
         query = query.filter(Card.card_type == category)
     if subtype:
@@ -65,6 +78,14 @@ def list_cards():
         query = query.filter(Card.module.in_(modules))
 
     sort_col = SORT_COLS.get(sort, Card.module)
+    if sort == 'name':
+        # Sort by the displayed (translated) name, accent-insensitive
+        name_col = Card.name
+        if lang != i18n.DEFAULT_LANG:
+            tr = aliased(CardTranslation)
+            query = query.outerjoin(tr, and_(tr.card_number == Card.number, tr.lang == lang, tr.field == 'name'))
+            name_col = func.coalesce(tr.value, Card.name)
+        sort_col = func.fold(name_col)
     primary = sort_col.desc() if order == 'desc' else sort_col.asc()
     if sort == 'number':
         query = query.order_by(primary)
@@ -99,7 +120,7 @@ def get_card(id_or_number):
         card = Card.query.filter_by(number=id_or_number).first()
 
     if not card:
-        return jsonify(error='Card not found.'), 404
+        return jsonify(error=_('Card not found.')), 404
 
     detail = card.to_card_detail()
     if card.card_type == 'Soldier':

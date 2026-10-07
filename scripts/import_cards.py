@@ -436,6 +436,12 @@ def main():
         db.session.commit()
         print(f'  Notes cleaned: {notes_cleaned}/{len(soldiers)} soldiers')
 
+        # i18n: flag translations whose English source text changed
+        from app.translation_io import rehash
+        r = rehash()
+        print(f"Translations: {r['fresh']} up to date | {r['stale']} stale | {r['adopted']} adopted"
+              + (f" | {len(r['orphaned'])} orphaned (card number no longer exists)" if r['orphaned'] else ''))
+
 
 if __name__ == '__main__':
     main()

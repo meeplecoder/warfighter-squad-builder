@@ -13,6 +13,22 @@ VEHICLE_SUBTYPE = 'Vehicle'
 
 NON_BUDGET_SUBTYPES = {NPS_SUBTYPE, SQUAD_SUBTYPE, VEHICLE_SUBTYPE}
 
+# Message templates by code (English). Params are also returned so callers can localise
+# (squads.py → i18n.localize_validation). `nation` params are raw enum values.
+MESSAGES = {
+    'NO_PLAYER_SOLDIER': 'At least one Player Soldier is required.',
+    'NATION_MISMATCH': '{name} is restricted to {nation} soldiers.',
+    'OVER_BUDGET': 'Squad costs {rp_total} RP but mission budget is {budget} RP.',
+    'OVER_LOADOUT': '{name} exceeds Loadout: carrying {used}, max {max}.',
+    'DUPLICATE_SKILL': '{name} already has {skill}.',
+    'SPECIALIST_PREREQ': '{name} has prerequisites. Verify them in the card Notes.',
+    'LOW_SOLDIER_COUNT': "This mission's budget suggests using {recommended} Player Soldiers.",
+}
+
+
+def _issue(code, **params):
+    return {'code': code, 'params': params, 'message': MESSAGES[code].format(**params)}
+
 
 def gear_loadout_weight(gear_card):
     """Loadout weight of a single gear card."""
@@ -40,25 +56,19 @@ def validate_squad(payload, mission_card, soldiers_data):
     # 1. At least one Player Soldier
     ps_soldiers = [s for s in soldiers_data if s['card'].get('card_subtype') == PS_SUBTYPE]
     if not ps_soldiers:
-        errors.append({'code': 'NO_PLAYER_SOLDIER', 'message': 'At least one Player Soldier is required.'})
+        errors.append(_issue('NO_PLAYER_SOLDIER'))
 
     # 2. Nation check on all soldier + gear cards
     for s in soldiers_data:
         c = s['card']
         c_nation = c.get('nation')
         if c_nation and c_nation != nation:
-            errors.append({
-                'code': 'NATION_MISMATCH',
-                'message': f"{c['name']} is restricted to {c_nation} soldiers.",
-            })
+            errors.append(_issue('NATION_MISMATCH', name=c['name'], nation=c_nation))
         for g in s['gear']:
             gc = g['card']
             gc_nation = gc.get('nation')
             if gc_nation and gc_nation != nation:
-                errors.append({
-                    'code': 'NATION_MISMATCH',
-                    'message': f"{gc['name']} is restricted to {gc_nation} soldiers.",
-                })
+                errors.append(_issue('NATION_MISMATCH', name=gc['name'], nation=gc_nation))
 
     # 3. RP budget (PS soldiers + PS gear only)
     rp_total = 0
@@ -71,10 +81,7 @@ def validate_squad(payload, mission_card, soldiers_data):
                 rp_total += (g['card'].get('resource_cost') or 0) * g['quantity']
 
     if budget and rp_total > budget:
-        errors.append({
-            'code': 'OVER_BUDGET',
-            'message': f'Squad costs {rp_total} RP but mission budget is {budget} RP.',
-        })
+        errors.append(_issue('OVER_BUDGET', rp_total=rp_total, budget=budget))
 
     # 4. Loadout per PS + duplicate skills
     soldier_computed = []
@@ -92,37 +99,23 @@ def validate_squad(payload, mission_card, soldiers_data):
             )
             loadout_remaining = effective_loadout - gear_loadout_used
             if gear_loadout_used > effective_loadout:
-                errors.append({
-                    'code': 'OVER_LOADOUT',
-                    'message': (
-                        f"{card['name']} exceeds Loadout: "
-                        f"carrying {gear_loadout_used}, max {effective_loadout}."
-                    ),
-                })
+                errors.append(_issue('OVER_LOADOUT', name=card['name'],
+                                     used=gear_loadout_used, max=effective_loadout))
 
-            # Duplicate skill names
+            # Duplicate skill names (compared on the canonical English name)
             skill_names = []
             for g in s['gear']:
                 if g['card']['card_type'] == 'Skill':
-                    sname = g['card']['name']
+                    sname = g['card'].get('name_en') or g['card']['name']
                     if sname in skill_names or g['quantity'] > 1:
-                        errors.append({
-                            'code': 'DUPLICATE_SKILL',
-                            'message': f"{card['name']} already has {sname}.",
-                        })
+                        errors.append(_issue('DUPLICATE_SKILL', name=card['name'], skill=g['card']['name']))
                     else:
                         skill_names.append(sname)
 
             # Specialist skill warning
             for g in s['gear']:
                 if g['card'].get('card_subtype') == 'Specialist':
-                    warnings.append({
-                        'code': 'SPECIALIST_PREREQ',
-                        'message': (
-                            f"{g['card']['name']} has prerequisites. "
-                            'Verify them in the card Notes.'
-                        ),
-                    })
+                    warnings.append(_issue('SPECIALIST_PREREQ', name=g['card']['name']))
 
             soldier_computed.append({
                 'card_id': card['id'],
@@ -145,10 +138,7 @@ def validate_squad(payload, mission_card, soldiers_data):
         recommended = 1 if budget < 40 else (2 if budget < 80 else (3 if budget < 120 else 4))
         actual_ps = len(ps_soldiers)
         if actual_ps < recommended:
-            warnings.append({
-                'code': 'LOW_SOLDIER_COUNT',
-                'message': f"This mission's budget suggests using {recommended} Player Soldiers.",
-            })
+            warnings.append(_issue('LOW_SOLDIER_COUNT', recommended=recommended))
 
     rp_remaining = budget - rp_total if budget else None
 
