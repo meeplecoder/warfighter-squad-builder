@@ -73,6 +73,10 @@ def list_cards():
     else:
         query = query.order_by(primary, _MODULE_PRIORITY, Card.module.asc(), Card.number.asc())
 
+    # Full ordered ID list (no paging) — used for prev/next in card detail
+    if request.args.get('ids_only', 'false').lower() == 'true':
+        return jsonify(ids=[cid for (cid,) in query.with_entities(Card.id).all()])
+
     total = query.count()
     cards = query.offset((page - 1) * per_page).limit(per_page).all()
 

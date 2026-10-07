@@ -244,8 +244,9 @@ function openLightbox(url) {
 // VIEW: Cards Browser
 // ---------------------------------------------------------------------------
 let cardFilters = { q: '', category: '', subtype: '', nation: '', module: '', sort: 'module', order: 'asc', page: 1, per_page: 50 };
-// IDs of cards currently visible in the browser list (for prev/next navigation)
+// IDs of all cards matching the browser filters/sort, across pages (for prev/next navigation)
 let cardNavList = [];
+let cardNavReq = 0;  // guards against stale ids_only responses
 let allNations = [];
 let allModules = [];
 
@@ -473,8 +474,14 @@ async function refreshCardsTable() {
     });
   });
 
-  // Persist card ID order for prev/next navigation in card detail
+  // Persist full card ID order (all pages) for prev/next navigation in card detail
   cardNavList = items.map(c => c.id);
+  const idParams = new URLSearchParams(params);
+  idParams.delete('page'); idParams.delete('per_page'); idParams.set('ids_only', 'true');
+  const navReq = ++cardNavReq;
+  API.get('/cards?' + idParams.toString())
+    .then(d => { if (navReq === cardNavReq) cardNavList = d.ids; })
+    .catch(() => {});
 
   resultsDiv.querySelectorAll('tr[data-id]').forEach(row => {
     row.addEventListener('click', () => navigate('cards/' + row.dataset.id));
@@ -515,6 +522,8 @@ async function showCardDetail(idOrNumber) {
   const navIdx = cardNavList.indexOf(card.id);
   const prevId = navIdx > 0 ? cardNavList[navIdx - 1] : null;
   const nextId = navIdx >= 0 && navIdx < cardNavList.length - 1 ? cardNavList[navIdx + 1] : null;
+  // Keep the browser on the page containing this card when returning to the list
+  if (navIdx >= 0) cardFilters.page = Math.floor(navIdx / cardFilters.per_page) + 1;
   const navPos = navIdx >= 0 ? `<span class="cd-nav-pos">${navIdx + 1} / ${cardNavList.length}</span>` : '';
   const prevBtn = prevId
     ? `<a href="#/cards/${prevId}" class="btn btn-ghost btn-sm">← Prev</a>`
