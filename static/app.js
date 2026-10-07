@@ -564,7 +564,7 @@ async function showCardDetail(idOrNumber) {
   function cdTable(tbl, title) {
     if (!tbl) return '';
     const { headers, rows } = tbl;
-    return `${title ? `<div class="cd-subtable-label">${esc(title)}</div>` : ''}
+    return `${title ? sectionLabel(title) : ''}
     <div class="cd-table-wrap">
       <table class="cd-table">
         <thead><tr>${headers.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead>

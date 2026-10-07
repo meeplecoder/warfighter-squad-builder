@@ -946,15 +946,6 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
   overflow-x: auto;
   margin-bottom: 10px;
 }
-.cd-subtable-label {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--text-muted);
-  margin-bottom: 4px;
-  margin-top: 10px;
-}
 .cd-table {
   width: auto;
   border-collapse: collapse;
