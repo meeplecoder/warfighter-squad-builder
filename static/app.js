@@ -624,7 +624,7 @@ async function showCardDetail(idOrNumber) {
           return `<span class="cd-badge" style="${style}" title="Ignores ${esc(h.type)} environment attack penalties">${lbl} Hardy (${esc(h.type)})</span>`;
         }).join('')}
       </div>` : ''}
-      ${cdTable(card.health_actions_table)}
+      ${card.health_actions_table ? sectionLabel('Health / Actions') + cdTable(card.health_actions_table) : ''}
     `;
 
   } else if (card.card_type === 'Weapon') {
@@ -689,7 +689,7 @@ async function showCardDetail(idOrNumber) {
     statsHtml += spawnTable(card.hostile_spawn_table);
     statsHtml += cdTable(card.weapon_range_table, 'Range');
     statsHtml += cdTable(card.weapon_mode_table, 'Fire Mode');
-    statsHtml += cdTable(card.health_actions_table);
+    if (card.health_actions_table) statsHtml += sectionLabel('Health / Actions') + cdTable(card.health_actions_table);
   }
 
   setMain(`

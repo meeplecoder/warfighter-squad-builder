@@ -879,6 +879,9 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
 }
 
 /* Vitals grid — HP / Move / Cover / Loadout / etc. */
+/* Extra section labels within the same section need breathing room above */
+.cd-section-label:not(:first-child) { margin-top: 18px; }
+
 .cd-vitals {
   display: flex;
   flex-wrap: wrap;
