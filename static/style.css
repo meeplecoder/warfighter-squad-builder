@@ -825,6 +825,13 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
 .cd-eyebrow-module { font-size: 11px; }
 .cd-eyebrow-num    { margin-left: auto; font-size: 11px; opacity: 0.5; font-variant-numeric: tabular-nums; }
 
+.cd-name-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+}
+.cd-theater-tag { font-size: 13px; color: var(--text-muted); white-space: nowrap; }
 .cd-name {
   font-size: 1.8rem;
   font-weight: 800;
@@ -928,7 +935,6 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
 .cd-badge-xp { background: #19192e; color: #7d7dbf; border: 1px solid #2e2e4e; }
 
 
-.cd-theater-tag { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
 
 /* Data tables: weapon range/mode, spawn, health/actions, default gear */
 .cd-table-wrap {

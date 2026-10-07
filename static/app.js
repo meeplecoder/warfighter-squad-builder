@@ -577,7 +577,7 @@ async function showCardDetail(idOrNumber) {
 
   function spawnTable(rows) {
     if (!rows?.length) return '';
-    return `<div class="cd-subtable-label">Hostile Spawn</div>
+    return `${sectionLabel('Hostile Spawn')}
     <div class="cd-table-wrap">
       <table class="cd-table">
         <thead><tr><th>Team RP</th><th>Hostiles</th></tr></thead>
@@ -649,7 +649,6 @@ async function showCardDetail(idOrNumber) {
     statsHtml = `
       ${sectionLabel('Mission Brief')}
       <div class="cd-vitals">${mAttrs.map(a => vital(a.k, a.v)).join('')}</div>
-      ${card.theater ? `<div class="cd-theater-tag">📍 ${esc(card.theater)}</div>` : ''}
     `;
 
   } else if (card.card_type === 'Objective') {
@@ -660,7 +659,6 @@ async function showCardDetail(idOrNumber) {
     statsHtml = `
       ${oAttrs.length ? `${sectionLabel('Costs')}<div class="cd-vitals">${oAttrs.map(a => vital(a.k, a.v)).join('')}</div>` : ''}
       ${spawnTable(card.hostile_spawn_table)}
-      ${card.theater ? `<div class="cd-theater-tag">📍 ${esc(card.theater)}</div>` : ''}
     `;
 
   } else {
@@ -712,7 +710,10 @@ async function showCardDetail(idOrNumber) {
           <span class="cd-eyebrow-module">${esc(card.module)}</span>
           <span class="cd-eyebrow-num">${esc(card.number)}</span>
         </div>
-        <h1 class="cd-name">${esc(card.name)}</h1>
+        <div class="cd-name-row">
+          <h1 class="cd-name">${esc(card.name)}</h1>
+          ${card.theater ? `<span class="cd-theater-tag">📍 ${esc(card.theater)}</span>` : ''}
+        </div>
       </div>
 
       <div class="cd-body">
