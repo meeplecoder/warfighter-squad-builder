@@ -765,3 +765,224 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
   z-index: 200;
 }
 [data-tooltip]:hover::after { opacity: 1; transition-delay: 0.5s; }
+
+/* =====================================================================
+   Card Detail — redesigned (.cd-*)
+   ===================================================================== */
+
+/* Wrapper: sets type-accent custom properties */
+.cd-wrap {
+  --cd-accent: var(--accent);
+  --cd-accent-bg: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface);
+}
+
+/* Type color themes — match existing chip palette */
+.cd-t-soldier    { --cd-accent: #6dbf8f; --cd-accent-bg: #192e24; }
+.cd-t-weapon     { --cd-accent: #bf6d6d; --cd-accent-bg: #2c1818; }
+.cd-t-equipment  { --cd-accent: #6d9bbf; --cd-accent-bg: #18242e; }
+.cd-t-skill      { --cd-accent: #9b6dbf; --cd-accent-bg: #22182c; }
+.cd-t-sr         { --cd-accent: #8a9099; --cd-accent-bg: #1e2025; }
+.cd-t-mission    { --cd-accent: #bf9b6d; --cd-accent-bg: #2c2218; }
+.cd-t-objective  { --cd-accent: #c4906a; --cd-accent-bg: #2c2018; }
+.cd-t-situation  { --cd-accent: #7ea8bf; --cd-accent-bg: #18262e; }
+.cd-t-hostile    { --cd-accent: #bf6d6d; --cd-accent-bg: #2c1818; }
+
+/* Nav bar */
+.cd-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.cd-nav-pos { font-size: 12px; color: var(--text-muted); }
+
+/* Header strip */
+.cd-header {
+  background: var(--cd-accent-bg);
+  border-bottom: 2px solid var(--cd-accent);
+  padding: 16px 20px 18px;
+}
+
+/* Eyebrow: type chip · subtype · nation · module · #number */
+.cd-eyebrow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.cd-eyebrow-sub    { color: var(--cd-accent); font-weight: 600; }
+.cd-eyebrow-sep    { color: var(--border); }
+.cd-eyebrow-nation { font-weight: 500; }
+.cd-eyebrow-module { font-size: 11px; }
+.cd-eyebrow-num    { margin-left: auto; font-size: 11px; opacity: 0.5; font-variant-numeric: tabular-nums; }
+
+.cd-name {
+  font-size: 1.8rem;
+  font-weight: 800;
+  line-height: 1.12;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+/* Two-column body */
+.cd-body {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+}
+.cd-main  { padding: 20px; border-right: 1px solid var(--border); min-width: 0; }
+.cd-aside { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+
+/* Card image */
+.cd-image-wrap {
+  border-radius: calc(var(--radius) - 1px);
+  overflow: hidden;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+}
+.cd-has-image { cursor: zoom-in; }
+.cd-image { width: 100%; height: auto; display: block; transition: opacity 0.18s; }
+.cd-has-image:hover .cd-image { opacity: 0.88; }
+.cd-image-placeholder {
+  padding-top: 140%;
+  background: var(--surface2);
+  position: relative;
+}
+.cd-image-placeholder::after {
+  content: '🃏';
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 48px; opacity: 0.12;
+}
+
+/* Content sections */
+.cd-section { margin-bottom: 22px; }
+.cd-section:last-child { margin-bottom: 0; }
+.cd-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--cd-accent);
+  margin-bottom: 10px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--cd-accent-bg);
+}
+
+/* Vitals grid — HP / Move / Cover / Loadout / etc. */
+.cd-vitals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.cd-vital {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 14px;
+  text-align: center;
+  min-width: 60px;
+}
+.cd-vital-val {
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  margin-bottom: 3px;
+}
+.cd-vital-lbl {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+/* CX / XP experience badges */
+.cd-xp-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; }
+.cd-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.cd-badge-cx { background: #192c19; color: #7dbf7d; border: 1px solid #2e4e2e; }
+.cd-badge-xp { background: #19192e; color: #7d7dbf; border: 1px solid #2e2e4e; }
+
+
+.cd-theater-tag { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+
+/* Data tables: weapon range/mode, spawn, health/actions, default gear */
+.cd-table-wrap {
+  display: inline-block;
+  max-width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  overflow-x: auto;
+  margin-bottom: 10px;
+}
+.cd-subtable-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  margin-top: 10px;
+}
+.cd-table {
+  width: auto;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.cd-table th {
+  padding: 6px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  background: var(--surface2);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.cd-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); }
+.cd-table tbody tr:last-child td { border-bottom: none; }
+.cd-table tbody tr.clickable:hover { background: var(--surface2); cursor: pointer; }
+.cd-assoc-table tbody tr.clickable:hover { background: var(--surface2); cursor: pointer; }
+.cd-assoc-num { font-size: 11px; color: var(--text-muted); }
+
+/* Field notes */
+.cd-notes {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--cd-accent);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-line;
+  color: var(--text-muted);
+}
+
+/* Responsive: stack image below on narrow screens */
+@media (max-width: 640px) {
+  .cd-body { grid-template-columns: 1fr; }
+  .cd-main { border-right: none; border-bottom: 1px solid var(--border); }
+  .cd-aside { padding: 12px; }
+  .cd-name  { font-size: 1.4rem; }
+}

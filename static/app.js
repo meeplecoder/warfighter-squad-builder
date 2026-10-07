@@ -502,177 +502,256 @@ async function showCardDetail(idOrNumber) {
     return;
   }
 
-  const isSoldier = card.card_type === 'Soldier';
-  const stats = isSoldier ? [
-    ['RP Cost',   card.resource_cost],
-    ['Health',    card.health],
-    ['Movement',  card.movement],
-    ['Cover',     card.cover],
-    ['Loadout',   card.loadout],
-    ['HtH',       card.hth != null ? (card.hth >= 0 ? '+' : '') + card.hth : null],
-    ['XP',        card.xp ?? 0],
-    ['CX',        card.cx ?? 0],
-  ].filter(([, v]) => v != null) : [
-    ['RP Cost', card.resource_cost],
-    ['Health', card.health],
-    ['Movement', card.movement],
-    ['Cover', card.cover],
-    ['Loadout', card.loadout],
-    ['HtH', card.hth != null ? (card.hth >= 0 ? '+' : '') + card.hth : null],
-    ['Actions', card.actions],
-    ['Budget (RP)', card.resources],
-    ['Turns', card.time],
-    ['Obj. at #', card.objective_position],
-    ['Loadout Mod', card.loadout_modifier != null ? (card.loadout_modifier >= 0 ? '+' : '') + card.loadout_modifier : null],
-    ['Entrance Cost', card.entrance_cost],
-    ['HtH Cost', card.action_cost_hth],
-    ['Reinforcements', card.reinforcements],
-    ['XP Value', card.xp_value],
-    ['Count', card.hostile_count],
-    ['Noise', card.noise],
-    ['Support Cost', card.support_cost],
-    ['Covert Cost', card.covert_cost],
-    ['Gain', card.gain],
-    ['Loss', card.loss],
-  ].filter(([, v]) => v != null && v !== '');
+  // Type → CSS theme class (sets --cd-accent / --cd-accent-bg)
+  const TYPE_CLS = {
+    Soldier: 'cd-t-soldier', Weapon: 'cd-t-weapon', Equipment: 'cd-t-equipment',
+    Skill: 'cd-t-skill', 'Service Record': 'cd-t-sr',
+    Mission: 'cd-t-mission', Objective: 'cd-t-objective',
+    Situation: 'cd-t-situation', Hostile: 'cd-t-hostile',
+  };
+  const typeCls = TYPE_CLS[card.card_type] || '';
 
-  const statItems = stats.map(([label, val]) => `
-    <div class="stat-item">
-      <div class="stat-label">${esc(label)}</div>
-      <div class="stat-value">${esc(String(val))}</div>
-    </div>`).join('');
-
-  const imagePanel = card.image_url
-    ? `<div class="card-image-panel">
-        <img src="${esc(card.image_url)}" alt="${esc(card.name)}" class="card-full-img">
-       </div>`
-    : `<div class="card-image-panel">
-        <div class="card-image-placeholder"></div>
-       </div>`;
-
-  const addBtn = builderState.missionCard
-    ? `<button class="btn btn-primary mt-2" id="add-to-build">+ Add to current build</button>` : '';
-
-  const assocs = card.associations || [];
-  const assocTable = assocs.length > 0 ? `
-    <div style="margin-top:24px">
-      <div class="builder-section-title">Included Cards (pre-printed)</div>
-      <table class="data-table" style="margin-top:8px">
-        <thead><tr><th>#</th><th>Name</th><th>Category</th><th>Qty</th></tr></thead>
-        <tbody>
-          ${assocs.map(a => `
-            <tr class="clickable" data-id="${a.card.id}">
-              <td class="text-muted" style="font-size:11px">${esc(a.card.number)}</td>
-              <td><span ${cardImageAttr(a.card)}>${esc(a.card.name)}</span></td>
-              <td>${chipForCategory(a.card.card_type)}</td>
-              <td>${a.quantity}</td>
-            </tr>`).join('')}
-        </tbody>
-      </table>
-    </div>` : '';
-
-  // Build prev/next navigation from the current card browser list
+  // --- Prev / Next ---
   const navIdx = cardNavList.indexOf(card.id);
   const prevId = navIdx > 0 ? cardNavList[navIdx - 1] : null;
   const nextId = navIdx >= 0 && navIdx < cardNavList.length - 1 ? cardNavList[navIdx + 1] : null;
-  const prevBtn = prevId ? `<a href="#/cards/${prevId}" class="btn btn-ghost btn-sm">← Prev</a>` : `<span class="btn btn-ghost btn-sm" style="opacity:.35;cursor:default">← Prev</span>`;
-  const nextBtn = nextId ? `<a href="#/cards/${nextId}" class="btn btn-ghost btn-sm">Next →</a>` : `<span class="btn btn-ghost btn-sm" style="opacity:.35;cursor:default">Next →</span>`;
-  const navPos = navIdx >= 0 ? `<span class="text-muted" style="font-size:12px">${navIdx + 1} / ${cardNavList.length}</span>` : '';
+  const navPos = navIdx >= 0 ? `<span class="cd-nav-pos">${navIdx + 1} / ${cardNavList.length}</span>` : '';
+  const prevBtn = prevId
+    ? `<a href="#/cards/${prevId}" class="btn btn-ghost btn-sm">← Prev</a>`
+    : `<span class="btn btn-ghost btn-sm" style="opacity:.35;pointer-events:none">← Prev</span>`;
+  const nextBtn = nextId
+    ? `<a href="#/cards/${nextId}" class="btn btn-ghost btn-sm">Next →</a>`
+    : `<span class="btn btn-ghost btn-sm" style="opacity:.35;pointer-events:none">Next →</span>`;
+
+  // --- Add to build ---
+  const addBtn = builderState.missionCard
+    ? `<button class="btn btn-primary btn-sm" id="add-to-build">+ Add to build</button>` : '';
+
+  // --- Eyebrow subtype ---
+  const subtypeLabel = (() => {
+    if (card.card_type === 'Mission')    return card.mission_type || card.card_subtype || '';
+    if (card.card_type === 'Objective') {
+      return [card.objective_family, card.objective_mechanic].filter(Boolean).join(' · ');
+    }
+    return SUBTYPE_CATS.has(card.card_type) ? (card.card_subtype || '') : '';
+  })();
+
+  // --- Image ---
+  const hasImage = !!card.image_url;
+  const imageHtml = hasImage
+    ? `<img src="${esc(card.image_url)}" alt="${esc(card.name)}" class="cd-image">`
+    : `<div class="cd-image-placeholder"></div>`;
+
+  const assocs = card.associations || [];
+
+  // ---------------------------------------------------------------------------
+  // Stat-section helpers
+  // ---------------------------------------------------------------------------
+  function vital(label, value) {
+    if (value == null || value === '') return '';
+    return `<div class="cd-vital"><div class="cd-vital-val">${esc(String(value))}</div><div class="cd-vital-lbl">${esc(label)}</div></div>`;
+  }
+
+  function cdTable(tbl, title) {
+    if (!tbl) return '';
+    const { headers, rows } = tbl;
+    return `${title ? `<div class="cd-subtable-label">${esc(title)}</div>` : ''}
+    <div class="cd-table-wrap">
+      <table class="cd-table">
+        <thead><tr>${headers.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead>
+        <tbody>${rows.map(row =>
+          `<tr>${row.map(v => `<td>${esc(String(v))}</td>`).join('')}</tr>`
+        ).join('')}</tbody>
+      </table>
+    </div>`;
+  }
+
+  function spawnTable(rows) {
+    if (!rows?.length) return '';
+    return `<div class="cd-subtable-label">Hostile Spawn</div>
+    <div class="cd-table-wrap">
+      <table class="cd-table">
+        <thead><tr><th>Team RP</th><th>Hostiles</th></tr></thead>
+        <tbody>${rows.map(r => {
+          const label = r.range.endsWith('-') ? '≤ ' + r.range.slice(0, -1) : r.range;
+          return `<tr><td>${label}</td><td>${r.count}</td></tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>`;
+  }
+
+  function sectionLabel(text) {
+    return `<div class="cd-section-label">${esc(text)}</div>`;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Type-specific stat blocks
+  // ---------------------------------------------------------------------------
+  let statsHtml = '';
+
+  if (card.card_type === 'Soldier') {
+    const hth = card.hth != null ? (card.hth >= 0 ? '+' : '') + card.hth : null;
+    const HARDY_STYLE = {
+      Cold: 'background:#18243e;color:#60a5fa;border:1px solid #1e3a6e',
+      Hot:  'background:#2e1a08;color:#fb923c;border:1px solid #5e2e10',
+    };
+    statsHtml = `
+      ${sectionLabel('Vitals')}
+      <div class="cd-vitals">
+        ${vital('HP', card.health)}
+        ${vital('Move', card.movement)}
+        ${vital('Cover', card.cover)}
+        ${vital('Loadout', card.loadout)}
+        ${hth != null ? vital('HtH', hth) : ''}
+        ${vital('Actions', card.actions)}
+        ${vital('RP Cost', card.resource_cost)}
+      </div>
+      ${(card.cx || card.xp || card.hardy_markers?.length) ? `<div class="cd-xp-row">
+        ${card.cx ? `<span class="cd-badge cd-badge-cx" title="Combat Experience — extra Action cards per turn">⚔ CX ${card.cx}</span>` : ''}
+        ${card.xp ? `<span class="cd-badge cd-badge-xp" title="Experience Points (pre-printed)">★ XP ${card.xp}</span>` : ''}
+        ${(card.hardy_markers || []).map(h => {
+          const lbl = h.modifier === '+' ? `+${h.count}` : `${h.count}×`;
+          const style = HARDY_STYLE[h.type] || 'background:var(--surface2);color:var(--text-muted);border:1px solid var(--border)';
+          return `<span class="cd-badge" style="${style}" title="Ignores ${esc(h.type)} environment attack penalties">${lbl} Hardy (${esc(h.type)})</span>`;
+        }).join('')}
+      </div>` : ''}
+      ${cdTable(card.health_actions_table)}
+    `;
+
+  } else if (card.card_type === 'Weapon') {
+    statsHtml = `
+      ${sectionLabel('Specifications')}
+      <div class="cd-vitals">
+        ${vital('RP Cost', card.resource_cost)}
+        ${card.loadout != null ? vital('Loadout Wt.', card.loadout) : ''}
+      </div>
+      ${cdTable(card.weapon_range_table, 'Range')}
+      ${cdTable(card.weapon_mode_table, 'Fire Mode')}
+    `;
+
+  } else if (card.card_type === 'Mission') {
+    const mAttrs = [
+      card.resources != null          ? { k: 'RP Budget',    v: card.resources } : null,
+      card.time != null               ? { k: 'Turns',         v: card.time } : null,
+      card.objective_position != null ? { k: 'Obj. Location', v: card.objective_position } : null,
+      card.loadout_modifier != null   ? { k: 'Loadout Mod',   v: (card.loadout_modifier >= 0 ? '+' : '') + card.loadout_modifier } : null,
+      card.action_cost_hth != null    ? { k: 'HtH Cost',      v: card.action_cost_hth } : null,
+    ].filter(Boolean);
+    statsHtml = `
+      ${sectionLabel('Mission Brief')}
+      <div class="cd-vitals">${mAttrs.map(a => vital(a.k, a.v)).join('')}</div>
+      ${card.theater ? `<div class="cd-theater-tag">📍 ${esc(card.theater)}</div>` : ''}
+    `;
+
+  } else if (card.card_type === 'Objective') {
+    const oAttrs = [
+      card.entrance_cost != null   ? { k: 'Entry Cost', v: card.entrance_cost } : null,
+      card.action_cost_hth != null ? { k: 'HtH Cost',   v: card.action_cost_hth } : null,
+    ].filter(Boolean);
+    statsHtml = `
+      ${oAttrs.length ? `${sectionLabel('Costs')}<div class="cd-vitals">${oAttrs.map(a => vital(a.k, a.v)).join('')}</div>` : ''}
+      ${spawnTable(card.hostile_spawn_table)}
+      ${card.theater ? `<div class="cd-theater-tag">📍 ${esc(card.theater)}</div>` : ''}
+    `;
+
+  } else {
+    // Equipment, Skill, Service Record, Situation, Hostile, …
+    const attrs = [
+      card.resource_cost != null  ? { k: 'RP Cost',   v: card.resource_cost } : null,
+      card.loadout != null        ? { k: 'Loadout',    v: card.loadout } : null,
+      card.health != null         ? { k: 'HP',         v: card.health } : null,
+      card.movement != null       ? { k: 'Move',       v: card.movement } : null,
+      card.cover != null          ? { k: 'Cover',      v: card.cover } : null,
+      card.hth != null            ? { k: 'HtH',        v: (card.hth >= 0 ? '+' : '') + card.hth } : null,
+      card.actions != null        ? { k: 'Actions',    v: card.actions } : null,
+      card.resources != null      ? { k: 'Budget',     v: card.resources + ' RP' } : null,
+      card.time != null           ? { k: 'Turns',      v: card.time } : null,
+      card.noise != null          ? { k: 'Noise',      v: card.noise } : null,
+      card.support_cost != null   ? { k: 'Support',    v: card.support_cost } : null,
+      card.covert_cost != null    ? { k: 'Covert',     v: card.covert_cost } : null,
+      card.gain != null           ? { k: 'Gain',       v: card.gain } : null,
+      card.loss != null           ? { k: 'Loss',       v: card.loss } : null,
+      card.xp_value != null       ? { k: 'XP Value',  v: card.xp_value } : null,
+      card.hostile_count          ? { k: 'Count',      v: card.hostile_count } : null,
+    ].filter(Boolean);
+    if (attrs.length) {
+      statsHtml += `${sectionLabel('Stats')}<div class="cd-vitals">${attrs.map(a => vital(a.k, a.v)).join('')}</div>`;
+    }
+    statsHtml += spawnTable(card.hostile_spawn_table);
+    statsHtml += cdTable(card.weapon_range_table, 'Range');
+    statsHtml += cdTable(card.weapon_mode_table, 'Fire Mode');
+    statsHtml += cdTable(card.health_actions_table);
+  }
 
   setMain(`
-    <div style="margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <div class="cd-nav">
       <a href="#/cards" class="btn btn-ghost btn-sm">↩ Cards</a>
+      ${addBtn}
       <span style="flex:1"></span>
       ${navPos}
       ${prevBtn}
       ${nextBtn}
     </div>
-    <div class="card-detail-layout">
-      <div class="card-stats-panel">
-        <div class="card-header-bar">
-          ${esc(card.number)} · ${chipForCategory(card.card_type)} ${chipForSubtype(card.card_subtype, card.card_type)}
-          ${card.nation ? `· <span class="chip">${esc(card.nation)}</span>` : ''}
-          · <span class="text-muted" style="font-size:12px">${esc(card.module)}</span>
+
+    <div class="cd-wrap ${typeCls}">
+      <div class="cd-header">
+        <div class="cd-eyebrow">
+          ${chipForCategory(card.card_type)}
+          ${subtypeLabel ? `<span class="cd-eyebrow-sub">${esc(subtypeLabel)}</span>` : ''}
+          ${card.nation ? `<span class="cd-eyebrow-sep">·</span><span class="cd-eyebrow-nation">${esc(card.nation)}</span>` : ''}
+          <span class="cd-eyebrow-sep">·</span>
+          <span class="cd-eyebrow-module">${esc(card.module)}</span>
+          <span class="cd-eyebrow-num">${esc(card.number)}</span>
         </div>
-        <div class="card-name">${esc(card.name)}</div>
-        <div class="stat-grid">${statItems || '<span class="text-muted">No numeric stats.</span>'}</div>
-        ${card.hardy_markers ? (() => {
-          const ENV_COLOR = { Cold: '#0369a1', Hot: '#b45309' };
-          const HARDY_TIP = {
-            Cold: 'This soldier ignores Cold environment attack penalties.',
-            Hot:  'This soldier ignores Hot environment attack penalties.',
-          };
-          return card.hardy_markers.map(h => {
-            const color = ENV_COLOR[h.type] || 'var(--text-muted)';
-            const label = h.modifier === '+' ? `+${h.count}` : `${h.count}×`;
-            const tip = HARDY_TIP[h.type] || `This soldier ignores ${esc(h.type)} environment penalties.`;
-            return `<span class="hardy-badge" style="--hardy-color:${color}" title="${tip}">${label} Hardy (${esc(h.type)})</span>`;
-          }).join('');
-        })() : ''}
-        ${card.health_actions_table ? (() => {
-          const { headers, rows } = card.health_actions_table;
-          return `<div class="spawn-table-wrap" style="margin-bottom:8px">
-            <table class="spawn-table">
-              <thead><tr>${headers.map(h => `<th class="spawn-rp">${esc(h)}</th>`).join('')}</tr></thead>
-              <tbody>
-                ${rows.map(row =>
-                  `<tr>${row.map((v, i) => `<td class="${i === 0 ? 'spawn-rp' : 'spawn-count'}">${v}</td>`).join('')}</tr>`
-                ).join('')}
-              </tbody>
-            </table>
-          </div>`;
-        })() : ''}
-        ${card.notes ? `<div class="card-notes">${esc(card.notes)}</div>` : ''}
-        ${card.hostile_spawn_table ? (() => {
-          const rows = card.hostile_spawn_table;
-          return `<div class="spawn-table-wrap">
-            <div class="spawn-table-title">Hostiles Spawn Table</div>
-            <table class="spawn-table">
-              <thead><tr><th class="spawn-rp">Team RP</th><th class="spawn-count">Hostiles</th></tr></thead>
-              <tbody>
-                ${rows.map(r => {
-                  const label = r.range.endsWith('-') ? '≤ ' + r.range.slice(0, -1) : r.range;
-                  return `<tr><td class="spawn-rp">${label}</td><td class="spawn-count">${r.count}</td></tr>`;
-                }).join('')}
-              </tbody>
-            </table>
-          </div>`;
-        })() : ''}
-        ${(card.weapon_range_table || card.weapon_mode_table) ? (() => {
-          const renderWeaponTable = (tbl) => {
-            if (!tbl) return '';
-            const { headers, rows } = tbl;
-            return `<div class="spawn-table-wrap" style="margin-top:10px">
-              <table class="spawn-table">
-                <thead><tr>${headers.map(h => `<th class="spawn-rp">${esc(h)}</th>`).join('')}</tr></thead>
+        <h1 class="cd-name">${esc(card.name)}</h1>
+      </div>
+
+      <div class="cd-body">
+        <div class="cd-main">
+          ${statsHtml ? `<div class="cd-section">${statsHtml}</div>` : ''}
+
+          ${card.notes ? `<div class="cd-section">
+            ${sectionLabel('Notes')}
+            <div class="cd-notes">${esc(card.notes)}</div>
+          </div>` : ''}
+
+          ${assocs.length ? `<div class="cd-section">
+            ${sectionLabel('Default Gear')}
+            <div class="cd-table-wrap">
+              <table class="cd-table cd-assoc-table">
+                <thead><tr><th>#</th><th>Name</th><th>Type</th><th>Qty</th></tr></thead>
                 <tbody>
-                  ${rows.map(row =>
-                    `<tr>${row.map((v, i) => `<td class="${i === 0 ? 'spawn-rp' : 'spawn-count'}">${esc(String(v))}</td>`).join('')}</tr>`
-                  ).join('')}
+                  ${assocs.map(a => `
+                    <tr class="clickable" data-id="${a.card.id}">
+                      <td class="cd-assoc-num">${esc(a.card.number)}</td>
+                      <td><span ${cardImageAttr(a.card)}>${esc(a.card.name)}</span></td>
+                      <td>${chipForCategory(a.card.card_type)}</td>
+                      <td>${a.quantity > 1 ? '×' + a.quantity : '—'}</td>
+                    </tr>`).join('')}
                 </tbody>
               </table>
-            </div>`;
-          };
-          return renderWeaponTable(card.weapon_range_table) +
-                 renderWeaponTable(card.weapon_mode_table);
-        })() : ''}
-        ${assocTable}
-        ${addBtn}
+            </div>
+          </div>` : ''}
+        </div>
+
+        <div class="cd-aside">
+          <div class="cd-image-wrap ${hasImage ? 'cd-has-image' : ''}">
+            ${imageHtml}
+          </div>
+        </div>
       </div>
-      ${imagePanel}
     </div>
   `);
 
-  const imgEl = document.querySelector('.card-full-img');
+  const imgEl = document.querySelector('.cd-image');
   if (imgEl) imgEl.addEventListener('click', () => openLightbox(card.image_url));
 
-  document.querySelectorAll('.card-stats-panel tr[data-id]').forEach(row =>
+  document.querySelectorAll('.cd-assoc-table tr[data-id]').forEach(row =>
     row.addEventListener('click', () => navigate('cards/' + row.dataset.id)));
 
-  const addBtn2 = document.getElementById('add-to-build');
-  if (addBtn2) {
-    addBtn2.addEventListener('click', () => {
-      // Add card to builder based on current picker mode
+  const addBtnEl = document.getElementById('add-to-build');
+  if (addBtnEl) {
+    addBtnEl.addEventListener('click', () => {
       if (builderState.pickerMode === 'soldier') {
         addSoldierToBuilder(card);
         navigate('builder');
