@@ -8,16 +8,17 @@
 </head>
 <body>
   <header id="app-header">
-    <div class="header-brand">⚔ Warfighter Squad Builder</div>
+    <div class="header-brand">⚔ <span data-i18n="app.title">Warfighter Squad Builder</span></div>
     <nav id="header-auth"></nav>
   </header>
 
   <div id="app-layout">
     <nav id="sidebar">
-      <a href="#/cards"   class="nav-link" data-route="cards">Cards</a>
-      <a href="#/squads"  class="nav-link" data-route="squads">Squads</a>
-      <a href="#/builder" class="nav-link" data-route="builder" id="nav-builder">Builder</a>
-      <a href="#/profile" class="nav-link" data-route="profile" id="nav-profile">Profile</a>
+      <a href="#/cards"   class="nav-link" data-route="cards" data-i18n="nav.cards">Cards</a>
+      <a href="#/squads"  class="nav-link" data-route="squads" data-i18n="nav.squads">Squads</a>
+      <a href="#/builder" class="nav-link" data-route="builder" id="nav-builder" data-i18n="nav.builder">Builder</a>
+      <a href="#/profile" class="nav-link" data-route="profile" id="nav-profile" data-i18n="nav.profile">Profile</a>
+      <a href="#/translations" class="nav-link" data-route="translations" id="nav-translations" style="display:none" data-i18n="nav.translations">Translations</a>
     </nav>
     <main id="app-main">
       <div class="spinner-wrap"><div class="spinner"></div></div>
@@ -27,6 +28,7 @@
   <!-- Global card image hover thumbnail -->
   <div id="card-thumb"></div>
 
+  <script src="/static/i18n.js"></script>
   <script src="/static/api.js"></script>
   <script src="/static/app.js"></script>
 </body>

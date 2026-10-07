@@ -66,6 +66,7 @@ async function boot() {
   } catch (e) {
     currentUser = null;
   }
+  await i18nSetLang(i18nPreferred(currentUser));
   // Pre-load nations so builder nation select is available on first visit
   try { const r = await API.get('/nations'); allNations = r.nations || []; } catch (_) {}
   renderHeader();
@@ -75,21 +76,52 @@ async function boot() {
 
 function renderHeader() {
   const nav = document.getElementById('header-auth');
+  const langSelect = `
+    <select id="lang-select" class="lang-select" title="${esc(t('header.language'))}">
+      ${I18N.SUPPORTED.map(l => `<option value="${l}" ${l === I18N.lang ? 'selected' : ''}>${esc(I18N.NAMES[l])}</option>`).join('')}
+    </select>`;
   if (currentUser) {
     nav.innerHTML = `
+      ${langSelect}
       <span class="username">${esc(currentUser.username)}</span>
-      <button class="btn btn-sm btn-ghost" id="logout-btn">Logout</button>`;
+      <button class="btn btn-sm btn-ghost" id="logout-btn">${esc(t('header.logout'))}</button>`;
     nav.querySelector('#logout-btn').addEventListener('click', doLogout);
   } else {
     nav.innerHTML = `
-      <a href="#/login" class="btn btn-sm btn-ghost">Login</a>
-      <a href="#/register" class="btn btn-sm btn-primary">Register</a>`;
+      ${langSelect}
+      <a href="#/login" class="btn btn-sm btn-ghost">${esc(t('header.login'))}</a>
+      <a href="#/register" class="btn btn-sm btn-primary">${esc(t('header.register'))}</a>`;
   }
+  nav.querySelector('#lang-select').addEventListener('change', e => changeLanguage(e.target.value));
 }
 
 function updateProfileLink() {
   const link = document.getElementById('nav-profile');
   if (link) link.style.display = currentUser ? '' : 'none';
+  const trLink = document.getElementById('nav-translations');
+  if (trLink) trLink.style.display = currentUser?.is_admin ? '' : 'none';
+}
+
+// Switch UI + card language, persist it, and re-render the current view in place
+async function changeLanguage(lang) {
+  await i18nSetLang(lang);
+  if (currentUser) {
+    try { await API.put('/profile/', { language: I18N.lang }); currentUser.language = I18N.lang; } catch (_) {}
+  }
+  renderHeader();
+  const key = (location.hash.slice(1) || '/cards').split('/').filter(Boolean)[0];
+  if (key === 'builder') {
+    await refreshBuilderCards();
+    renderBuilder();
+  } else {
+    route();
+  }
+}
+
+// After login: adopt the profile language if the user has one
+async function applyUserLanguage() {
+  const lang = i18nNormalize(currentUser?.language);
+  if (lang && lang !== I18N.lang) await i18nSetLang(lang);
 }
 
 async function doLogout() {
@@ -133,7 +165,7 @@ function chipForCategory(cat) {
     Soldier: 'chip-soldier', Weapon: 'chip-weapon', Equipment: 'chip-equipment',
     Skill: 'chip-skill', Mission: 'chip-mission', Objective: 'chip-mission',
   };
-  return `<span class="chip ${map[cat] || ''}">${esc(cat)}</span>`;
+  return `<span class="chip ${map[cat] || ''}">${esc(tv('card_type', cat))}</span>`;
 }
 
 // card_types where card_subtype is a real type label (not a theater name)
@@ -141,14 +173,28 @@ const SUBTYPE_CATS = new Set(['Soldier','Weapon','Skill','Equipment','Objective'
 
 function chipForSubtype(subtype, category) {
   if (category && !SUBTYPE_CATS.has(category)) return '';
-  if (subtype === 'Player') return `<span class="chip chip-ps">PS</span>`;
-  if (subtype === 'NPS') return `<span class="chip chip-nps">NPS</span>`;
-  return subtype ? `<span class="chip">${esc(subtype)}</span>` : '';
+  if (subtype === 'Player') return `<span class="chip chip-ps" title="${esc(tv('card_subtype', 'Player'))}">${esc(t('chip.ps'))}</span>`;
+  if (subtype === 'NPS') return `<span class="chip chip-nps" title="${esc(tv('card_subtype', 'NPS'))}">${esc(t('chip.nps'))}</span>`;
+  return subtype ? `<span class="chip">${esc(tv('card_subtype', subtype))}</span>` : '';
 }
 
 function fmtDate(iso) {
   if (!iso) return '';
-  return iso.slice(0, 10);
+  const d = new Date(iso);
+  if (isNaN(d)) return iso.slice(0, 10);
+  return d.toLocaleDateString(I18N.lang, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+// Canonical (English) card name — use for logic/comparisons, never display
+function cardKey(card) {
+  return (card.name_en || card.name || '').toLowerCase();
+}
+
+// Owner-only marker for cards whose translation is missing / unreviewed
+function trMarker(card) {
+  const st = card?.translation_status;
+  if (!st || st === 'reviewed') return '';
+  return `<span class="tr-marker tr-${st}" title="${esc(t('tr.marker.' + st))}">⚑</span>`;
 }
 
 function cardImageAttr(card) {
@@ -160,9 +206,9 @@ function paginationHtml(page, pages, onNav) {
   if (pages <= 1) return '';
   return `
     <div class="pagination">
-      <button class="btn btn-sm btn-ghost" ${page <= 1 ? 'disabled' : ''} data-pg="${page - 1}">◀ Prev</button>
-      <span class="page-info">Page ${page} of ${pages}</span>
-      <button class="btn btn-sm btn-ghost" ${page >= pages ? 'disabled' : ''} data-pg="${page + 1}">Next ▶</button>
+      <button class="btn btn-sm btn-ghost" ${page <= 1 ? 'disabled' : ''} data-pg="${page - 1}">◀ ${esc(t('common.prev'))}</button>
+      <span class="page-info">${esc(t('common.page_of', { page, pages }))}</span>
+      <button class="btn btn-sm btn-ghost" ${page >= pages ? 'disabled' : ''} data-pg="${page + 1}">${esc(t('common.next'))} ▶</button>
     </div>`;
 }
 
@@ -233,7 +279,7 @@ function openLightbox(url) {
   overlay.className = 'lightbox-overlay';
   overlay.innerHTML = `
     <img src="${esc(url)}" alt="card full">
-    <button class="lightbox-close" title="Close">✕</button>`;
+    <button class="lightbox-close" title="${esc(t('common.close'))}">✕</button>`;
   overlay.addEventListener('click', e => {
     if (e.target === overlay || e.target.classList.contains('lightbox-close')) overlay.remove();
   });
@@ -274,15 +320,6 @@ const NATION_FLAGS = {
   'United Nations':'🇺🇳',
 };
 
-const NATION_DISPLAY_NAMES = {
-  'Australian':   'Australia',
-  'German':       'Germany',
-  'Italian':      'Italy',
-  'Russian':      'Russia',
-  'North Korean': 'North Korea',
-  'South Korean': 'South Korea',
-};
-
 // Nations shown first in selectors, in this exact order
 const NATION_PINNED = [
   'US', 'German', 'Russian', 'UK', 'Poland', 'Japan',
@@ -290,9 +327,10 @@ const NATION_PINNED = [
   'Finland', 'Canada', 'Italian',
 ];
 
+// Display names live in i18n (enum.nation.*), e.g. 'German' → 'Germany' / 'Alemania'
 function nationLabel(n) {
   const flag = NATION_FLAGS[n] || '';
-  const display = NATION_DISPLAY_NAMES[n] || n;
+  const display = tv('nation', n);
   return flag ? `${flag} ${display}` : display;
 }
 
@@ -301,7 +339,7 @@ function sortedNations(nations) {
   const pinned = NATION_PINNED.filter(p => nations.includes(p));
   const rest = nations
     .filter(n => !pinnedSet.has(n))
-    .sort((a, b) => (NATION_DISPLAY_NAMES[a] || a).localeCompare(NATION_DISPLAY_NAMES[b] || b));
+    .sort((a, b) => tv('nation', a).localeCompare(tv('nation', b), I18N.lang));
   return [...pinned, ...rest];
 }
 let allCategories = ['Soldier','Mission','Objective','Weapon','Equipment','Skill','Service Record'];
@@ -332,23 +370,23 @@ function thSort(label, col, activeSort, activeOrder) {
 // Filter changes only call refreshCardsTable() so the input never loses focus.
 function renderCardsShell() {
   const catOptions = ['', ...allCategories].map(c =>
-    `<option value="${esc(c)}" ${cardFilters.category === c ? 'selected' : ''}>${c || 'All categories'}</option>`
+    `<option value="${esc(c)}" ${cardFilters.category === c ? 'selected' : ''}>${esc(c ? tv('card_type', c) : t('cards.all_categories'))}</option>`
   ).join('');
   const nationOptions = ['', ...sortedNations(allNations)].map(n =>
-    `<option value="${esc(n)}" ${cardFilters.nation === n ? 'selected' : ''}>${n ? nationLabel(n) : 'All nations'}</option>`
+    `<option value="${esc(n)}" ${cardFilters.nation === n ? 'selected' : ''}>${esc(n ? nationLabel(n) : t('cards.all_nations'))}</option>`
   ).join('');
   const moduleOptions = ['', ...allModules].map(m =>
-    `<option value="${esc(m)}" ${cardFilters.module === m ? 'selected' : ''}>${m || 'All modules'}</option>`
+    `<option value="${esc(m)}" ${cardFilters.module === m ? 'selected' : ''}>${esc(m ? tv('module', m) : t('cards.all_modules'))}</option>`
   ).join('');
 
   setMain(`
-    <h1 style="margin-bottom:16px">Cards</h1>
+    <h1 style="margin-bottom:16px">${esc(t('cards.title'))}</h1>
     <div class="filter-bar" style="flex-wrap:wrap;gap:6px">
-      <input type="text" id="q-input" placeholder="Search name / notes…" value="${esc(cardFilters.q)}" style="min-width:200px;flex:1">
+      <input type="text" id="q-input" placeholder="${esc(t('cards.search_placeholder'))}" value="${esc(cardFilters.q)}" style="min-width:200px;flex:1">
       <select id="cat-select">${catOptions}</select>
       <select id="nation-select">${nationOptions}</select>
       <select id="module-select">${moduleOptions}</select>
-      <button class="btn btn-ghost btn-sm" id="reset-filters">Reset</button>
+      <button class="btn btn-ghost btn-sm" id="reset-filters">${esc(t('common.reset'))}</button>
     </div>
     <div id="cards-count" style="font-size:12px;color:var(--text-muted);margin-bottom:8px"></div>
     <div id="cards-results"></div>
@@ -419,24 +457,27 @@ async function refreshCardsTable() {
   try {
     data = await API.get('/cards?' + params.toString());
   } catch (e) {
-    resultsDiv.innerHTML = `<div class="alert alert-error">${esc(e.error || 'Failed to load cards.')}</div>`;
+    resultsDiv.innerHTML = `<div class="alert alert-error">${esc(e.error || t('cards.load_failed'))}</div>`;
     return;
   }
 
   const { items, total, page, pages } = data;
   const s = cardFilters.sort, o = cardFilters.order;
 
-  if (countDiv) countDiv.textContent =
-    `Showing ${total === 0 ? 0 : (page-1)*cardFilters.per_page+1}–${Math.min(page*cardFilters.per_page,total)} of ${total}`;
+  if (countDiv) countDiv.textContent = t('cards.showing', {
+    from: fmtNumber(total === 0 ? 0 : (page-1)*cardFilters.per_page+1),
+    to: fmtNumber(Math.min(page*cardFilters.per_page,total)),
+    total: fmtNumber(total),
+  });
 
   const rows = items.map(c => `
     <tr class="clickable" data-id="${c.id}">
       <td><span class="text-muted" style="font-size:11px">${esc(c.number)}</span></td>
-      <td><span ${cardImageAttr(c)}>${esc(c.name)}</span></td>
+      <td><span ${cardImageAttr(c)}>${esc(c.name)}</span>${trMarker(c)}</td>
       <td>${chipForCategory(c.card_type)}</td>
-      <td>${SUBTYPE_CATS.has(c.card_type) ? esc(c.card_subtype || '') : ''}</td>
-      <td>${esc(c.nation || '—')}</td>
-      <td>${esc(c.module)}</td>
+      <td>${SUBTYPE_CATS.has(c.card_type) ? esc(tv('card_subtype', c.card_subtype || '')) : ''}</td>
+      <td>${esc(c.nation ? tv('nation', c.nation) : '—')}</td>
+      <td>${esc(tv('module', c.module))}</td>
       <td style="text-align:right">${c.resource_cost != null ? c.resource_cost : ''}</td>
     </tr>`).join('');
 
@@ -446,14 +487,14 @@ async function refreshCardsTable() {
       <thead>
         <tr>
           ${thSort('#','number',s,o)}
-          ${thSort('Name','name',s,o)}
-          <th>Type</th><th>Subtype</th>
-          ${thSort('Nation','nation',s,o)}
-          ${thSort('Module','module',s,o)}
-          ${thSort('RP','resource_cost',s,o)}
+          ${thSort(t('col.name'),'name',s,o)}
+          <th>${esc(t('col.type'))}</th><th>${esc(t('col.subtype'))}</th>
+          ${thSort(t('col.nation'),'nation',s,o)}
+          ${thSort(t('col.module'),'module',s,o)}
+          ${thSort(t('stat.rp'),'resource_cost',s,o)}
         </tr>
       </thead>
-      <tbody>${rows || '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">No cards found.</td></tr>'}</tbody>
+      <tbody>${rows || `<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">${esc(t('cards.none'))}</td></tr>`}</tbody>
     </table>
     </div>`;
 
@@ -505,7 +546,7 @@ async function showCardDetail(idOrNumber) {
     const data = await API.get('/cards/' + idOrNumber);
     card = data.card;
   } catch (e) {
-    showError(e.error || 'Card not found.');
+    showError(e.error || t('cards.not_found'));
     return;
   }
 
@@ -526,23 +567,25 @@ async function showCardDetail(idOrNumber) {
   if (navIdx >= 0) cardFilters.page = Math.floor(navIdx / cardFilters.per_page) + 1;
   const navPos = navIdx >= 0 ? `<span class="cd-nav-pos">${navIdx + 1} / ${cardNavList.length}</span>` : '';
   const prevBtn = prevId
-    ? `<a href="#/cards/${prevId}" class="btn btn-ghost btn-sm">← Prev</a>`
-    : `<span class="btn btn-ghost btn-sm" style="opacity:.35;pointer-events:none">← Prev</span>`;
+    ? `<a href="#/cards/${prevId}" class="btn btn-ghost btn-sm">← ${esc(t('common.prev'))}</a>`
+    : `<span class="btn btn-ghost btn-sm" style="opacity:.35;pointer-events:none">← ${esc(t('common.prev'))}</span>`;
   const nextBtn = nextId
-    ? `<a href="#/cards/${nextId}" class="btn btn-ghost btn-sm">Next →</a>`
-    : `<span class="btn btn-ghost btn-sm" style="opacity:.35;pointer-events:none">Next →</span>`;
+    ? `<a href="#/cards/${nextId}" class="btn btn-ghost btn-sm">${esc(t('common.next'))} →</a>`
+    : `<span class="btn btn-ghost btn-sm" style="opacity:.35;pointer-events:none">${esc(t('common.next'))} →</span>`;
 
   // --- Add to build ---
   const addBtn = builderState.missionCard
-    ? `<button class="btn btn-primary btn-sm" id="add-to-build">+ Add to build</button>` : '';
+    ? `<button class="btn btn-primary btn-sm" id="add-to-build">+ ${esc(t('cd.add_to_build'))}</button>` : '';
+  const editTrBtn = currentUser?.is_admin && I18N.lang !== 'en'
+    ? `<a href="#/translations/${encodeURIComponent(card.number)}" class="btn btn-ghost btn-sm">${esc(t('cd.edit_translation'))}</a>` : '';
 
   // --- Eyebrow subtype ---
   const subtypeLabel = (() => {
-    if (card.card_type === 'Mission')    return card.mission_type || card.card_subtype || '';
+    if (card.card_type === 'Mission')    return tv('card_subtype', card.mission_type || card.card_subtype || '');
     if (card.card_type === 'Objective') {
-      return [card.objective_family, card.objective_mechanic].filter(Boolean).join(' · ');
+      return [card.objective_family, card.objective_mechanic].filter(Boolean).map(v => tv('card_subtype', v)).join(' · ');
     }
-    return SUBTYPE_CATS.has(card.card_type) ? (card.card_subtype || '') : '';
+    return SUBTYPE_CATS.has(card.card_type) ? tv('card_subtype', card.card_subtype || '') : '';
   })();
 
   // --- Image ---
@@ -567,7 +610,7 @@ async function showCardDetail(idOrNumber) {
     return `${title ? sectionLabel(title) : ''}
     <div class="cd-table-wrap">
       <table class="cd-table">
-        <thead><tr>${headers.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead>
+        <thead><tr>${headers.map(h => `<th>${esc(tv('table_header', h))}</th>`).join('')}</tr></thead>
         <tbody>${rows.map(row =>
           `<tr>${row.map(v => `<td>${esc(String(v))}</td>`).join('')}</tr>`
         ).join('')}</tbody>
@@ -577,10 +620,10 @@ async function showCardDetail(idOrNumber) {
 
   function spawnTable(rows) {
     if (!rows?.length) return '';
-    return `${sectionLabel('Hostile Spawn')}
+    return `${sectionLabel(t('cd.hostile_spawn'))}
     <div class="cd-table-wrap">
       <table class="cd-table">
-        <thead><tr><th>Team RP</th><th>Hostiles</th></tr></thead>
+        <thead><tr><th>${esc(t('cd.team_rp'))}</th><th>${esc(t('cd.hostiles'))}</th></tr></thead>
         <tbody>${rows.map(r => {
           const label = r.range.endsWith('-') ? '≤ ' + r.range.slice(0, -1) : r.range;
           return `<tr><td>${label}</td><td>${r.count}</td></tr>`;
@@ -605,95 +648,97 @@ async function showCardDetail(idOrNumber) {
       Hot:  'background:#2e1a08;color:#fb923c;border:1px solid #5e2e10',
     };
     statsHtml = `
-      ${sectionLabel('Vitals')}
+      ${sectionLabel(t('cd.vitals'))}
       <div class="cd-vitals">
-        ${vital('HP', card.health)}
-        ${vital('Move', card.movement)}
-        ${vital('Cover', card.cover)}
-        ${vital('Loadout', card.loadout)}
-        ${hth != null ? vital('HtH', hth) : ''}
-        ${vital('Actions', card.actions)}
-        ${vital('RP Cost', card.resource_cost)}
+        ${vital(t('stat.hp'), card.health)}
+        ${vital(t('stat.move'), card.movement)}
+        ${vital(t('stat.cover'), card.cover)}
+        ${vital(t('stat.loadout'), card.loadout)}
+        ${hth != null ? vital(t('stat.hth'), hth) : ''}
+        ${vital(t('stat.actions'), card.actions)}
+        ${vital(t('stat.rp_cost'), card.resource_cost)}
       </div>
       ${(card.cx || card.xp || card.hardy_markers?.length) ? `<div class="cd-xp-row">
-        ${card.cx ? `<span class="cd-badge cd-badge-cx" title="Combat Experience — extra Action cards per turn">⚔ CX ${card.cx}</span>` : ''}
-        ${card.xp ? `<span class="cd-badge cd-badge-xp" title="Experience Points (pre-printed)">★ XP ${card.xp}</span>` : ''}
+        ${card.cx ? `<span class="cd-badge cd-badge-cx" title="${esc(t('cd.cx_tip'))}">⚔ ${esc(t('stat.cx'))} ${card.cx}</span>` : ''}
+        ${card.xp ? `<span class="cd-badge cd-badge-xp" title="${esc(t('cd.xp_tip'))}">★ ${esc(t('stat.xp'))} ${card.xp}</span>` : ''}
         ${(card.hardy_markers || []).map(h => {
           const lbl = h.modifier === '+' ? `+${h.count}` : `${h.count}×`;
           const style = HARDY_STYLE[h.type] || 'background:var(--surface2);color:var(--text-muted);border:1px solid var(--border)';
-          return `<span class="cd-badge" style="${style}" title="Ignores ${esc(h.type)} environment attack penalties">${lbl} Hardy (${esc(h.type)})</span>`;
+          const env = tv('hardy', h.type);
+          return `<span class="cd-badge" style="${style}" title="${esc(t('cd.hardy_tip', { env }))}">${lbl} ${esc(t('cd.hardy', { env }))}</span>`;
         }).join('')}
       </div>` : ''}
-      ${card.health_actions_table ? sectionLabel('Health / Actions') + cdTable(card.health_actions_table) : ''}
+      ${card.health_actions_table ? sectionLabel(t('cd.health_actions')) + cdTable(card.health_actions_table) : ''}
     `;
 
   } else if (card.card_type === 'Weapon') {
     statsHtml = `
-      ${sectionLabel('Specifications')}
+      ${sectionLabel(t('cd.specifications'))}
       <div class="cd-vitals">
-        ${vital('RP Cost', card.resource_cost)}
-        ${card.loadout != null ? vital('Loadout', card.loadout) : ''}
+        ${vital(t('stat.rp_cost'), card.resource_cost)}
+        ${card.loadout != null ? vital(t('stat.loadout'), card.loadout) : ''}
       </div>
-      ${cdTable(card.weapon_range_table, 'Range')}
-      ${cdTable(card.weapon_mode_table, 'Fire Mode')}
+      ${cdTable(card.weapon_range_table, t('cd.range'))}
+      ${cdTable(card.weapon_mode_table, t('cd.fire_mode'))}
     `;
 
   } else if (card.card_type === 'Mission') {
     const mAttrs = [
-      card.resources != null          ? { k: 'RP Budget',    v: card.resources } : null,
-      card.time != null               ? { k: 'Turns',         v: card.time } : null,
-      card.objective_position != null ? { k: 'Obj. Location', v: card.objective_position } : null,
-      card.loadout_modifier != null   ? { k: 'Loadout Mod',   v: (card.loadout_modifier >= 0 ? '+' : '') + card.loadout_modifier } : null,
-      card.action_cost_hth != null    ? { k: 'HtH Cost',      v: card.action_cost_hth } : null,
+      card.resources != null          ? { k: t('stat.rp_budget'),    v: card.resources } : null,
+      card.time != null               ? { k: t('stat.turns'),        v: card.time } : null,
+      card.objective_position != null ? { k: t('stat.obj_location'), v: card.objective_position } : null,
+      card.loadout_modifier != null   ? { k: t('stat.loadout_mod'),  v: (card.loadout_modifier >= 0 ? '+' : '') + card.loadout_modifier } : null,
+      card.action_cost_hth != null    ? { k: t('stat.hth_cost'),     v: card.action_cost_hth } : null,
     ].filter(Boolean);
     statsHtml = `
-      ${sectionLabel('Mission Brief')}
+      ${sectionLabel(t('cd.mission_brief'))}
       <div class="cd-vitals">${mAttrs.map(a => vital(a.k, a.v)).join('')}</div>
     `;
 
   } else if (card.card_type === 'Objective') {
     const oAttrs = [
-      card.entrance_cost != null   ? { k: 'Entry Cost', v: card.entrance_cost } : null,
-      card.action_cost_hth != null ? { k: 'HtH Cost',   v: card.action_cost_hth } : null,
+      card.entrance_cost != null   ? { k: t('stat.entry_cost'), v: card.entrance_cost } : null,
+      card.action_cost_hth != null ? { k: t('stat.hth_cost'),   v: card.action_cost_hth } : null,
     ].filter(Boolean);
     statsHtml = `
-      ${oAttrs.length ? `${sectionLabel('Costs')}<div class="cd-vitals">${oAttrs.map(a => vital(a.k, a.v)).join('')}</div>` : ''}
+      ${oAttrs.length ? `${sectionLabel(t('cd.costs'))}<div class="cd-vitals">${oAttrs.map(a => vital(a.k, a.v)).join('')}</div>` : ''}
       ${spawnTable(card.hostile_spawn_table)}
     `;
 
   } else {
     // Equipment, Skill, Service Record, Situation, Hostile, …
     const attrs = [
-      card.resource_cost != null  ? { k: 'RP Cost',   v: card.resource_cost } : null,
-      card.loadout != null        ? { k: 'Loadout',    v: card.loadout } : null,
-      card.health != null         ? { k: 'HP',         v: card.health } : null,
-      card.movement != null       ? { k: 'Move',       v: card.movement } : null,
-      card.cover != null          ? { k: 'Cover',      v: card.cover } : null,
-      card.hth != null            ? { k: 'HtH',        v: (card.hth >= 0 ? '+' : '') + card.hth } : null,
-      card.actions != null        ? { k: 'Actions',    v: card.actions } : null,
-      card.resources != null      ? { k: 'Budget',     v: card.resources + ' RP' } : null,
-      card.time != null           ? { k: 'Turns',      v: card.time } : null,
-      card.noise != null          ? { k: 'Noise',      v: card.noise } : null,
-      card.support_cost != null   ? { k: 'Support',    v: card.support_cost } : null,
-      card.covert_cost != null    ? { k: 'Covert',     v: card.covert_cost } : null,
-      card.gain != null           ? { k: 'Gain',       v: card.gain } : null,
-      card.loss != null           ? { k: 'Loss',       v: card.loss } : null,
-      card.xp_value != null       ? { k: 'XP Value',  v: card.xp_value } : null,
-      card.hostile_count          ? { k: 'Count',      v: card.hostile_count } : null,
+      card.resource_cost != null  ? { k: t('stat.rp_cost'),  v: card.resource_cost } : null,
+      card.loadout != null        ? { k: t('stat.loadout'),  v: card.loadout } : null,
+      card.health != null         ? { k: t('stat.hp'),       v: card.health } : null,
+      card.movement != null       ? { k: t('stat.move'),     v: card.movement } : null,
+      card.cover != null          ? { k: t('stat.cover'),    v: card.cover } : null,
+      card.hth != null            ? { k: t('stat.hth'),      v: (card.hth >= 0 ? '+' : '') + card.hth } : null,
+      card.actions != null        ? { k: t('stat.actions'),  v: card.actions } : null,
+      card.resources != null      ? { k: t('stat.budget'),   v: card.resources + ' ' + t('stat.rp') } : null,
+      card.time != null           ? { k: t('stat.turns'),    v: card.time } : null,
+      card.noise != null          ? { k: t('stat.noise'),    v: card.noise } : null,
+      card.support_cost != null   ? { k: t('stat.support'),  v: card.support_cost } : null,
+      card.covert_cost != null    ? { k: t('stat.covert'),   v: card.covert_cost } : null,
+      card.gain != null           ? { k: t('stat.gain'),     v: card.gain } : null,
+      card.loss != null           ? { k: t('stat.loss'),     v: card.loss } : null,
+      card.xp_value != null       ? { k: t('stat.xp_value'), v: card.xp_value } : null,
+      card.hostile_count          ? { k: t('stat.count'),    v: card.hostile_count } : null,
     ].filter(Boolean);
     if (attrs.length) {
-      statsHtml += `${sectionLabel('Stats')}<div class="cd-vitals">${attrs.map(a => vital(a.k, a.v)).join('')}</div>`;
+      statsHtml += `${sectionLabel(t('cd.stats'))}<div class="cd-vitals">${attrs.map(a => vital(a.k, a.v)).join('')}</div>`;
     }
     statsHtml += spawnTable(card.hostile_spawn_table);
-    statsHtml += cdTable(card.weapon_range_table, 'Range');
-    statsHtml += cdTable(card.weapon_mode_table, 'Fire Mode');
-    if (card.health_actions_table) statsHtml += sectionLabel('Health / Actions') + cdTable(card.health_actions_table);
+    statsHtml += cdTable(card.weapon_range_table, t('cd.range'));
+    statsHtml += cdTable(card.weapon_mode_table, t('cd.fire_mode'));
+    if (card.health_actions_table) statsHtml += sectionLabel(t('cd.health_actions')) + cdTable(card.health_actions_table);
   }
 
   setMain(`
     <div class="cd-nav">
-      <a href="#/cards" class="btn btn-ghost btn-sm">↩ Cards</a>
+      <a href="#/cards" class="btn btn-ghost btn-sm">↩ ${esc(t('nav.cards'))}</a>
       ${addBtn}
+      ${editTrBtn}
       <span style="flex:1"></span>
       ${navPos}
       ${prevBtn}
@@ -705,14 +750,15 @@ async function showCardDetail(idOrNumber) {
         <div class="cd-eyebrow">
           ${chipForCategory(card.card_type)}
           ${subtypeLabel ? `<span class="cd-eyebrow-sub">${esc(subtypeLabel)}</span>` : ''}
-          ${card.nation ? `<span class="cd-eyebrow-sep">·</span><span class="cd-eyebrow-nation">${esc(card.nation)}</span>` : ''}
+          ${card.nation ? `<span class="cd-eyebrow-sep">·</span><span class="cd-eyebrow-nation">${esc(tv('nation', card.nation))}</span>` : ''}
           <span class="cd-eyebrow-sep">·</span>
-          <span class="cd-eyebrow-module">${esc(card.module)}</span>
+          <span class="cd-eyebrow-module">${esc(tv('module', card.module))}</span>
           <span class="cd-eyebrow-num">${esc(card.number)}</span>
         </div>
         <div class="cd-name-row">
-          <h1 class="cd-name">${esc(card.name)}</h1>
-          ${card.theater ? `<span class="cd-theater-tag">📍 ${esc(card.theater)}</span>` : ''}
+          <h1 class="cd-name" ${card.name_en && card.name_en !== card.name ? `title="${esc(t('cd.original') + ': ' + card.name_en)}"` : ''}>${esc(card.name)}</h1>
+          ${trMarker(card)}
+          ${card.theater ? `<span class="cd-theater-tag">📍 ${esc(tv('theater', card.theater))}</span>` : ''}
         </div>
       </div>
 
@@ -721,15 +767,19 @@ async function showCardDetail(idOrNumber) {
           ${statsHtml ? `<div class="cd-section">${statsHtml}</div>` : ''}
 
           ${card.notes ? `<div class="cd-section">
-            ${sectionLabel('Notes')}
+            ${sectionLabel(t('cd.notes'))}
             <div class="cd-notes">${esc(card.notes)}</div>
+            ${card.notes_en && card.notes_en !== card.notes ? `<details class="cd-original">
+              <summary>${esc(t('cd.show_original'))}</summary>
+              <div class="cd-notes">${esc(card.notes_en)}</div>
+            </details>` : ''}
           </div>` : ''}
 
           ${assocs.length ? `<div class="cd-section">
-            ${sectionLabel('Default Gear')}
+            ${sectionLabel(t('cd.default_gear'))}
             <div class="cd-table-wrap">
               <table class="cd-table cd-assoc-table">
-                <thead><tr><th>#</th><th>Name</th><th>Type</th><th>Qty</th></tr></thead>
+                <thead><tr><th>#</th><th>${esc(t('col.name'))}</th><th>${esc(t('col.type'))}</th><th>${esc(t('col.qty'))}</th></tr></thead>
                 <tbody>
                   ${assocs.map(a => `
                     <tr class="clickable" data-id="${a.card.id}">
@@ -794,18 +844,18 @@ register('squads', async function(subId) {
 
 function renderSquadsShell() {
   const newBtn = currentUser
-    ? `<button class="btn btn-primary" id="new-squad-btn">+ New Squad</button>` : '';
+    ? `<button class="btn btn-primary" id="new-squad-btn">+ ${esc(t('squads.new'))}</button>` : '';
   const myTab = currentUser
-    ? `<button class="tab-btn ${squadsActiveTab === 'my' ? 'active' : ''}" data-tab="my">My Squads</button>` : '';
+    ? `<button class="tab-btn ${squadsActiveTab === 'my' ? 'active' : ''}" data-tab="my">${esc(t('squads.tab_my'))}</button>` : '';
 
   setMain(`
     <div class="flex justify-between items-center" style="margin-bottom:12px">
-      <h1>Squads</h1>
+      <h1>${esc(t('squads.title'))}</h1>
       ${newBtn}
     </div>
     <div class="tabs" style="margin-bottom:16px">
       ${myTab}
-      <button class="tab-btn ${squadsActiveTab === 'community' ? 'active' : ''}" data-tab="community">Community</button>
+      <button class="tab-btn ${squadsActiveTab === 'community' ? 'active' : ''}" data-tab="community">${esc(t('squads.tab_community'))}</button>
     </div>
     <div id="squads-tab-content"></div>
   `);
@@ -853,17 +903,17 @@ async function renderMySquads(containerEl) {
 
   let data;
   try { data = await API.get('/squads?' + params.toString()); }
-  catch (e) { containerEl.innerHTML = `<div class="alert alert-error">${esc(e.error||'Failed.')}</div>`; return; }
+  catch (e) { containerEl.innerHTML = `<div class="alert alert-error">${esc(e.error||t('common.failed'))}</div>`; return; }
 
   const { items, total, page, pages } = data;
   const rows = items.map(s => `
     <tr class="clickable" data-id="${s.id}">
       <td><strong>${esc(s.name)}</strong></td>
-      <td>${esc(s.nation)}</td>
-      <td>${s.mission ? `${esc(s.mission.name)} <span class="text-muted">· ${s.mission.resources} RP</span>` : '—'}</td>
+      <td>${esc(nationLabel(s.nation))}</td>
+      <td>${s.mission ? `${esc(s.mission.name)} <span class="text-muted">· ${s.mission.resources} ${esc(t('stat.rp'))}</span>` : '—'}</td>
       <td>${s.rp_total}</td>
       <td>${s.likes_count} ♥</td>
-      <td><span class="${s.status === 'draft' ? 'badge badge-draft' : 'badge badge-ok'}">${s.status}</span></td>
+      <td><span class="${s.status === 'draft' ? 'badge badge-draft' : 'badge badge-ok'}">${esc(tv('squad_status', s.status))}</span></td>
       <td class="text-muted">${fmtDate(s.updated_at)}</td>
     </tr>`).join('');
 
@@ -872,21 +922,21 @@ async function renderMySquads(containerEl) {
   const savedSel = hadFocus ? [_myActive.selectionStart, _myActive.selectionEnd] : null;
   containerEl.innerHTML = `
     <div class="filter-bar" style="margin-bottom:8px">
-      <input type="text" id="my-q" placeholder="Search squads…" value="${esc(f.q)}" style="flex:1;min-width:160px">
-      <button class="quick-filter ${f.myModules ? 'active-accent' : ''}" id="my-modules-filter-my">My modules</button>
+      <input type="text" id="my-q" placeholder="${esc(t('squads.search_placeholder'))}" value="${esc(f.q)}" style="flex:1;min-width:160px">
+      <button class="quick-filter ${f.myModules ? 'active-accent' : ''}" id="my-modules-filter-my">${esc(t('squads.my_modules'))}</button>
     </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">${total} squad${total!==1?'s':''}</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">${esc(tn('squads.count', total))}</div>
     <table class="data-table">
       <thead><tr>
-        ${_squadSortTh('Name', 'name', f)}
-        ${_squadSortTh('Nation', 'nation', f)}
-        ${_squadSortTh('Mission', 'mission_name', f)}
-        ${_squadSortTh('Team RP', 'rp_total', f)}
-        ${_squadSortTh('Likes', 'likes_count', f)}
-        <th>Status</th>
-        ${_squadSortTh('Updated', 'updated_at', f)}
+        ${_squadSortTh(t('col.name'), 'name', f)}
+        ${_squadSortTh(t('col.nation'), 'nation', f)}
+        ${_squadSortTh(t('col.mission'), 'mission_name', f)}
+        ${_squadSortTh(t('col.team_rp'), 'rp_total', f)}
+        ${_squadSortTh(t('col.likes'), 'likes_count', f)}
+        <th>${esc(t('col.status'))}</th>
+        ${_squadSortTh(t('col.updated'), 'updated_at', f)}
       </tr></thead>
-      <tbody>${rows||'<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">No squads yet. Build one!</td></tr>'}</tbody>
+      <tbody>${rows||`<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">${esc(t('squads.none_mine'))}</td></tr>`}</tbody>
     </table>
     ${paginationHtml(page, pages)}`;
 
@@ -928,19 +978,19 @@ async function renderCommunitySquads(containerEl) {
 
   let data;
   try { data = await API.get('/squads?' + params.toString()); }
-  catch (e) { containerEl.innerHTML = `<div class="alert alert-error">${esc(e.error||'Failed.')}</div>`; return; }
+  catch (e) { containerEl.innerHTML = `<div class="alert alert-error">${esc(e.error||t('common.failed'))}</div>`; return; }
 
   const { items, total, page, pages } = data;
   const likedBtn = currentUser ? `
-    <button class="quick-filter ${f.liked ? 'active' : ''}" id="liked-filter">♥ Liked by me</button>` : '';
+    <button class="quick-filter ${f.liked ? 'active' : ''}" id="liked-filter">♥ ${esc(t('squads.liked_by_me'))}</button>` : '';
   const myModulesBtn = currentUser ? `
-    <button class="quick-filter ${f.myModules ? 'active-accent' : ''}" id="my-modules-filter-comm">My modules</button>` : '';
+    <button class="quick-filter ${f.myModules ? 'active-accent' : ''}" id="my-modules-filter-comm">${esc(t('squads.my_modules'))}</button>` : '';
 
   const rows = items.map(s => `
     <tr class="clickable" data-id="${s.id}">
       <td><strong>${esc(s.name)}</strong></td>
-      <td>${esc(s.nation)}</td>
-      <td>${s.mission ? `${esc(s.mission.name)} <span class="text-muted">· ${s.mission.resources} RP</span>` : '—'}</td>
+      <td>${esc(nationLabel(s.nation))}</td>
+      <td>${s.mission ? `${esc(s.mission.name)} <span class="text-muted">· ${s.mission.resources} ${esc(t('stat.rp'))}</span>` : '—'}</td>
       <td>${s.rp_total}</td>
       <td>${s.likes_count} ♥</td>
       <td>${esc(s.owner ? s.owner.username : '—')}</td>
@@ -952,22 +1002,22 @@ async function renderCommunitySquads(containerEl) {
   const savedSel = hadFocus ? [_commActive.selectionStart, _commActive.selectionEnd] : null;
   containerEl.innerHTML = `
     <div class="filter-bar" style="margin-bottom:8px">
-      <input type="text" id="comm-q" placeholder="Search squads…" value="${esc(f.q)}" style="flex:1;min-width:160px">
+      <input type="text" id="comm-q" placeholder="${esc(t('squads.search_placeholder'))}" value="${esc(f.q)}" style="flex:1;min-width:160px">
       ${likedBtn}
       ${myModulesBtn}
     </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">${total} published squad${total!==1?'s':''}</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">${esc(tn('squads.published_count', total))}</div>
     <table class="data-table">
       <thead><tr>
-        ${_squadSortTh('Name', 'name', f)}
-        ${_squadSortTh('Nation', 'nation', f)}
-        ${_squadSortTh('Mission', 'mission_name', f)}
-        ${_squadSortTh('Team RP', 'rp_total', f)}
-        ${_squadSortTh('Likes', 'likes_count', f)}
-        <th>Owner</th>
-        ${_squadSortTh('Date', 'created_at', f)}
+        ${_squadSortTh(t('col.name'), 'name', f)}
+        ${_squadSortTh(t('col.nation'), 'nation', f)}
+        ${_squadSortTh(t('col.mission'), 'mission_name', f)}
+        ${_squadSortTh(t('col.team_rp'), 'rp_total', f)}
+        ${_squadSortTh(t('col.likes'), 'likes_count', f)}
+        <th>${esc(t('col.owner'))}</th>
+        ${_squadSortTh(t('col.date'), 'created_at', f)}
       </tr></thead>
-      <tbody>${rows||'<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">No published squads yet.</td></tr>'}</tbody>
+      <tbody>${rows||`<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">${esc(t('squads.none_published'))}</td></tr>`}</tbody>
     </table>
     ${paginationHtml(page, pages)}`;
 
@@ -1012,19 +1062,19 @@ async function showSquadDetail(squadId) {
     const cr = await API.get('/squads/' + squadId + '/comments');
     comments = cr.items;
   } catch (e) {
-    showError(e.error || 'Squad not found.');
+    showError(e.error || t('squad.not_found'));
     return;
   }
 
   const isOwner = currentUser && currentUser.id === squad.owner.id;
   const isDraft = squad.status === 'draft';
-  const editBtn = isOwner ? `<button class="btn btn-sm btn-ghost" id="edit-squad-btn">Edit</button>` : '';
-  const deleteBtn = isOwner ? `<button class="btn btn-sm btn-danger" id="delete-squad-btn">Delete</button>` : '';
-  const publishBtn = isOwner && isDraft ? `<button class="btn btn-sm btn-primary" id="publish-btn">Publish</button>` : '';
-  const draftBadge = isDraft ? `<span class="badge-draft">DRAFT</span>` : '';
+  const editBtn = isOwner ? `<button class="btn btn-sm btn-ghost" id="edit-squad-btn">${esc(t('common.edit'))}</button>` : '';
+  const deleteBtn = isOwner ? `<button class="btn btn-sm btn-danger" id="delete-squad-btn">${esc(t('common.delete'))}</button>` : '';
+  const publishBtn = isOwner && isDraft ? `<button class="btn btn-sm btn-primary" id="publish-btn">${esc(t('squad.publish'))}</button>` : '';
+  const draftBadge = isDraft ? `<span class="badge-draft">${esc(t('squad.draft_badge'))}</span>` : '';
 
   const likedClass = squad.liked_by_me ? 'liked' : '';
-  const likeDisabled = !currentUser ? 'disabled title="Log in to like"' : '';
+  const likeDisabled = !currentUser ? `disabled title="${esc(t('squad.login_to_like'))}"` : '';
   const likeBtn = `
     <button class="like-btn ${likedClass}" id="like-btn" ${likeDisabled}>
       ♥ <span id="likes-count">${squad.likes_count}</span>
@@ -1040,9 +1090,9 @@ async function showSquadDetail(squadId) {
       const lm = ss.effective_loadout - (c.loadout || 0);
       const color = lm !== 0 ? ' color:var(--danger);' : '';
       const tip = lm !== 0
-        ? `data-tooltip="Base: ${c.loadout}, Mission modifier: ${lm >= 0 ? '+' : ''}${lm}"`
+        ? `data-tooltip="${esc(t('squad.loadout_tip', { base: c.loadout, mod: (lm >= 0 ? '+' : '') + lm }))}"`
         : '';
-      return `<div class="text-muted" style="font-size:12px;margin-bottom:6px;${color}" ${tip}>Loadout: ${ss.gear_loadout_used}/${ss.effective_loadout}</div>`;
+      return `<div class="text-muted" style="font-size:12px;margin-bottom:6px;${color}" ${tip}>${esc(t('stat.loadout'))}: ${ss.gear_loadout_used}/${ss.effective_loadout}</div>`;
     })();
 
     const gearHtml = (() => {
@@ -1051,29 +1101,29 @@ async function showSquadDetail(squadId) {
         const ta = _GEAR_TYPE_ORDER[a.card.card_type] ?? 99;
         const tb = _GEAR_TYPE_ORDER[b.card.card_type] ?? 99;
         if (ta !== tb) return ta - tb;
-        return a.card.name.localeCompare(b.card.name);
+        return a.card.name.localeCompare(b.card.name, I18N.lang);
       };
       const defaultGear = (ss.default_gear || []).slice().sort(_gearSort);
-      const defaultGearNames = new Set(defaultGear.map(g => g.card.name.toLowerCase()));
-      const sortedGear = ss.gear.slice().sort(_gearSort).filter(g => !defaultGearNames.has(g.card.name.toLowerCase()));
+      const defaultGearNames = new Set(defaultGear.map(g => cardKey(g.card)));
+      const sortedGear = ss.gear.slice().sort(_gearSort).filter(g => !defaultGearNames.has(cardKey(g.card)));
       const _gearRow = (g, showCost) => `
         <tr>
           <td><span ${cardImageAttr(g.card)}>${esc(g.card.name)}</span></td>
-          <td class="text-muted">${esc(g.card.card_type)}</td>
-          ${showCost ? `<td class="text-muted">${g.card.resource_cost != null ? g.card.resource_cost + ' RP' : ''}</td>
-          <td class="text-muted">${g.loadout_weight != null ? 'L' + g.loadout_weight : ''}</td>
+          <td class="text-muted">${esc(tv('card_type', g.card.card_type))}</td>
+          ${showCost ? `<td class="text-muted">${g.card.resource_cost != null ? g.card.resource_cost + ' ' + esc(t('stat.rp')) : ''}</td>
+          <td class="text-muted">${g.loadout_weight != null ? esc(t('stat.loadout_abbr')) + g.loadout_weight : ''}</td>
           ${g.quantity > 1 ? `<td>×${g.quantity}</td>` : '<td></td>'}` : ''}
         </tr>`;
       let out = '';
       if (sortedGear.length) {
         out += `<div class="default-gear-section">
-          <div class="default-gear-label">Gear</div>
+          <div class="default-gear-label">${esc(t('squad.gear'))}</div>
           <table class="gear-table">${sortedGear.map(g => _gearRow(g, isPS)).join('')}</table>
         </div>`;
       }
       if (defaultGear.length) {
         out += `<div class="default-gear-section">
-          <div class="default-gear-label">Included</div>
+          <div class="default-gear-label">${esc(t('squad.included'))}</div>
           <table class="gear-table">${defaultGear.map(g => _gearRow(g, false)).join('')}</table>
         </div>`;
       }
@@ -1088,14 +1138,14 @@ async function showSquadDetail(squadId) {
             <span class="soldier-name" ${cardImageAttr(c)}>${esc(c.name)}</span>
             <span class="soldier-number text-muted">(${esc(c.number)})</span>
           </div>
-          <span class="text-muted" style="font-size:13px">${c.resource_cost != null ? c.resource_cost + ' RP' : ''}</span>
+          <span class="text-muted" style="font-size:13px">${c.resource_cost != null ? c.resource_cost + ' ' + esc(t('stat.rp')) : ''}</span>
         </div>
         <div class="soldier-stats">
-          ${c.health != null ? `<span>HP ${c.health}</span>` : ''}
-          ${c.cover != null ? `<span>Cover ${c.cover}</span>` : ''}
-          ${c.movement != null ? `<span>Move ${c.movement}</span>` : ''}
-          ${c.hth != null ? `<span>HtH ${c.hth >= 0 ? '+' : ''}${c.hth}</span>` : ''}
-          ${!isPS && c.loadout != null ? `<span>Loadout ${c.loadout}</span>` : ''}
+          ${c.health != null ? `<span>${esc(t('stat.hp'))} ${c.health}</span>` : ''}
+          ${c.cover != null ? `<span>${esc(t('stat.cover'))} ${c.cover}</span>` : ''}
+          ${c.movement != null ? `<span>${esc(t('stat.move'))} ${c.movement}</span>` : ''}
+          ${c.hth != null ? `<span>${esc(t('stat.hth'))} ${c.hth >= 0 ? '+' : ''}${c.hth}</span>` : ''}
+          ${!isPS && c.loadout != null ? `<span>${esc(t('stat.loadout'))} ${c.loadout}</span>` : ''}
         </div>
         ${loadoutBar}
         ${gearHtml}
@@ -1113,31 +1163,31 @@ async function showSquadDetail(squadId) {
         <div class="comment-body">${esc(cm.body)}</div>
         ${canEdit ? `
           <div class="comment-actions">
-            <button class="btn btn-sm btn-ghost edit-comment-btn" data-cid="${cm.id}">Edit</button>
-            <button class="btn btn-sm btn-danger delete-comment-btn" data-cid="${cm.id}">Delete</button>
+            <button class="btn btn-sm btn-ghost edit-comment-btn" data-cid="${cm.id}">${esc(t('common.edit'))}</button>
+            <button class="btn btn-sm btn-danger delete-comment-btn" data-cid="${cm.id}">${esc(t('common.delete'))}</button>
           </div>` : ''}
       </div>`;
   }).join('');
 
   const commentForm = currentUser ? `
     <div class="comment-form">
-      <textarea id="comment-input" placeholder="Add a comment…" rows="3"></textarea>
+      <textarea id="comment-input" placeholder="${esc(t('comments.placeholder'))}" rows="3"></textarea>
       <div class="form-row">
-        <button class="btn btn-primary" id="post-comment-btn">Post comment</button>
+        <button class="btn btn-primary" id="post-comment-btn">${esc(t('comments.post'))}</button>
       </div>
-    </div>` : `<p class="text-muted mt-2"><a href="#/login">Log in</a> to comment.</p>`;
+    </div>` : `<p class="text-muted mt-2">${t('comments.login_html')}</p>`;
 
   // Build prev/next navigation from the current squad browser list
   const squadNavIdx = squadNavList.indexOf(squad.id);
   const prevSqId = squadNavIdx > 0 ? squadNavList[squadNavIdx - 1] : null;
   const nextSqId = squadNavIdx >= 0 && squadNavIdx < squadNavList.length - 1 ? squadNavList[squadNavIdx + 1] : null;
-  const prevSqBtn = prevSqId ? `<a href="#/squads/${prevSqId}" class="btn btn-ghost btn-sm">← Prev</a>` : `<span class="btn btn-ghost btn-sm" style="opacity:.35;cursor:default">← Prev</span>`;
-  const nextSqBtn = nextSqId ? `<a href="#/squads/${nextSqId}" class="btn btn-ghost btn-sm">Next →</a>` : `<span class="btn btn-ghost btn-sm" style="opacity:.35;cursor:default">Next →</span>`;
+  const prevSqBtn = prevSqId ? `<a href="#/squads/${prevSqId}" class="btn btn-ghost btn-sm">← ${esc(t('common.prev'))}</a>` : `<span class="btn btn-ghost btn-sm" style="opacity:.35;cursor:default">← ${esc(t('common.prev'))}</span>`;
+  const nextSqBtn = nextSqId ? `<a href="#/squads/${nextSqId}" class="btn btn-ghost btn-sm">${esc(t('common.next'))} →</a>` : `<span class="btn btn-ghost btn-sm" style="opacity:.35;cursor:default">${esc(t('common.next'))} →</span>`;
   const squadNavPos = squadNavIdx >= 0 ? `<span class="text-muted" style="font-size:12px">${squadNavIdx + 1} / ${squadNavList.length}</span>` : '';
 
   setMain(`
     <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <a href="#/squads" class="btn btn-ghost btn-sm">← Squads</a>
+      <a href="#/squads" class="btn btn-ghost btn-sm">← ${esc(t('nav.squads'))}</a>
       ${editBtn} ${deleteBtn} ${publishBtn}
       <span style="flex:1"></span>
       ${squadNavPos}
@@ -1148,14 +1198,14 @@ async function showSquadDetail(squadId) {
     <div class="squad-header">
       <div class="squad-title">${draftBadge} ${esc(squad.name)}</div>
       <div class="squad-meta">
-        By ${esc(squad.owner.username)} · ${fmtDate(squad.created_at)} · ${esc(squad.nation)}
+        ${esc(t('squad.by', { user: squad.owner.username }))} · ${fmtDate(squad.created_at)} · ${esc(nationLabel(squad.nation))}
       </div>
       <div style="margin-top:8px">${likeBtn}</div>
     </div>
 
     <div class="squad-info-row">
       <div class="squad-mission-box mission-primary">
-        <div class="squad-box-label">Mission</div>
+        <div class="squad-box-label">${esc(t('col.mission'))}</div>
         ${squad.mission ? (() => {
           const m = squad.mission;
           const rp = squad.computed.rp_total;
@@ -1165,13 +1215,13 @@ async function showSquadDetail(squadId) {
           const pct = budget > 0 ? Math.min(100, Math.round(rp / budget * 100)) : 0;
           const subtitle = m.module ? esc(m.module) : null;
           const attrDefs = [
-            m.time != null              ? ['Turns',   m.time] : null,
-            m.objective_position != null ? ['Obj.Loc', m.objective_position] : null,
-            m.loadout_modifier != null  ? ['Loadout', (m.loadout_modifier >= 0 ? '+' : '') + m.loadout_modifier] : null,
-            m.action_cost_hth != null   ? ['HtH Cost',m.action_cost_hth] : null,
+            m.time != null              ? [t('stat.turns'),       m.time] : null,
+            m.objective_position != null ? [t('stat.obj_loc_short'), m.objective_position] : null,
+            m.loadout_modifier != null  ? [t('stat.loadout'),     (m.loadout_modifier >= 0 ? '+' : '') + m.loadout_modifier] : null,
+            m.action_cost_hth != null   ? [t('stat.hth_cost'),    m.action_cost_hth] : null,
           ].filter(Boolean);
           const chips = attrDefs.map(([k,v]) =>
-            `<span class="mission-attr">${k} <strong>${v}</strong></span>`).join('');
+            `<span class="mission-attr">${esc(k)} <strong>${v}</strong></span>`).join('');
           const MISSION_TYPE_COLOR = {
             'Raid':           '#b45309',
             'Airborne':       '#3730a3',
@@ -1185,24 +1235,24 @@ async function showSquadDetail(squadId) {
           return `
             <div class="mission-name">
               <span ${cardImageAttr(m)}>${esc(m.name)}</span>
-              ${m.nation ? `<span class="chip chip-mission" style="margin-left:6px;vertical-align:middle">${esc(m.nation)}</span>` : ''}
+              ${m.nation ? `<span class="chip chip-mission" style="margin-left:6px;vertical-align:middle">${esc(tv('nation', m.nation))}</span>` : ''}
             </div>
             <div class="mission-meta-row">
-              ${m.mission_type && m.mission_type !== 'Standard' ? `<span class="obj-type-badge" style="background:${mtColor}">${esc(m.mission_type)}</span>` : ''}
-              ${isFortified ? `<span class="obj-type-badge" style="background:#7f1d1d">Fortification</span>` : ''}
-              ${m.theater ? `<span class="text-muted" style="font-size:12px">${esc(m.theater)}</span>` : ''}
+              ${m.mission_type && m.mission_type !== 'Standard' ? `<span class="obj-type-badge" style="background:${mtColor}">${esc(tv('card_subtype', m.mission_type))}</span>` : ''}
+              ${isFortified ? `<span class="obj-type-badge" style="background:#7f1d1d">${esc(tv('card_subtype', 'Fortification'))}</span>` : ''}
+              ${m.theater ? `<span class="text-muted" style="font-size:12px">${esc(tv('theater', m.theater))}</span>` : ''}
             </div>
-            ${m.module ? `<div class="mission-subtitle">${esc(m.module)}</div>` : ''}
+            ${m.module ? `<div class="mission-subtitle">${esc(tv('module', m.module))}</div>` : ''}
             <div class="mission-rp-track"><div class="mission-rp-fill ${over ? 'over' : ''}" style="width:${pct}%"></div></div>
             <div class="mission-rp-row">
-              <span class="${over ? 'text-danger' : ''}">${rp} / ${budget} RP</span>
-              <span class="${over ? 'text-danger' : 'text-muted'}">${over ? Math.abs(rem) + ' over budget' : rem + ' remaining'}</span>
+              <span class="${over ? 'text-danger' : ''}">${rp} / ${budget} ${esc(t('stat.rp'))}</span>
+              <span class="${over ? 'text-danger' : 'text-muted'}">${esc(over ? t('budget.over', { n: Math.abs(rem) }) : t('budget.remaining', { n: rem }))}</span>
             </div>
             ${chips ? `<div class="mission-attrs">${chips}</div>` : ''}`;
         })() : '<span class="text-muted">—</span>'}
       </div>
       <div class="squad-mission-box">
-        <div class="squad-box-label">Suggested Objective${squad.objectives?.length > 1 ? 's' : ''}</div>
+        <div class="squad-box-label">${esc(squad.objectives?.length > 1 ? t('squad.suggested_objectives') : t('squad.suggested_objective'))}</div>
         ${(() => {
           const OBJ_TYPE_COLOR = {
             'Eliminate Hostiles':     'var(--danger)',
@@ -1217,15 +1267,15 @@ async function showSquadDetail(squadId) {
           };
           const situationHtml = squad.situation ? `
             <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
-              <div class="squad-box-label" style="margin-bottom:4px">Situation</div>
+              <div class="squad-box-label" style="margin-bottom:4px">${esc(t('squad.situation'))}</div>
               <div style="font-size:13px"><span ${cardImageAttr(squad.situation)}>${esc(squad.situation.name)}</span>
-              ${squad.situation.nation ? `<span class="chip chip-mission" style="margin-left:6px;vertical-align:middle">${esc(squad.situation.nation)}</span>` : ''}</div>
-              ${squad.situation.module ? `<div class="mission-subtitle" style="margin-top:2px">${esc(squad.situation.module)}</div>` : ''}
+              ${squad.situation.nation ? `<span class="chip chip-mission" style="margin-left:6px;vertical-align:middle">${esc(tv('nation', squad.situation.nation))}</span>` : ''}</div>
+              ${squad.situation.module ? `<div class="mission-subtitle" style="margin-top:2px">${esc(tv('module', squad.situation.module))}</div>` : ''}
             </div>` : '';
 
           const objs = squad.objectives || [];
           if (!objs.length) {
-            return `<div class="text-muted" style="font-size:13px;margin-top:4px">No objective selected</div>${situationHtml}`;
+            return `<div class="text-muted" style="font-size:13px;margin-top:4px">${esc(t('squad.no_objective'))}</div>${situationHtml}`;
           }
           const isSingle = objs.length === 1;
           const objsHtml = objs.map((o, idx) => {
@@ -1233,25 +1283,25 @@ async function showSquadDetail(squadId) {
             const familyColor = o.objective_family ? (OBJ_FAMILY_COLOR[o.objective_family] || 'var(--text-muted)') : null;
             if (isSingle) {
               const attrDefs = [
-                o.theater != null ? ['Theater', o.theater] : null,
-                o.entrance_cost != null ? ['Entry Cost', o.entrance_cost] : null,
-                o.action_cost_hth != null ? ['HtH Cost', o.action_cost_hth] : null,
+                o.theater != null ? [t('stat.theater'), tv('theater', o.theater)] : null,
+                o.entrance_cost != null ? [t('stat.entry_cost'), o.entrance_cost] : null,
+                o.action_cost_hth != null ? [t('stat.hth_cost'), o.action_cost_hth] : null,
               ].filter(Boolean);
               const chips = attrDefs.map(([k,v]) =>
-                `<span class="mission-attr">${k} <strong>${v}</strong></span>`).join('');
+                `<span class="mission-attr">${esc(k)} <strong>${esc(v)}</strong></span>`).join('');
               return `<div class="mission-name">
-                ${o.objective_mechanic ? `<span class="obj-type-badge" style="background:${typeColor}">${esc(o.objective_mechanic)}</span>` : ''}
-                ${familyColor ? `<span class="obj-type-badge" style="background:${familyColor}">${esc(o.objective_family)}</span>` : ''}
+                ${o.objective_mechanic ? `<span class="obj-type-badge" style="background:${typeColor}">${esc(tv('card_subtype', o.objective_mechanic))}</span>` : ''}
+                ${familyColor ? `<span class="obj-type-badge" style="background:${familyColor}">${esc(tv('card_subtype', o.objective_family))}</span>` : ''}
                 <span ${cardImageAttr(o)}>${esc(o.name)}</span>
-                ${o.nation ? `<span class="chip chip-mission" style="margin-left:6px;vertical-align:middle">${esc(o.nation)}</span>` : ''}
+                ${o.nation ? `<span class="chip chip-mission" style="margin-left:6px;vertical-align:middle">${esc(tv('nation', o.nation))}</span>` : ''}
               </div>
-              ${o.module ? `<div class="mission-subtitle">${esc(o.module)}</div>` : ''}
+              ${o.module ? `<div class="mission-subtitle">${esc(tv('module', o.module))}</div>` : ''}
               ${chips ? `<div class="mission-attrs" style="margin-top:8px">${chips}</div>` : ''}`;
             } else {
               // Compact row — name + tiny badges only
               return `<div class="flex items-center obj-compact-row" style="${idx > 0 ? 'margin-top:6px;padding-top:6px;border-top:1px solid var(--border)' : ''}">
                 <span style="font-size:13px"><span ${cardImageAttr(o)}>${esc(o.name)}</span></span>
-                ${o.objective_mechanic ? `<span class="obj-type-badge" style="background:${typeColor};margin-left:6px;font-size:10px;padding:1px 5px">${esc(o.objective_mechanic)}</span>` : ''}
+                ${o.objective_mechanic ? `<span class="obj-type-badge" style="background:${typeColor};margin-left:6px;font-size:10px;padding:1px 5px">${esc(tv('card_subtype', o.objective_mechanic))}</span>` : ''}
               </div>`;
             }
           }).join('');
@@ -1277,24 +1327,24 @@ async function showSquadDetail(squadId) {
         ...[...modSet].filter(m => m !== 'Core Europe').sort(),
       ];
       return `<div class="required-modules">
-        <span class="required-modules-label">Required modules</span>
-        ${sorted.map(m => `<span class="chip">${esc(m)}</span>`).join('')}
+        <span class="required-modules-label">${esc(t('squad.required_modules'))}</span>
+        ${sorted.map(m => `<span class="chip">${esc(tv('module', m))}</span>`).join('')}
       </div>`;
     })()}
 
-    <h2 style="margin-bottom:12px">Soldiers</h2>
-    <div class="soldiers-grid">${soldiersHtml || '<p class="text-muted">No soldiers.</p>'}</div>
+    <h2 style="margin-bottom:12px">${esc(t('squad.soldiers'))}</h2>
+    <div class="soldiers-grid">${soldiersHtml || `<p class="text-muted">${esc(t('squad.no_soldiers'))}</p>`}</div>
 
     <div class="squad-author-notes">
-      <h2 style="margin-bottom:8px">Strategy Notes</h2>
+      <h2 style="margin-bottom:8px">${esc(t('squad.strategy_notes'))}</h2>
       ${squad.notes
         ? `<div class="card-notes">${esc(squad.notes)}</div>`
-        : `<p class="text-muted" style="font-size:13px;margin:0">No strategy notes provided.</p>`}
+        : `<p class="text-muted" style="font-size:13px;margin:0">${esc(t('squad.no_notes'))}</p>`}
     </div>
 
     <div class="comments-section">
-      <h2 style="margin-bottom:10px">Comments (${comments.length})</h2>
-      <div id="comments-list">${commentsHtml || '<p class="text-muted">No comments yet.</p>'}</div>
+      <h2 style="margin-bottom:10px">${esc(t('comments.title', { n: comments.length }))}</h2>
+      <div id="comments-list">${commentsHtml || `<p class="text-muted">${esc(t('comments.none'))}</p>`}</div>
       ${commentForm}
     </div>
   `);
@@ -1320,7 +1370,7 @@ async function showSquadDetail(squadId) {
       await showSquadDetail(squad.id);
     } catch (e) {
       const v = e.data?.validation;
-      alert((e.error || 'Publish failed.') + (v?.errors?.length ? '\n' + v.errors.map(x => x.message).join('\n') : ''));
+      alert((e.error || t('squad.publish_failed')) + (v?.errors?.length ? '\n' + v.errors.map(x => x.message).join('\n') : ''));
     }
   });
 
@@ -1331,11 +1381,11 @@ async function showSquadDetail(squadId) {
 
   // Delete
   document.getElementById('delete-squad-btn')?.addEventListener('click', async () => {
-    if (!confirm('Delete this squad?')) return;
+    if (!confirm(t('squad.confirm_delete'))) return;
     try {
       await API.delete('/squads/' + squad.id);
       navigate('squads');
-    } catch (e) { alert(e.error || 'Failed to delete.'); }
+    } catch (e) { alert(e.error || t('squad.delete_failed')); }
   });
 
   // Post comment
@@ -1346,7 +1396,7 @@ async function showSquadDetail(squadId) {
     try {
       await API.post('/squads/' + squad.id + '/comments', { body });
       await showSquadDetail(squad.id); // reload
-    } catch (e) { alert(e.error || 'Failed to post comment.'); }
+    } catch (e) { alert(e.error || t('comments.post_failed')); }
   });
 
   // Edit/delete comments (delegated)
@@ -1357,11 +1407,11 @@ async function showSquadDetail(squadId) {
     if (!cid) return;
 
     if (delBtn) {
-      if (!confirm('Delete this comment?')) return;
+      if (!confirm(t('comments.confirm_delete'))) return;
       try {
         await API.delete('/squads/' + squad.id + '/comments/' + cid);
         await showSquadDetail(squad.id);
-      } catch (e) { alert(e.error || 'Failed.'); }
+      } catch (e) { alert(e.error || t('common.failed')); }
     }
     if (editBtn) {
       const item = document.querySelector(`.comment-item[data-cid="${cid}"]`);
@@ -1372,13 +1422,13 @@ async function showSquadDetail(squadId) {
       ta.rows = 3;
       ta.style.width = '100%';
       bodyEl.replaceWith(ta);
-      editBtn.textContent = 'Save';
+      editBtn.textContent = t('common.save');
       editBtn.classList.remove('edit-comment-btn');
       editBtn.addEventListener('click', async () => {
         try {
           await API.put('/squads/' + squad.id + '/comments/' + cid, { body: ta.value.trim() });
           await showSquadDetail(squad.id);
-        } catch (e) { alert(e.error || 'Failed.'); }
+        } catch (e) { alert(e.error || t('common.failed')); }
       });
     }
   });
@@ -1387,27 +1437,28 @@ async function showSquadDetail(squadId) {
 // ---------------------------------------------------------------------------
 // Reusable Card Table Component
 // ---------------------------------------------------------------------------
+// header = i18n key (resolved at render time so a language switch applies)
 const CARD_TABLE_COLS = {
   number:            { header: '#', render: c => esc(c.number), sortKey: 'number' },
-  name:              { header: 'Name', render: c => `<span ${cardImageAttr(c)}>${esc(c.name)}</span>`, sortKey: 'name' },
-  subtype:           { header: 'Type', render: c => chipForSubtype(c.card_subtype, c.card_type) },
-  category:          { header: 'Category', render: c => chipForCategory(c.card_type) },
-  nation:            { header: 'Nation', render: c => esc(c.nation || '—'), sortKey: 'nation' },
-  module:            { header: 'Module', render: c => esc(c.module), sortKey: 'module' },
-  rp:                { header: 'RP', render: c => c.resource_cost != null ? String(c.resource_cost) : '', sortKey: 'resource_cost' },
-  cx:                { header: 'CX', render: c => c.cx ? String(c.cx) : '' },
-  xp:                { header: 'XP', render: c => c.xp ? String(c.xp) : '' },
-  health:            { header: 'HP', render: c => c.health != null ? String(c.health) : '' },
-  loadout:           { header: 'Loadout', render: c => c.loadout != null ? String(c.loadout) : '' },
-  movement:          { header: 'Move', render: c => c.movement != null ? String(c.movement) : '' },
-  cover:             { header: 'Cover', render: c => c.cover != null ? String(c.cover) : '' },
-  hth:               { header: 'HtH', render: c => c.hth != null ? (c.hth >= 0 ? '+' : '') + c.hth : '' },
-  resources:         { header: 'Budget', render: c => c.resources != null ? c.resources + ' RPs' : '' },
-  time:              { header: 'Turns', render: c => c.time != null ? String(c.time) : '' },
-  objective_position:{ header: 'Obj@', render: c => c.objective_position != null ? String(c.objective_position) : '' },
-  loadout_modifier:  { header: 'LOADOUT', render: c => c.loadout_modifier != null ? (c.loadout_modifier >= 0 ? '+' : '') + c.loadout_modifier : '' },
-  entrance_cost:     { header: 'Entry Cost', render: c => c.entrance_cost != null ? String(c.entrance_cost) : '', sortKey: 'entrance_cost' },
-  action_cost_hth:   { header: 'HtH Cost', render: c => c.action_cost_hth != null ? String(c.action_cost_hth) : '', sortKey: 'action_cost_hth' },
+  name:              { header: 'col.name', render: c => `<span ${cardImageAttr(c)}>${esc(c.name)}</span>${trMarker(c)}`, sortKey: 'name' },
+  subtype:           { header: 'col.type', render: c => chipForSubtype(c.card_subtype, c.card_type) },
+  category:          { header: 'col.category', render: c => chipForCategory(c.card_type) },
+  nation:            { header: 'col.nation', render: c => esc(c.nation ? tv('nation', c.nation) : '—'), sortKey: 'nation' },
+  module:            { header: 'col.module', render: c => esc(tv('module', c.module)), sortKey: 'module' },
+  rp:                { header: 'stat.rp', render: c => c.resource_cost != null ? String(c.resource_cost) : '', sortKey: 'resource_cost' },
+  cx:                { header: 'stat.cx', render: c => c.cx ? String(c.cx) : '' },
+  xp:                { header: 'stat.xp', render: c => c.xp ? String(c.xp) : '' },
+  health:            { header: 'stat.hp', render: c => c.health != null ? String(c.health) : '' },
+  loadout:           { header: 'stat.loadout', render: c => c.loadout != null ? String(c.loadout) : '' },
+  movement:          { header: 'stat.move', render: c => c.movement != null ? String(c.movement) : '' },
+  cover:             { header: 'stat.cover', render: c => c.cover != null ? String(c.cover) : '' },
+  hth:               { header: 'stat.hth', render: c => c.hth != null ? (c.hth >= 0 ? '+' : '') + c.hth : '' },
+  resources:         { header: 'stat.budget', render: c => c.resources != null ? c.resources + ' ' + esc(t('stat.rp')) : '' },
+  time:              { header: 'stat.turns', render: c => c.time != null ? String(c.time) : '' },
+  objective_position:{ header: 'stat.obj_at', render: c => c.objective_position != null ? String(c.objective_position) : '' },
+  loadout_modifier:  { header: 'stat.loadout_mod', render: c => c.loadout_modifier != null ? (c.loadout_modifier >= 0 ? '+' : '') + c.loadout_modifier : '' },
+  entrance_cost:     { header: 'stat.entry_cost', render: c => c.entrance_cost != null ? String(c.entrance_cost) : '', sortKey: 'entrance_cost' },
+  action_cost_hth:   { header: 'stat.hth_cost', render: c => c.action_cost_hth != null ? String(c.action_cost_hth) : '', sortKey: 'action_cost_hth' },
 };
 
 const MODE_COLS = {
@@ -1431,7 +1482,7 @@ function renderCardTable(containerEl, items, opts = {}) {
     const indicator = isActive ? (sortOrder === 'asc' ? ' ▲' : ' ▼') : '';
     const cls = ['sort-header', col.sortKey ? 'sortable' : '', isActive ? 'sort-active' : ''].filter(Boolean).join(' ');
     const attr = col.sortKey ? `data-sort="${col.sortKey}"` : '';
-    return `<th class="${cls}" ${attr}>${esc(col.header)}${indicator}</th>`;
+    return `<th class="${cls}" ${attr}>${esc(t(col.header))}${indicator}</th>`;
   }).join('');
 
   const bodyRows = items.length
@@ -1439,7 +1490,7 @@ function renderCardTable(containerEl, items, opts = {}) {
         const cells = colDefs.map(col => `<td>${col.render ? col.render(c) : ''}</td>`).join('');
         return `<tr class="clickable" data-cid="${c.id}">${cells}</tr>`;
       }).join('')
-    : `<tr><td colspan="${cols.length}" class="text-muted" style="text-align:center;padding:16px">No cards found.</td></tr>`;
+    : `<tr><td colspan="${cols.length}" class="text-muted" style="text-align:center;padding:16px">${esc(t('cards.none'))}</td></tr>`;
 
   containerEl.innerHTML = `
     <div class="table-scroll">
@@ -1487,7 +1538,7 @@ register('builder', async function(squadId) {
         defaultGear: ss.default_gear || [],
       }));
     } catch (e) {
-      showError(e.error || 'Failed to load squad.');
+      showError(e.error || t('builder.load_failed'));
       return;
     }
   } else {
@@ -1520,9 +1571,25 @@ function sortSoldiers() {
   });
 }
 
+// Re-fetch every card held in builderState so names/notes follow a language switch
+async function refreshBuilderCards() {
+  const fresh = async c => {
+    if (!c?.id) return c;
+    try { return (await API.get('/cards/' + c.id)).card; } catch (_) { return c; }
+  };
+  const bs = builderState;
+  [bs.missionCard, bs.situationCard] = await Promise.all([fresh(bs.missionCard), fresh(bs.situationCard)]);
+  bs.objectiveCards = await Promise.all(bs.objectiveCards.map(fresh));
+  bs.soldiers = await Promise.all(bs.soldiers.map(async s => {
+    const card = await fresh(s.card);
+    const gear = await Promise.all(s.gear.map(async g => ({ ...g, card: await fresh(g.card) })));
+    return { ...s, card, gear, defaultGear: card.associations || s.defaultGear };
+  }));
+}
+
 function addSoldierToBuilder(card) {
   if (builderState.soldiers.some(s => s.card.id === card.id)) {
-    alert(card.name + ' is already in this squad.');
+    alert(t('builder.soldier_already', { name: card.name }));
     return false;
   }
   builderState.soldiers.push({ card, gear: [], defaultGear: card.associations || [] });
@@ -1533,16 +1600,16 @@ function addSoldierToBuilder(card) {
 function addGearToBuilder(card, soldierIdx) {
   const soldier = builderState.soldiers[soldierIdx];
   if (!soldier) return false;
-  // Block if already in pre-printed list (match by name, case-insensitive)
-  const nameLower = card.name.toLowerCase();
-  if ((soldier.defaultGear || []).some(g => g.card.name.toLowerCase() === nameLower)) {
-    alert(`"${card.name}" is already pre-printed on ${soldier.card.name}.`);
+  // Block if already in pre-printed list (match by canonical English name, case-insensitive)
+  const key = cardKey(card);
+  if ((soldier.defaultGear || []).some(g => cardKey(g.card) === key)) {
+    alert(t('builder.gear_preprinted', { name: card.name, soldier: soldier.card.name }));
     return false;
   }
   // A soldier cannot have the same skill twice (any copy of the same-named skill)
   if (card.card_type === 'Skill' &&
-      soldier.gear.some(g => g.card.card_type === 'Skill' && g.card.name.toLowerCase() === nameLower)) {
-    alert(`${soldier.card.name} already has "${card.name}".`);
+      soldier.gear.some(g => g.card.card_type === 'Skill' && cardKey(g.card) === key)) {
+    alert(t('builder.skill_already', { name: card.name, soldier: soldier.card.name }));
     return false;
   }
   const existing = soldier.gear.find(g => g.card.id === card.id);
@@ -1556,7 +1623,7 @@ function addGearToBuilder(card, soldierIdx) {
 
 function renderBuilder() {
   if (!currentUser) {
-    setMain(`<div class="alert alert-warning">Please <a href="#/login">log in</a> to build squads.</div>`);
+    setMain(`<div class="alert alert-warning">${t('builder.login_required_html')}</div>`);
     return;
   }
 
@@ -1588,21 +1655,21 @@ function renderBuilder() {
       return `
       <div class="gear-item">
         <span ${cardImageAttr(g.card)} style="flex:1">${esc(g.card.name)}</span>
-        <span class="text-muted" style="white-space:nowrap">${unitRp} RP</span>
+        <span class="text-muted" style="white-space:nowrap">${unitRp} ${esc(t('stat.rp'))}</span>
         ${g.quantity > 1 ? `<span class="gear-qty">×${g.quantity}</span>` : '<span></span>'}
-        <button class="btn btn-icon remove-gear-btn" data-sidx="${idx}" data-gidx="${gi}" title="Remove">✕</button>
+        <button class="btn btn-icon remove-gear-btn" data-sidx="${idx}" data-gidx="${gi}" title="${esc(t('common.remove'))}">✕</button>
       </div>`;
     }).join('');
 
     const dg = s.defaultGear || [];
     const defaultGearHtml = dg.length > 0 ? `
       <div class="default-gear-section">
-        <div class="default-gear-label">Included:</div>
+        <div class="default-gear-label">${esc(t('squad.included'))}:</div>
         ${dg.map(g => `
           <div class="gear-item gear-item-default">
             ${g.quantity > 1 ? `<span class="gear-qty">${g.quantity}×</span>` : ''}
             <span ${cardImageAttr(g.card)}>${esc(g.card.name)}</span>
-            <span class="text-muted" style="font-size:11px">${g.card.card_type}</span>
+            <span class="text-muted" style="font-size:11px">${esc(tv('card_type', g.card.card_type))}</span>
           </div>`).join('')}
       </div>` : '';
 
@@ -1612,38 +1679,38 @@ function renderBuilder() {
           <span>
             ${chipForSubtype(c.card_subtype, c.card_type)}
             <span class="soldier-slot-name" ${cardImageAttr(c)}>${esc(c.name)}</span>
-            ${c.cx ? `<span class="badge-cx" title="Combat Experience: grants extra Action cards per turn">${c.cx} CX</span>` : ''}
-            ${c.xp ? `<span class="badge-xp" title="Experience Points (pre-printed)">${c.xp} XP</span>` : ''}
+            ${c.cx ? `<span class="badge-cx" title="${esc(t('cd.cx_tip'))}">${c.cx} ${esc(t('stat.cx'))}</span>` : ''}
+            ${c.xp ? `<span class="badge-xp" title="${esc(t('cd.xp_tip'))}">${c.xp} ${esc(t('stat.xp'))}</span>` : ''}
           </span>
           <span>
-            <span class="soldier-slot-cost text-muted">${c.resource_cost || 0} RP</span>
-            <button class="btn btn-icon remove-soldier-btn" data-sidx="${idx}" title="Remove soldier">✕</button>
+            <span class="soldier-slot-cost text-muted">${c.resource_cost || 0} ${esc(t('stat.rp'))}</span>
+            <button class="btn btn-icon remove-soldier-btn" data-sidx="${idx}" title="${esc(t('builder.remove_soldier'))}">✕</button>
           </span>
         </div>
         ${isPS ? `
           <div class="gear-list">${gearItems}</div>
           <div class="bar-wrapper" style="margin-top:6px">
-            <div class="bar-label">Loadout ${gearLoadout}/${effectiveLoadout}</div>
+            <div class="bar-label">${esc(t('stat.loadout'))} ${gearLoadout}/${effectiveLoadout}</div>
             <div class="bar-track"><div class="bar-fill ${loadCls}" style="width:${loadPct}%"></div></div>
           </div>
           ${defaultGearHtml}
           <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
-            <button class="btn btn-sm btn-ghost add-weapon-btn" data-sidx="${idx}">+ Weapon</button>
-            <button class="btn btn-sm btn-ghost add-equip-btn" data-sidx="${idx}">+ Equipment</button>
-            <button class="btn btn-sm btn-ghost add-skill-btn" data-sidx="${idx}">+ Skill</button>
-            <button class="btn btn-sm btn-ghost add-sr-btn" data-sidx="${idx}">+ Service Record</button>
+            <button class="btn btn-sm btn-ghost add-weapon-btn" data-sidx="${idx}">+ ${esc(tv('card_type', 'Weapon'))}</button>
+            <button class="btn btn-sm btn-ghost add-equip-btn" data-sidx="${idx}">+ ${esc(tv('card_type', 'Equipment'))}</button>
+            <button class="btn btn-sm btn-ghost add-skill-btn" data-sidx="${idx}">+ ${esc(tv('card_type', 'Skill'))}</button>
+            <button class="btn btn-sm btn-ghost add-sr-btn" data-sidx="${idx}">+ ${esc(tv('card_type', 'Service Record'))}</button>
           </div>
         ` : (c.card_subtype === 'NPS' || c.card_subtype === 'Squad') ? `
           ${defaultGearHtml}
         ` : c.card_subtype !== 'Vehicle' ? `
           <div class="gear-list">${gearItems}</div>
-          <div class="nps-gear-note" style="font-size:11px;margin-top:4px">Cards below not counted in budget</div>
+          <div class="nps-gear-note" style="font-size:11px;margin-top:4px">${esc(t('builder.nps_not_counted'))}</div>
           ${defaultGearHtml}
           <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
-            <button class="btn btn-sm btn-ghost add-nps-wpn-btn" data-sidx="${idx}">+ Weapon</button>
-            <button class="btn btn-sm btn-ghost add-nps-eqp-btn" data-sidx="${idx}">+ Equipment</button>
-            <button class="btn btn-sm btn-ghost add-nps-skl-btn" data-sidx="${idx}">+ Skill</button>
-            <button class="btn btn-sm btn-ghost add-nps-act-btn" data-sidx="${idx}">+ Action</button>
+            <button class="btn btn-sm btn-ghost add-nps-wpn-btn" data-sidx="${idx}">+ ${esc(tv('card_type', 'Weapon'))}</button>
+            <button class="btn btn-sm btn-ghost add-nps-eqp-btn" data-sidx="${idx}">+ ${esc(tv('card_type', 'Equipment'))}</button>
+            <button class="btn btn-sm btn-ghost add-nps-skl-btn" data-sidx="${idx}">+ ${esc(tv('card_type', 'Skill'))}</button>
+            <button class="btn btn-sm btn-ghost add-nps-act-btn" data-sidx="${idx}">+ ${esc(tv('card_type', 'Action'))}</button>
           </div>
         ` : ''}
       </div>`;
@@ -1651,22 +1718,22 @@ function renderBuilder() {
 
   setMain(`
     <div class="builder-actions">
-      <button class="btn btn-ghost btn-sm" id="save-draft-btn">Save as Draft</button>
-      <button class="btn btn-primary" id="publish-squad-btn">Publish</button>
-      <button class="btn btn-ghost btn-sm" id="validate-btn">Validate</button>
-      ${builderState.squadId ? `<a href="#/squads/${builderState.squadId}" class="btn btn-ghost btn-sm">Cancel</a>` : ''}
+      <button class="btn btn-ghost btn-sm" id="save-draft-btn">${esc(t('builder.save_draft'))}</button>
+      <button class="btn btn-primary" id="publish-squad-btn">${esc(t('squad.publish'))}</button>
+      <button class="btn btn-ghost btn-sm" id="validate-btn">${esc(t('builder.validate'))}</button>
+      ${builderState.squadId ? `<a href="#/squads/${builderState.squadId}" class="btn btn-ghost btn-sm">${esc(t('common.cancel'))}</a>` : ''}
     </div>
     <div id="builder-validation"></div>
     <div class="builder-layout">
       <!-- LEFT -->
       <div class="builder-left">
         <div class="builder-section">
-          <div class="builder-section-title">Squad Name</div>
-          <input type="text" id="squad-name" value="${esc(builderState.name)}" placeholder="Unnamed Squad" style="width:100%">
+          <div class="builder-section-title">${esc(t('builder.squad_name'))}</div>
+          <input type="text" id="squad-name" value="${esc(builderState.name)}" placeholder="${esc(t('builder.unnamed'))}" style="width:100%">
         </div>
 
         <div class="builder-section">
-          <div class="builder-section-title">Mission</div>
+          <div class="builder-section-title">${esc(t('col.mission'))}</div>
           ${builderState.missionCard
             ? (() => {
                 const mc = builderState.missionCard;
@@ -1677,23 +1744,23 @@ function renderBuilder() {
                 const bmColor = BUILDER_MISSION_COLOR[mc.card_subtype];
                 return `<div class="flex justify-between items-center">
                   <span>
-                    ${bmColor ? `<span class="obj-type-badge" style="background:${bmColor}">${esc(mc.card_subtype)}</span>` : ''}
+                    ${bmColor ? `<span class="obj-type-badge" style="background:${bmColor}">${esc(tv('card_subtype', mc.card_subtype))}</span>` : ''}
                     <span ${cardImageAttr(mc)}><strong>${esc(mc.name)}</strong></span>
                   </span>
-                  <button class="btn btn-sm btn-ghost" id="change-mission-btn">Change</button>
+                  <button class="btn btn-sm btn-ghost" id="change-mission-btn">${esc(t('common.change'))}</button>
                 </div>
-                <div class="text-muted" style="font-size:12px;margin-top:4px">${[
-                  mc.resources != null ? `${mc.resources} RP` : null,
-                  mc.time != null ? `${mc.time} Turns` : null,
-                  mc.objective_position != null ? `Obj.Loc: ${mc.objective_position}` : null,
-                  mc.loadout_modifier != null ? `Loadout: ${mc.loadout_modifier >= 0 ? '+' : ''}${mc.loadout_modifier}` : null,
-                ].filter(Boolean).join(' · ')}</div>`;
+                <div class="text-muted" style="font-size:12px;margin-top:4px">${esc([
+                  mc.resources != null ? `${mc.resources} ${t('stat.rp')}` : null,
+                  mc.time != null ? `${mc.time} ${t('stat.turns')}` : null,
+                  mc.objective_position != null ? `${t('stat.obj_loc_short')}: ${mc.objective_position}` : null,
+                  mc.loadout_modifier != null ? `${t('stat.loadout')}: ${mc.loadout_modifier >= 0 ? '+' : ''}${mc.loadout_modifier}` : null,
+                ].filter(Boolean).join(' · '))}</div>`;
               })()
-            : `<button class="btn btn-ghost" id="pick-mission-btn">Select a Mission…</button>`}
+            : `<button class="btn btn-ghost" id="pick-mission-btn">${esc(t('builder.select_mission'))}</button>`}
         </div>
 
         <div class="builder-section">
-          <div class="builder-section-title">Suggested Objectives <span class="text-muted">(optional)</span></div>
+          <div class="builder-section-title">${esc(t('squad.suggested_objectives'))} <span class="text-muted">(${esc(t('common.optional'))})</span></div>
           ${builderState.objectiveCards.length > 0
             ? (() => {
                 const isSingle = builderState.objectiveCards.length === 1;
@@ -1704,64 +1771,64 @@ function renderBuilder() {
                     const ocMechanic = ocFamily && ocSubtype.startsWith(ocFamily + ' / ')
                       ? ocSubtype.slice(ocFamily.length + 3) : (ocFamily ? '' : ocSubtype);
                     const attrs = [
-                      oc.theater ? oc.theater : null,
-                      oc.entrance_cost != null ? `Entry: ${oc.entrance_cost}` : null,
-                      oc.action_cost_hth != null ? `HtH: ${oc.action_cost_hth}` : null,
+                      oc.theater ? tv('theater', oc.theater) : null,
+                      oc.entrance_cost != null ? `${t('stat.entry')}: ${oc.entrance_cost}` : null,
+                      oc.action_cost_hth != null ? `${t('stat.hth')}: ${oc.action_cost_hth}` : null,
                     ].filter(Boolean).join(' · ');
-                    const subtypeLabel = [ocFamily, ocMechanic].filter(Boolean).join(' · ');
+                    const subtypeLabel = [ocFamily, ocMechanic].filter(Boolean).map(v => tv('card_subtype', v)).join(' · ');
                     return `<div class="flex justify-between items-center">
                       <span><span ${cardImageAttr(oc)}><strong>${esc(oc.name)}</strong></span></span>
                       <span style="display:flex;gap:4px">
-                        <button class="btn btn-sm btn-ghost" data-change-obj="1">Change</button>
-                        <button class="btn btn-sm btn-ghost remove-obj-btn" data-idx="${idx}" title="Remove" style="color:var(--text-muted)">✕</button>
+                        <button class="btn btn-sm btn-ghost" data-change-obj="1">${esc(t('common.change'))}</button>
+                        <button class="btn btn-sm btn-ghost remove-obj-btn" data-idx="${idx}" title="${esc(t('common.remove'))}" style="color:var(--text-muted)">✕</button>
                       </span>
                     </div>
-                    <div class="text-muted" style="font-size:11px;margin-top:3px">${[subtypeLabel, attrs].filter(Boolean).join(' · ')}</div>`;
+                    <div class="text-muted" style="font-size:11px;margin-top:3px">${esc([subtypeLabel, attrs].filter(Boolean).join(' · '))}</div>`;
                   } else {
                     return `<div class="flex justify-between items-center obj-compact-row">
                       <span style="font-size:13px"><span ${cardImageAttr(oc)}>${esc(oc.name)}</span></span>
-                      <button class="btn btn-sm btn-ghost remove-obj-btn" data-idx="${idx}" title="Remove" style="color:var(--text-muted)">✕</button>
+                      <button class="btn btn-sm btn-ghost remove-obj-btn" data-idx="${idx}" title="${esc(t('common.remove'))}" style="color:var(--text-muted)">✕</button>
                     </div>`;
                   }
                 }).join('');
                 const addMoreBtn = builderState.missionCard
-                  ? `<button class="btn btn-ghost btn-sm" id="add-obj-btn" style="margin-top:6px">+ Add another…</button>`
+                  ? `<button class="btn btn-ghost btn-sm" id="add-obj-btn" style="margin-top:6px">+ ${esc(t('builder.add_another'))}</button>`
                   : '';
                 return rows + addMoreBtn;
               })()
             : builderState.missionCard
-              ? `<button class="btn btn-ghost" id="pick-obj-btn">Add an Objective…</button>`
-              : `<span class="text-muted">Select a mission first.</span>`}
+              ? `<button class="btn btn-ghost" id="pick-obj-btn">${esc(t('builder.add_objective'))}</button>`
+              : `<span class="text-muted">${esc(t('builder.mission_first'))}</span>`}
         </div>
 
         <div class="builder-section">
-          <div class="builder-section-title">Nation</div>
+          <div class="builder-section-title">${esc(t('col.nation'))}</div>
           ${builderState.missionCard
             ? `<select id="nation-select" style="width:100%">
-                <option value="">— Select nation —</option>
+                <option value="">— ${esc(t('builder.select_nation'))} —</option>
                 ${sortedNations(allNations).map(n => `<option value="${esc(n)}" ${builderState.nation===n?'selected':''}>${esc(nationLabel(n))}</option>`).join('')}
                </select>`
-            : `<span class="text-muted">Select a mission first.</span>`}
+            : `<span class="text-muted">${esc(t('builder.mission_first'))}</span>`}
         </div>
 
         <div class="builder-section">
           <div class="builder-section-title">
-            <span>Soldiers</span>
+            <span>${esc(t('squad.soldiers'))}</span>
             ${budget > 0 ? `
               <div class="bar-wrapper" style="margin-top:4px">
-                <div class="bar-label">Budget: ${rpTotal}/${budget} RP (${rpRemaining >= 0 ? rpRemaining + ' remaining' : Math.abs(rpRemaining) + ' OVER'})</div>
+                <div class="bar-label">${esc(t('builder.budget_bar', { used: rpTotal, budget, status: rpRemaining >= 0 ? t('budget.remaining', { n: rpRemaining }) : t('budget.over_caps', { n: Math.abs(rpRemaining) }) }))}</div>
                 <div class="bar-track"><div class="bar-fill ${budgetCls}" style="width:${budgetPct}%"></div></div>
               </div>` : ''}
           </div>
           ${soldiersHtml}
           ${builderState.missionCard
-            ? `<button class="btn btn-ghost" id="add-soldier-btn" ${!builderState.nation ? 'disabled title="Select a nation first"' : ''}>+ Add Soldier</button>`
+            ? `<button class="btn btn-ghost" id="add-soldier-btn" ${!builderState.nation ? `disabled title="${esc(t('builder.nation_first'))}"` : ''}>+ ${esc(t('builder.add_soldier'))}</button>`
             : ''}
         </div>
 
         <div class="builder-section">
-          <div class="builder-section-title">Strategy Notes</div>
-          <div class="text-muted" style="font-size:12px;margin-bottom:6px">Strategy tips, card choices rationale, play advice…</div>
+          <div class="builder-section-title">${esc(t('squad.strategy_notes'))}</div>
+          <div class="text-muted" style="font-size:12px;margin-bottom:6px">${esc(t('builder.notes_hint'))}</div>
           <textarea id="squad-notes" style="width:100%;min-height:100px;resize:vertical">${esc(builderState.notes)}</textarea>
         </div>
       </div>
@@ -1769,7 +1836,7 @@ function renderBuilder() {
       <!-- RIGHT: Card Picker -->
       <div class="builder-right" id="picker-panel">
         <div class="picker-title" id="picker-title">
-          ${builderState.pickerMode ? _pickerTitle(builderState.pickerMode) : 'Select a section on the left to pick cards.'}
+          ${esc(builderState.pickerMode ? _pickerTitle(builderState.pickerMode) : t('picker.hint'))}
         </div>
         ${builderState.pickerMode ? renderPickerSearch() : ''}
         <div id="picker-results"></div>
@@ -1862,13 +1929,15 @@ function renderBuilder() {
 
 function _pickerTitle(mode) {
   const titles = {
-    mission: 'Select a Mission',
-    objective: 'Select an Objective',
-    situation: 'Select a Situation',
-    soldier: 'Add a Soldier',
-    gear: `Add ${builderState.pickerGearCat || 'Gear'} to ${
-      builderState.pickerTarget != null && builderState.soldiers[builderState.pickerTarget]
-        ? builderState.soldiers[builderState.pickerTarget].card.name : 'Soldier'}`,
+    mission: t('picker.mission'),
+    objective: t('picker.objective'),
+    situation: t('picker.situation'),
+    soldier: t('picker.soldier'),
+    gear: t('picker.gear', {
+      cat: builderState.pickerGearCat ? tv('card_type', builderState.pickerGearCat) : t('squad.gear'),
+      soldier: builderState.pickerTarget != null && builderState.soldiers[builderState.pickerTarget]
+        ? builderState.soldiers[builderState.pickerTarget].card.name : tv('card_type', 'Soldier'),
+    }),
   };
   return titles[mode] || '';
 }
@@ -1886,11 +1955,11 @@ function setPickerMode(mode, target = null, gearCat = null) {
 
 function renderPickerSearch() {
   const moduleOptions = ['', ...allModules].map(m =>
-    `<option value="${esc(m)}" ${builderState.pickerModule === m ? 'selected' : ''}>${m || 'All modules'}</option>`
+    `<option value="${esc(m)}" ${builderState.pickerModule === m ? 'selected' : ''}>${esc(m ? tv('module', m) : t('cards.all_modules'))}</option>`
   ).join('');
   return `
     <div class="filter-bar mb-2" style="flex-wrap:wrap;gap:6px">
-      <input type="text" id="picker-q" placeholder="Search…" value="${esc(builderState.pickerQ)}" style="flex:1;min-width:120px">
+      <input type="text" id="picker-q" placeholder="${esc(t('common.search'))}" value="${esc(builderState.pickerQ)}" style="flex:1;min-width:120px">
       <select id="picker-module-select">${moduleOptions}</select>
     </div>`;
 }
@@ -2006,7 +2075,7 @@ async function loadPickerResults() {
       });
     }
   } catch (e) {
-    resultsDiv.innerHTML = `<div class="alert alert-error">${esc(e.error || 'Failed to load cards.')}</div>`;
+    resultsDiv.innerHTML = `<div class="alert alert-error">${esc(e.error || t('cards.load_failed'))}</div>`;
   }
 }
 
@@ -2019,7 +2088,7 @@ async function validateSquad() {
     const result = await API.post('/squads/validate', payload);
     div.innerHTML = renderValidation(result);
   } catch (e) {
-    div.innerHTML = alertHtml(e.error || 'Validation error.');
+    div.innerHTML = alertHtml(e.error || t('builder.validation_error'));
   }
 }
 
@@ -2048,7 +2117,7 @@ async function saveSquad(status = 'draft') {
     navigate('squads/' + savedId);
   } catch (e) {
     if (div) {
-      div.innerHTML = alertHtml(e.error || 'Save failed.');
+      div.innerHTML = alertHtml(e.error || t('builder.save_failed'));
       if (e.data?.validation) div.innerHTML += renderValidation(e.data.validation);
     }
   }
@@ -2056,7 +2125,7 @@ async function saveSquad(status = 'draft') {
 
 function buildSquadPayload(status = 'draft') {
   return {
-    name: builderState.name || 'Unnamed Squad',
+    name: builderState.name || t('builder.unnamed'),
     mission_card_id: builderState.missionCard?.id || null,
     objective_card_ids: builderState.objectiveCards.map(o => o.id),
     situation_card_id: builderState.situationCard?.id || null,
@@ -2074,15 +2143,15 @@ function buildSquadPayload(status = 'draft') {
 function renderValidation(v) {
   let html = '';
   if (v.errors && v.errors.length) {
-    html += '<div class="alert alert-error"><strong>Errors:</strong><ul>' +
+    html += `<div class="alert alert-error"><strong>${esc(t('validation.errors'))}:</strong><ul>` +
       v.errors.map(e => `<li>${esc(e.message)}</li>`).join('') + '</ul></div>';
   }
   if (v.warnings && v.warnings.length) {
-    html += '<div class="alert alert-warning"><strong>Warnings:</strong><ul>' +
+    html += `<div class="alert alert-warning"><strong>${esc(t('validation.warnings'))}:</strong><ul>` +
       v.warnings.map(w => `<li>${esc(w.message)}</li>`).join('') + '</ul></div>';
   }
   if (!v.errors?.length && !v.warnings?.length) {
-    html += '<div class="alert alert-success">✓ Squad is valid.</div>';
+    html += `<div class="alert alert-success">✓ ${esc(t('validation.valid'))}</div>`;
   }
   return html;
 }
@@ -2098,53 +2167,59 @@ register('profile', async function() {
     const p = await API.get('/profile/');
     profile = p;
   } catch (e) {
-    showError(e.error || 'Failed to load profile.');
+    showError(e.error || t('profile.load_failed'));
     return;
   }
 
   const moduleItems = profile.modules.map(m => `
     <label class="module-item">
       <input type="checkbox" name="module" value="${esc(m.module)}" ${m.owned ? 'checked' : ''}>
-      ${esc(m.module)}
+      ${esc(tv('module', m.module))}
     </label>`).join('');
 
   setMain(`
-    <h1 style="margin-bottom:20px">My Profile</h1>
+    <h1 style="margin-bottom:20px">${esc(t('profile.title'))}</h1>
 
     <div class="profile-section">
-      <h2>Account</h2>
+      <h2>${esc(t('profile.account'))}</h2>
       <div class="form-field">
-        <label>Username</label>
+        <label>${esc(t('auth.username'))}</label>
         <div>${esc(profile.user.username)}</div>
       </div>
       <div class="form-field">
-        <label>Email</label>
+        <label>${esc(t('auth.email'))}</label>
         <div>${esc(profile.user.email)}</div>
       </div>
       <div class="form-field">
-        <label>Full name</label>
+        <label>${esc(t('auth.full_name'))}</label>
         <input type="text" id="full-name" value="${esc(profile.user.full_name || '')}">
       </div>
-      <button class="btn btn-primary" id="save-profile-btn">Save profile</button>
+      <div class="form-field">
+        <label>${esc(t('header.language'))}</label>
+        <select id="profile-lang">
+          ${I18N.SUPPORTED.map(l => `<option value="${l}" ${l === I18N.lang ? 'selected' : ''}>${esc(I18N.NAMES[l])}</option>`).join('')}
+        </select>
+      </div>
+      <button class="btn btn-primary" id="save-profile-btn">${esc(t('profile.save'))}</button>
       <div id="profile-msg"></div>
     </div>
 
     <div class="profile-section">
-      <h2>Change Password</h2>
-      <div class="form-field"><label>Current password</label><input type="password" id="cur-pw"></div>
-      <div class="form-field"><label>New password</label><input type="password" id="new-pw"></div>
-      <button class="btn btn-primary" id="save-pw-btn">Update password</button>
+      <h2>${esc(t('profile.change_password'))}</h2>
+      <div class="form-field"><label>${esc(t('profile.current_password'))}</label><input type="password" id="cur-pw"></div>
+      <div class="form-field"><label>${esc(t('profile.new_password'))}</label><input type="password" id="new-pw"></div>
+      <button class="btn btn-primary" id="save-pw-btn">${esc(t('profile.update_password'))}</button>
       <div id="pw-msg"></div>
     </div>
 
     <div class="profile-section">
-      <h2>Owned Modules</h2>
+      <h2>${esc(t('profile.owned_modules'))}</h2>
       <div class="module-actions">
-        <button class="btn btn-sm btn-ghost" id="select-all-btn">Select All</button>
-        <button class="btn btn-sm btn-ghost" id="deselect-all-btn">Deselect All</button>
+        <button class="btn btn-sm btn-ghost" id="select-all-btn">${esc(t('profile.select_all'))}</button>
+        <button class="btn btn-sm btn-ghost" id="deselect-all-btn">${esc(t('profile.deselect_all'))}</button>
       </div>
       <div class="module-list">${moduleItems}</div>
-      <button class="btn btn-primary mt-2" id="save-modules-btn">Save module selection</button>
+      <button class="btn btn-primary mt-2" id="save-modules-btn">${esc(t('profile.save_modules'))}</button>
       <div id="modules-msg"></div>
     </div>
   `);
@@ -2153,11 +2228,13 @@ register('profile', async function() {
 
   main.querySelector('#save-profile-btn')?.addEventListener('click', async () => {
     const fn = main.querySelector('#full-name').value.trim();
+    const lang = main.querySelector('#profile-lang').value;
     const msg = main.querySelector('#profile-msg');
     try {
-      await API.put('/profile/', { full_name: fn });
-      msg.innerHTML = alertHtml('Saved!', 'success');
-    } catch (e) { msg.innerHTML = alertHtml(e.error || 'Failed.'); }
+      await API.put('/profile/', { full_name: fn, language: lang });
+      if (lang !== I18N.lang) { await changeLanguage(lang); return; }
+      msg.innerHTML = alertHtml(t('profile.saved'), 'success');
+    } catch (e) { msg.innerHTML = alertHtml(e.error || t('common.failed')); }
   });
 
   main.querySelector('#save-pw-btn')?.addEventListener('click', async () => {
@@ -2166,10 +2243,10 @@ register('profile', async function() {
     const msg = main.querySelector('#pw-msg');
     try {
       await API.put('/profile/password', { current_password: cp, new_password: np });
-      msg.innerHTML = alertHtml('Password updated!', 'success');
+      msg.innerHTML = alertHtml(t('profile.password_updated'), 'success');
       main.querySelector('#cur-pw').value = '';
       main.querySelector('#new-pw').value = '';
-    } catch (e) { msg.innerHTML = alertHtml(e.error || 'Failed.'); }
+    } catch (e) { msg.innerHTML = alertHtml(e.error || t('common.failed')); }
   });
 
   main.querySelector('#select-all-btn')?.addEventListener('click', () => {
@@ -2184,10 +2261,257 @@ register('profile', async function() {
     const msg = main.querySelector('#modules-msg');
     try {
       await API.put('/profile/modules', { owned_modules: owned });
-      msg.innerHTML = alertHtml(`Saved ${owned.length} modules.`, 'success');
-    } catch (e) { msg.innerHTML = alertHtml(e.error || 'Failed.'); }
+      msg.innerHTML = alertHtml(tn('profile.modules_saved', owned.length), 'success');
+    } catch (e) { msg.innerHTML = alertHtml(e.error || t('common.failed')); }
   });
 });
+
+// ---------------------------------------------------------------------------
+// VIEW: Translations (owner only — users.is_admin). See spec/07_i18n.md §4.3
+// ---------------------------------------------------------------------------
+const trState = {
+  lang: I18N.SUPPORTED.find(l => l !== 'en'),
+  type: '', module: '', status: 'missing', q: '', page: 1,
+  navList: [],      // card numbers of the current list page (editor prev/next)
+};
+const _glossary = {};  // lang -> [{en, tr, note}]
+
+async function loadGlossary(lang) {
+  if (_glossary[lang]) return _glossary[lang];
+  _glossary[lang] = [];
+  try {
+    const res = await fetch(`/static/i18n/glossary.${lang}.csv`, { cache: 'no-cache' });
+    if (res.ok) {
+      const lines = (await res.text()).split(/\r?\n/).slice(1).filter(l => l.trim());
+      _glossary[lang] = lines.map(l => {
+        const [en, tr, ...note] = l.split(',');
+        return { en: (en || '').trim(), tr: (tr || '').trim(), note: note.join(',').trim() };
+      }).filter(g => g.en);
+    }
+  } catch (_) {}
+  return _glossary[lang];
+}
+
+function glossaryHits(glossary, ...texts) {
+  const hay = texts.filter(Boolean).join('\n');
+  return glossary.filter(g => new RegExp(`\\b${g.en.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(hay));
+}
+
+function trStatusBadge(st) {
+  return `<span class="tr-badge tr-badge-${st}">${esc(t('tr.status.' + st))}</span>`;
+}
+
+register('translations', async function(number) {
+  if (!currentUser?.is_admin) { setMain(`<div class="alert alert-warning">${esc(t('tr.admin_only'))}</div>`); return; }
+  if (!allModules.length) {
+    try { const r = await API.get('/modules'); allModules = r.modules || []; } catch (_) {}
+  }
+  if (number) { await showTranslationEditor(decodeURIComponent(number)); return; }
+  renderTranslationsShell();
+});
+
+function renderTranslationsShell() {
+  const f = trState;
+  const opt = (val, cur, label) => `<option value="${esc(val)}" ${val === cur ? 'selected' : ''}>${esc(label)}</option>`;
+  setMain(`
+    <div class="flex justify-between items-center" style="margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <h1>${esc(t('tr.title'))}</h1>
+      <div style="display:flex;gap:6px;align-items:center">
+        <select id="tr-lang">${I18N.SUPPORTED.filter(l => l !== 'en').map(l => opt(l, f.lang, I18N.NAMES[l])).join('')}</select>
+        <button class="btn btn-sm btn-ghost" id="tr-export">${esc(t('tr.export'))}</button>
+        <label class="btn btn-sm btn-ghost" style="margin:0">${esc(t('tr.import'))}<input type="file" id="tr-import" accept=".json,application/json" style="display:none"></label>
+      </div>
+    </div>
+    <div id="tr-stats" style="margin-bottom:12px"></div>
+    <div id="tr-import-msg"></div>
+    <div class="filter-bar" style="flex-wrap:wrap;gap:6px">
+      <input type="text" id="tr-q" placeholder="${esc(t('tr.search_placeholder'))}" value="${esc(f.q)}" style="flex:1;min-width:180px">
+      <select id="tr-status">
+        ${opt('', f.status, t('tr.all_statuses'))}
+        ${['missing', 'stale', 'draft', 'reviewed'].map(st => opt(st, f.status, t('tr.status.' + st))).join('')}
+      </select>
+      <select id="tr-type">${['', ...allCategories].map(c => opt(c, f.type, c ? tv('card_type', c) : t('cards.all_categories'))).join('')}</select>
+      <select id="tr-module">${['', ...allModules].map(m => opt(m, f.module, m ? tv('module', m) : t('cards.all_modules'))).join('')}</select>
+    </div>
+    <div id="tr-results"></div>
+  `);
+
+  const main = document.getElementById('app-main');
+  const reload = () => { f.page = 1; refreshTranslationsList(); };
+  main.querySelector('#tr-lang').addEventListener('change', e => { f.lang = e.target.value; refreshTranslationStats(); reload(); });
+  main.querySelector('#tr-status').addEventListener('change', e => { f.status = e.target.value; reload(); });
+  main.querySelector('#tr-type').addEventListener('change', e => { f.type = e.target.value; reload(); });
+  main.querySelector('#tr-module').addEventListener('change', e => { f.module = e.target.value; reload(); });
+  let debounce;
+  main.querySelector('#tr-q').addEventListener('input', e => {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => { f.q = e.target.value; reload(); }, 300);
+  });
+  main.querySelector('#tr-export').addEventListener('click', async () => {
+    try {
+      const data = await API.get('/translations/export?lang=' + f.lang);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `card_translations.${f.lang}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch (e) { alert(e.error || t('common.failed')); }
+  });
+  main.querySelector('#tr-import').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    const msg = document.getElementById('tr-import-msg');
+    let entries;
+    try { entries = JSON.parse(await file.text()); } catch (_) { msg.innerHTML = alertHtml(t('tr.import_invalid')); return; }
+    const fmt = r => t('tr.import_report', {
+      inserted: r.inserted, updated: r.updated, unchanged: r.unchanged,
+      kept: r.kept_reviewed.length, unknown: r.unknown_numbers.length, invalid: r.invalid.length,
+    });
+    try {
+      const dry = (await API.post('/translations/import?dry_run=true', entries)).report;
+      if (!confirm(t('tr.import_confirm') + '\n\n' + fmt(dry))) return;
+      const res = (await API.post('/translations/import', entries)).report;
+      msg.innerHTML = alertHtml(fmt(res), 'success');
+      refreshTranslationStats();
+      refreshTranslationsList();
+    } catch (err) { msg.innerHTML = alertHtml(err.error || t('common.failed')); }
+  });
+
+  refreshTranslationStats();
+  refreshTranslationsList();
+}
+
+async function refreshTranslationStats() {
+  const div = document.getElementById('tr-stats');
+  if (!div) return;
+  try {
+    const s = await API.get('/translations/stats?lang=' + trState.lang);
+    const all = Object.values(s.total).reduce((a, b) => a + b, 0) || 1;
+    const pct = st => (s.total[st] / all * 100).toFixed(1);
+    div.innerHTML = `
+      <div class="tr-progress">
+        ${['reviewed', 'draft', 'stale', 'missing'].map(st => `<div class="tr-progress-${st}" style="width:${pct(st)}%"></div>`).join('')}
+      </div>
+      <div class="tr-progress-legend">
+        ${['reviewed', 'draft', 'stale', 'missing'].map(st =>
+          `${trStatusBadge(st)} ${fmtNumber(s.total[st])}`).join(' &nbsp; ')}
+      </div>`;
+  } catch (e) { div.innerHTML = alertHtml(e.error || t('common.failed')); }
+}
+
+async function refreshTranslationsList() {
+  const div = document.getElementById('tr-results');
+  if (!div) return;
+  const f = trState;
+  const params = new URLSearchParams({ lang: f.lang, page: f.page, per_page: 50 });
+  if (f.status) params.set('status', f.status);
+  if (f.type) params.set('type', f.type);
+  if (f.module) params.set('module', f.module);
+  if (f.q) params.set('q', f.q);
+  let data;
+  try { data = await API.get('/translations?' + params); }
+  catch (e) { div.innerHTML = alertHtml(e.error || t('common.failed')); return; }
+
+  f.navList = data.items.map(i => i.number);
+  const rows = data.items.map(i => `
+    <tr class="clickable" data-number="${esc(i.number)}">
+      <td class="text-muted" style="font-size:11px">${esc(i.number)}</td>
+      <td><span ${cardImageAttr(i)}>${esc(i.name_en)}</span></td>
+      <td>${esc(i.translations.name?.value || '')}</td>
+      <td>${chipForCategory(i.card_type)}</td>
+      <td>${trStatusBadge(i.status)}</td>
+    </tr>`).join('');
+  div.innerHTML = `
+    <div style="font-size:12px;color:var(--text-muted);margin:8px 0">${esc(tn('tr.count', data.total))}</div>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead><tr><th>#</th><th>${esc(t('tr.english'))}</th><th>${esc(I18N.NAMES[f.lang])}</th><th>${esc(t('col.type'))}</th><th>${esc(t('col.status'))}</th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">${esc(t('cards.none'))}</td></tr>`}</tbody>
+      </table>
+    </div>
+    ${paginationHtml(data.page, data.pages)}`;
+  div.querySelectorAll('tr[data-number]').forEach(row =>
+    row.addEventListener('click', () => navigate('translations/' + encodeURIComponent(row.dataset.number))));
+  div.querySelectorAll('[data-pg]').forEach(btn =>
+    btn.addEventListener('click', () => { f.page = parseInt(btn.dataset.pg); refreshTranslationsList(); }));
+}
+
+async function showTranslationEditor(number) {
+  showSpinner();
+  const f = trState;
+  let item;
+  try {
+    const data = await API.get('/translations?' + new URLSearchParams({ lang: f.lang, number }));
+    item = data.items.find(i => i.number === number);
+  } catch (e) { showError(e.error || t('common.failed')); return; }
+  if (!item) { showError(t('cards.not_found')); return; }
+  const glossary = await loadGlossary(f.lang);
+  const hits = glossaryHits(glossary, item.name_en, item.notes_en);
+  const tr = item.translations;
+  const staleNote = fld => tr[fld]?.stale ? `<div class="alert alert-warning" style="margin:4px 0">${esc(t('tr.stale_note'))}</div>` : '';
+
+  const navIdx = f.navList.indexOf(number);
+  const prev = navIdx > 0 ? f.navList[navIdx - 1] : null;
+  const next = navIdx >= 0 && navIdx < f.navList.length - 1 ? f.navList[navIdx + 1] : null;
+  const navBtn = (num, label) => num
+    ? `<a href="#/translations/${encodeURIComponent(num)}" class="btn btn-ghost btn-sm">${label}</a>`
+    : `<span class="btn btn-ghost btn-sm" style="opacity:.35;pointer-events:none">${label}</span>`;
+
+  setMain(`
+    <div class="cd-nav">
+      <a href="#/translations" class="btn btn-ghost btn-sm">↩ ${esc(t('tr.title'))}</a>
+      <a href="#/cards/${item.id}" class="btn btn-ghost btn-sm">${esc(t('tr.view_card'))}</a>
+      <span style="flex:1"></span>
+      ${navBtn(prev, '← ' + esc(t('common.prev')))}
+      ${navBtn(next, esc(t('common.next')) + ' →')}
+    </div>
+    <div class="tr-editor">
+      <div class="tr-editor-source">
+        <div class="cd-eyebrow">${chipForCategory(item.card_type)} <span class="cd-eyebrow-num">${esc(item.number)}</span> ${trStatusBadge(item.status)}</div>
+        <div class="tr-label">${esc(t('tr.english'))}</div>
+        <h2>${esc(item.name_en)}</h2>
+        ${item.notes_en ? `<div class="cd-notes">${esc(item.notes_en)}</div>` : ''}
+        ${hits.length ? `<div class="tr-glossary">
+          <div class="tr-label">${esc(t('tr.glossary'))}</div>
+          ${hits.map(g => `<div><strong>${esc(g.en)}</strong> → ${esc(g.tr)}${g.note ? ` <span class="text-muted">(${esc(g.note)})</span>` : ''}</div>`).join('')}
+        </div>` : ''}
+        ${item.image_url ? `<img src="${esc(item.image_url)}" alt="" class="tr-editor-image">` : ''}
+      </div>
+      <div class="tr-editor-target">
+        <div class="tr-label">${esc(I18N.NAMES[f.lang])} — ${esc(t('col.name'))} ${tr.name ? trStatusBadge(tr.name.stale ? 'stale' : tr.name.status) : ''}</div>
+        ${staleNote('name')}
+        <input type="text" id="tr-name" value="${esc(tr.name?.value || '')}" placeholder="${esc(item.name_en)}" style="width:100%">
+        ${item.notes_en ? `
+          <div class="tr-label" style="margin-top:14px">${esc(I18N.NAMES[f.lang])} — ${esc(t('cd.notes'))} ${tr.notes ? trStatusBadge(tr.notes.stale ? 'stale' : tr.notes.status) : ''}</div>
+          ${staleNote('notes')}
+          <textarea id="tr-notes" rows="${Math.min(20, Math.max(5, item.notes_en.split('\n').length + 2))}" style="width:100%" placeholder="${esc(item.notes_en)}">${esc(tr.notes?.value || '')}</textarea>` : ''}
+        <div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap">
+          <button class="btn btn-primary" id="tr-save-reviewed">${esc(t('tr.save_reviewed'))}</button>
+          <button class="btn btn-ghost" id="tr-save-draft">${esc(t('tr.save_draft'))}</button>
+        </div>
+        <div class="text-muted" style="font-size:12px;margin-top:6px">${esc(t('tr.save_hint'))}</div>
+        <div id="tr-msg"></div>
+      </div>
+    </div>
+  `);
+
+  const save = async status => {
+    const body = { lang: f.lang, status, name: document.getElementById('tr-name').value };
+    const notesEl = document.getElementById('tr-notes');
+    if (notesEl) body.notes = notesEl.value;
+    const msg = document.getElementById('tr-msg');
+    try {
+      await API.put('/translations/' + encodeURIComponent(number), body);
+      if (next && status === 'reviewed') { navigate('translations/' + encodeURIComponent(next)); return; }
+      await showTranslationEditor(number);
+      document.getElementById('tr-msg').innerHTML = alertHtml(t('profile.saved'), 'success');
+    } catch (e) { msg.innerHTML = alertHtml(e.error || t('common.failed')); }
+  };
+  document.getElementById('tr-save-reviewed').addEventListener('click', () => save('reviewed'));
+  document.getElementById('tr-save-draft').addEventListener('click', () => save('draft'));
+}
 
 // ---------------------------------------------------------------------------
 // VIEW: Login
@@ -2195,13 +2519,13 @@ register('profile', async function() {
 register('login', function() {
   setMain(`
     <div class="auth-form-wrapper">
-      <h1>Login</h1>
+      <h1>${esc(t('header.login'))}</h1>
       <div id="login-msg"></div>
-      <div class="form-field"><label>Username</label><input type="text" id="login-user" autocomplete="username"></div>
-      <div class="form-field"><label>Password</label><input type="password" id="login-pw" autocomplete="current-password"></div>
-      <button class="btn btn-primary" id="login-btn" style="width:100%;margin-top:8px">Login</button>
+      <div class="form-field"><label>${esc(t('auth.username'))}</label><input type="text" id="login-user" autocomplete="username"></div>
+      <div class="form-field"><label>${esc(t('auth.password'))}</label><input type="password" id="login-pw" autocomplete="current-password"></div>
+      <button class="btn btn-primary" id="login-btn" style="width:100%;margin-top:8px">${esc(t('header.login'))}</button>
       <div class="auth-form-footer mt-2" style="text-align:center;font-size:13px">
-        No account? <a href="#/register">Register</a>
+        ${esc(t('auth.no_account'))} <a href="#/register">${esc(t('header.register'))}</a>
       </div>
     </div>`);
 
@@ -2212,10 +2536,11 @@ register('login', function() {
     try {
       const data = await API.post('/auth/login', { username, password });
       currentUser = data.user;
+      await applyUserLanguage();
       renderHeader();
       updateProfileLink();
       navigate('squads');
-    } catch (e) { msg.innerHTML = alertHtml(e.error || 'Login failed.'); }
+    } catch (e) { msg.innerHTML = alertHtml(e.error || t('auth.login_failed')); }
   };
 
   document.getElementById('login-btn').addEventListener('click', doLogin);
@@ -2228,15 +2553,15 @@ register('login', function() {
 register('register', function() {
   setMain(`
     <div class="auth-form-wrapper">
-      <h1>Create Account</h1>
+      <h1>${esc(t('auth.create_account'))}</h1>
       <div id="reg-msg"></div>
-      <div class="form-field"><label>Username</label><input type="text" id="reg-user" autocomplete="username"></div>
-      <div class="form-field"><label>Email</label><input type="email" id="reg-email" autocomplete="email"></div>
-      <div class="form-field"><label>Full name <span class="text-muted">(optional)</span></label><input type="text" id="reg-name"></div>
-      <div class="form-field"><label>Password</label><input type="password" id="reg-pw" autocomplete="new-password"></div>
-      <button class="btn btn-primary" id="reg-btn" style="width:100%;margin-top:8px">Create Account</button>
+      <div class="form-field"><label>${esc(t('auth.username'))}</label><input type="text" id="reg-user" autocomplete="username"></div>
+      <div class="form-field"><label>${esc(t('auth.email'))}</label><input type="email" id="reg-email" autocomplete="email"></div>
+      <div class="form-field"><label>${esc(t('auth.full_name'))} <span class="text-muted">(${esc(t('common.optional'))})</span></label><input type="text" id="reg-name"></div>
+      <div class="form-field"><label>${esc(t('auth.password'))}</label><input type="password" id="reg-pw" autocomplete="new-password"></div>
+      <button class="btn btn-primary" id="reg-btn" style="width:100%;margin-top:8px">${esc(t('auth.create_account'))}</button>
       <div class="auth-form-footer mt-2" style="text-align:center;font-size:13px">
-        Already have an account? <a href="#/login">Login</a>
+        ${esc(t('auth.have_account'))} <a href="#/login">${esc(t('header.login'))}</a>
       </div>
     </div>`);
 
@@ -2249,11 +2574,13 @@ register('register', function() {
         full_name: document.getElementById('reg-name').value.trim(),
         password: document.getElementById('reg-pw').value,
       });
+      // New accounts start with the language currently in use
+      try { await API.put('/profile/', { language: I18N.lang }); data.user.language = I18N.lang; } catch (_) {}
       currentUser = data.user;
       renderHeader();
       updateProfileLink();
       navigate('profile');
-    } catch (e) { msg.innerHTML = alertHtml(e.error || 'Registration failed.'); }
+    } catch (e) { msg.innerHTML = alertHtml(e.error || t('auth.register_failed')); }
   });
 });
 
@@ -2261,7 +2588,7 @@ register('register', function() {
 // 404
 // ---------------------------------------------------------------------------
 register('404', function() {
-  setMain('<div class="alert alert-warning">Page not found. <a href="#/cards">Go to Cards</a></div>');
+  setMain(`<div class="alert alert-warning">${t('app.not_found_html')}</div>`);
 });
 
 // ---------------------------------------------------------------------------

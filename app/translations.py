@@ -91,6 +91,8 @@ def list_translations():
     per_page = min(100, max(1, int(request.args.get('per_page', 25))))
 
     query = Card.query
+    if request.args.get('number'):
+        query = query.filter(Card.number == request.args['number'])
     if card_type:
         query = query.filter(Card.card_type == card_type)
     if module:

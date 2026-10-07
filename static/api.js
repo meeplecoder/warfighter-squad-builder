@@ -3,7 +3,7 @@ const API = {
   async request(method, path, body) {
     const opts = {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Lang': (typeof I18N !== 'undefined' ? I18N.lang : 'en') },
       credentials: 'same-origin',
     };
     if (body !== undefined) opts.body = JSON.stringify(body);
@@ -11,10 +11,10 @@ const API = {
     try {
       res = await fetch('/api' + path, opts);
     } catch (e) {
-      throw { status: 0, error: 'Could not reach the server. Check your connection.' };
+      throw { status: 0, error: t('err.network') };
     }
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw { status: res.status, error: data.error || 'Server error', data };
+    if (!res.ok) throw { status: res.status, error: data.error || t('err.server'), data };
     return data;
   },
   get(path) { return this.request('GET', path); },
