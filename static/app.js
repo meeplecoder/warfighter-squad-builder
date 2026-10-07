@@ -767,8 +767,8 @@ async function showCardDetail(idOrNumber) {
 // VIEW: Squads List
 // ---------------------------------------------------------------------------
 let squadsActiveTab = 'community';  // 'my' | 'community'
-let mySquadFilters = { q: '', sort: 'updated_at', order: 'desc', page: 1 };
-let communityFilters = { q: '', liked: false, sort: 'created_at', order: 'desc', page: 1 };
+let mySquadFilters = { q: '', sort: 'updated_at', order: 'desc', page: 1, myModules: false };
+let communityFilters = { q: '', liked: false, sort: 'created_at', order: 'desc', page: 1, myModules: false };
 // IDs of squads currently visible in the browser list (for prev/next navigation)
 let squadNavList = [];
 
@@ -839,6 +839,7 @@ async function renderMySquads(containerEl) {
   params.set('order', f.order);
   params.set('page', f.page);
   if (f.q) params.set('q', f.q);
+  if (f.myModules) params.set('my_modules', 'true');
 
   let data;
   try { data = await API.get('/squads?' + params.toString()); }
@@ -862,6 +863,7 @@ async function renderMySquads(containerEl) {
   containerEl.innerHTML = `
     <div class="filter-bar" style="margin-bottom:8px">
       <input type="text" id="my-q" placeholder="Search squads…" value="${esc(f.q)}" style="flex:1;min-width:160px">
+      <button class="quick-filter ${f.myModules ? 'active-accent' : ''}" id="my-modules-filter-my">My modules</button>
     </div>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">${total} squad${total!==1?'s':''}</div>
     <table class="data-table">
@@ -886,6 +888,9 @@ async function renderMySquads(containerEl) {
       qInput._t = setTimeout(() => { f.q = e.target.value; f.page = 1; renderMySquads(containerEl); }, 300);
     });
   }
+  containerEl.querySelector('#my-modules-filter-my')?.addEventListener('click', () => {
+    f.myModules = !f.myModules; f.page = 1; renderMySquads(containerEl);
+  });
   containerEl.querySelectorAll('th.sort-header[data-sort]').forEach(th =>
     th.addEventListener('click', () => {
       const col = th.dataset.sort;
@@ -909,6 +914,7 @@ async function renderCommunitySquads(containerEl) {
   params.set('order', f.order);
   params.set('page', f.page);
   if (f.q) params.set('q', f.q);
+  if (f.myModules && currentUser) params.set('my_modules', 'true');
 
   let data;
   try { data = await API.get('/squads?' + params.toString()); }
@@ -917,6 +923,8 @@ async function renderCommunitySquads(containerEl) {
   const { items, total, page, pages } = data;
   const likedBtn = currentUser ? `
     <button class="quick-filter ${f.liked ? 'active' : ''}" id="liked-filter">♥ Liked by me</button>` : '';
+  const myModulesBtn = currentUser ? `
+    <button class="quick-filter ${f.myModules ? 'active-accent' : ''}" id="my-modules-filter-comm">My modules</button>` : '';
 
   const rows = items.map(s => `
     <tr class="clickable" data-id="${s.id}">
@@ -936,6 +944,7 @@ async function renderCommunitySquads(containerEl) {
     <div class="filter-bar" style="margin-bottom:8px">
       <input type="text" id="comm-q" placeholder="Search squads…" value="${esc(f.q)}" style="flex:1;min-width:160px">
       ${likedBtn}
+      ${myModulesBtn}
     </div>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">${total} published squad${total!==1?'s':''}</div>
     <table class="data-table">
@@ -962,6 +971,9 @@ async function renderCommunitySquads(containerEl) {
   }
   containerEl.querySelector('#liked-filter')?.addEventListener('click', () => {
     f.liked = !f.liked; f.page = 1; renderCommunitySquads(containerEl);
+  });
+  containerEl.querySelector('#my-modules-filter-comm')?.addEventListener('click', () => {
+    f.myModules = !f.myModules; f.page = 1; renderCommunitySquads(containerEl);
   });
   containerEl.querySelectorAll('th.sort-header[data-sort]').forEach(th =>
     th.addEventListener('click', () => {
@@ -2065,12 +2077,10 @@ function renderValidation(v) {
 register('profile', async function() {
   if (!currentUser) { navigate('login'); return; }
   showSpinner();
-  let profile, mySquads;
+  let profile;
   try {
     const p = await API.get('/profile/');
     profile = p;
-    const sq = await API.get('/squads?user_id=' + currentUser.id + '&per_page=50');
-    mySquads = sq;
   } catch (e) {
     showError(e.error || 'Failed to load profile.');
     return;

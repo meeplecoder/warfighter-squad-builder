@@ -683,6 +683,7 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
 }
 .quick-filter:hover { background: var(--border); color: var(--text); }
 .quick-filter.active { background: #3a1a1a; border-color: var(--danger); color: var(--danger); }
+.quick-filter.active-accent { background: #1e2a12; border-color: var(--accent); color: var(--accent-light); }
 
 /* ---- Divider ------------------------------------------------------- */
 .divider {

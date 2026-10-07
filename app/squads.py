@@ -232,6 +232,46 @@ def list_squads():
         liked_ids = [l.squad_id for l in SquadLike.query.filter_by(user_id=current_user.id).all()]
         query = query.filter(Squad.id.in_(liked_ids))
 
+    my_modules = request.args.get('my_modules', 'false').lower() == 'true'
+    if my_modules and current_user.is_authenticated:
+        excluded = [um.module for um in current_user.modules if not um.owned]
+        if excluded:
+            query = query.filter(
+                ~Squad.mission_card_id.in_(
+                    db.session.query(Card.id).filter(Card.module.in_(excluded))
+                )
+            )
+            query = query.filter(
+                ~Squad.id.in_(
+                    db.session.query(SquadSoldier.squad_id)
+                    .join(Card, SquadSoldier.card_id == Card.id)
+                    .filter(Card.module.in_(excluded))
+                )
+            )
+            query = query.filter(
+                ~Squad.id.in_(
+                    db.session.query(SquadSoldier.squad_id)
+                    .join(SquadGear, SquadGear.squad_soldier_id == SquadSoldier.id)
+                    .join(Card, SquadGear.card_id == Card.id)
+                    .filter(Card.module.in_(excluded))
+                )
+            )
+            query = query.filter(
+                ~Squad.id.in_(
+                    db.session.query(SquadObjective.squad_id)
+                    .join(Card, SquadObjective.card_id == Card.id)
+                    .filter(Card.module.in_(excluded))
+                )
+            )
+            query = query.filter(
+                or_(
+                    Squad.situation_card_id.is_(None),
+                    ~Squad.situation_card_id.in_(
+                        db.session.query(Card.id).filter(Card.module.in_(excluded))
+                    )
+                )
+            )
+
     if sort == 'mission_name':
         query = query.join(Card, Squad.mission_card_id == Card.id)
         sort_attr = Card.name
