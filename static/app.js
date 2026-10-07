@@ -2092,16 +2092,6 @@ register('profile', async function() {
       ${esc(m.module)}
     </label>`).join('');
 
-  const squadRows = mySquads.items.map(s => `
-    <tr class="clickable" data-id="${s.id}">
-      <td>${esc(s.name)}</td>
-      <td>${esc(s.nation)}</td>
-      <td>${esc(s.mission?.name || '—')}</td>
-      <td>${s.rp_total} RP</td>
-      <td>${s.status === 'draft' ? '<span class="badge-draft">DRAFT</span>' : 'Published'}</td>
-      <td>${fmtDate(s.created_at)}</td>
-    </tr>`).join('');
-
   setMain(`
     <h1 style="margin-bottom:20px">My Profile</h1>
 
@@ -2140,14 +2130,6 @@ register('profile', async function() {
       <div class="module-list">${moduleItems}</div>
       <button class="btn btn-primary mt-2" id="save-modules-btn">Save module selection</button>
       <div id="modules-msg"></div>
-    </div>
-
-    <div class="profile-section">
-      <h2>My Squads</h2>
-      <table class="data-table">
-        <thead><tr><th>Name</th><th>Nation</th><th>Mission</th><th>RP</th><th>Status</th><th>Date</th></tr></thead>
-        <tbody>${squadRows || '<tr><td colspan="6" class="text-muted">No squads yet.</td></tr>'}</tbody>
-      </table>
     </div>
   `);
 
@@ -2188,10 +2170,6 @@ register('profile', async function() {
       await API.put('/profile/modules', { owned_modules: owned });
       msg.innerHTML = alertHtml(`Saved ${owned.length} modules.`, 'success');
     } catch (e) { msg.innerHTML = alertHtml(e.error || 'Failed.'); }
-  });
-
-  main.querySelectorAll('tr[data-id]').forEach(row => {
-    row.addEventListener('click', () => navigate('squads/' + row.dataset.id));
   });
 });
 
