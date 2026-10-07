@@ -1539,6 +1539,12 @@ function addGearToBuilder(card, soldierIdx) {
     alert(`"${card.name}" is already pre-printed on ${soldier.card.name}.`);
     return false;
   }
+  // A soldier cannot have the same skill twice (any copy of the same-named skill)
+  if (card.card_type === 'Skill' &&
+      soldier.gear.some(g => g.card.card_type === 'Skill' && g.card.name.toLowerCase() === nameLower)) {
+    alert(`${soldier.card.name} already has "${card.name}".`);
+    return false;
+  }
   const existing = soldier.gear.find(g => g.card.id === card.id);
   if (existing) {
     existing.quantity += 1;

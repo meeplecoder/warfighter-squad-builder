@@ -105,7 +105,7 @@ def validate_squad(payload, mission_card, soldiers_data):
             for g in s['gear']:
                 if g['card']['card_type'] == 'Skill':
                     sname = g['card']['name']
-                    if sname in skill_names:
+                    if sname in skill_names or g['quantity'] > 1:
                         errors.append({
                             'code': 'DUPLICATE_SKILL',
                             'message': f"{card['name']} already has {sname}.",
