@@ -64,7 +64,8 @@ class Card(db.Model):
         return ''  # structural (Fallback / Right Flank — no mechanic)
 
     def to_card_object(self):
-        image_url = f'/static/card_images/{self.number}.jpg' if self.has_image else None
+        prefix = self.number.split('-')[0]
+        image_url = f'/api/cards/images/{prefix}/{self.number}.jpg' if self.has_image else None
         d = {
             'id': self.id,
             'number': self.number,

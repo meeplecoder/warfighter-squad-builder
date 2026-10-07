@@ -1,8 +1,18 @@
-from flask import Blueprint, request, jsonify
+import os
+import re
+from flask import Blueprint, request, jsonify, send_from_directory, current_app, abort
+from flask_login import login_required, current_user
+from flask_limiter.util import get_remote_address
 from sqlalchemy import or_, case
-from app import db
+from app import db, limiter
 from app.models import Card
 from app.utils import nation_filter_clause
+
+
+def _image_rate_key():
+    if current_user.is_authenticated:
+        return f'uid:{current_user.id}'
+    return get_remote_address()
 
 # Put 'Core Europe' first when sorting by module
 _MODULE_PRIORITY = case((Card.module == 'Core Europe', 0), else_=1)
@@ -101,3 +111,21 @@ def get_card(id_or_number):
     else:
         detail['associations'] = []
     return jsonify(card=detail)
+
+
+_PREFIX_RE = re.compile(r'^[A-Za-z0-9]+$')
+_FILENAME_RE = re.compile(r'^[A-Za-z0-9]+-\d+\.jpg$', re.IGNORECASE)
+
+
+@cards_bp.route('/images/<prefix>/<filename>')
+@login_required
+@limiter.limit('120 per minute; 500 per hour', key_func=_image_rate_key)
+def card_image(prefix, filename):
+    if not _PREFIX_RE.match(prefix) or not _FILENAME_RE.match(filename):
+        abort(400)
+    response = send_from_directory(
+        os.path.join(current_app.config['CARD_IMAGES_DIR'], prefix),
+        filename,
+    )
+    response.headers['Cache-Control'] = 'private, max-age=604800'
+    return response

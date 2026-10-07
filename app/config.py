@@ -13,4 +13,5 @@ class Config:
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     CARDS_CSV = os.environ.get('CARDS_CSV', os.path.join(_BASE, '..', 'cards2.csv'))
+    CARD_IMAGES_DIR = os.path.join(_BASE, 'static', 'card_images')
     DEBUG = os.environ.get('DEBUG', 'false').lower() == 'true'

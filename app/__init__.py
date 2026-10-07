@@ -2,9 +2,12 @@ import os
 from flask import Flask, send_from_directory, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 db = SQLAlchemy()
 login_manager = LoginManager()
+limiter = Limiter(key_func=get_remote_address, default_limits=[])
 
 
 def create_app():
@@ -16,6 +19,7 @@ def create_app():
 
     db.init_app(app)
     login_manager.init_app(app)
+    limiter.init_app(app)
     login_manager.login_view = None  # API-only; return 401 instead of redirect
 
     from app.models import User, CardAssociation, SquadObjective  # noqa: F401 — ensure tables are registered
