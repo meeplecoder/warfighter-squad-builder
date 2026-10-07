@@ -9,6 +9,8 @@ let currentUser = null;
 
 const builderState = {
   squadId: null,       // null = new squad
+  parentSquadId: null, // set when copying another squad ("based on")
+  parentName: '',
   name: '',
   missionCard: null,
   objectiveCards: [],
@@ -1109,6 +1111,14 @@ async function showSquadDetail(squadId) {
   const deleteBtn = isOwner ? `<button class="btn btn-sm btn-danger" id="delete-squad-btn">${esc(t('common.delete'))}</button>` : '';
   const publishBtn = isOwner && isDraft ? `<button class="btn btn-sm btn-primary" id="publish-btn">${esc(t('squad.publish'))}</button>` : '';
   const draftBadge = isDraft ? `<span class="badge-draft">${esc(t('squad.draft_badge'))}</span>` : '';
+  const copyBtn = currentUser
+    ? `<button class="btn btn-sm btn-ghost" id="copy-squad-btn" title="${esc(t('squad.copy_tip'))}">${esc(t('squad.copy'))}</button>` : '';
+  const basedOn = squad.parent
+    ? `<div class="squad-based-on">${t('squad.based_on_html', {
+        link: `<a href="#/squads/${squad.parent.id}">${esc(squad.parent.name)}</a>`,
+        user: esc(squad.parent.owner.username) })}</div>` : '';
+  const copiesInfo = squad.copies_count
+    ? ` · <span class="text-muted">${esc(tn('squad.copies', squad.copies_count))}</span>` : '';
   const exportBtns = `
     <span class="export-group">
       <span class="text-muted" style="font-size:12px">${esc(t('io.export'))}:</span>
@@ -1232,7 +1242,7 @@ async function showSquadDetail(squadId) {
   setMain(`
     <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <a href="#/squads" class="btn btn-ghost btn-sm">← ${esc(t('nav.squads'))}</a>
-      ${editBtn} ${deleteBtn} ${publishBtn}
+      ${editBtn} ${deleteBtn} ${publishBtn} ${copyBtn}
       ${exportBtns}
       <span style="flex:1"></span>
       ${squadNavPos}
@@ -1243,8 +1253,9 @@ async function showSquadDetail(squadId) {
     <div class="squad-header">
       <div class="squad-title">${draftBadge} ${esc(squad.name)}</div>
       <div class="squad-meta">
-        ${esc(t('squad.by', { user: squad.owner.username }))} · ${fmtDate(squad.created_at)} · ${esc(nationLabel(squad.nation))}
+        ${esc(t('squad.by', { user: squad.owner.username }))} · ${fmtDate(squad.created_at)} · ${esc(nationLabel(squad.nation))}${copiesInfo}
       </div>
+      ${basedOn}
       <div style="margin-top:8px">${likeBtn}</div>
     </div>
 
@@ -1406,6 +1417,22 @@ async function showSquadDetail(squadId) {
       btn.classList.toggle('liked', res.liked_by_me);
       document.getElementById('likes-count').textContent = res.likes_count;
     } catch (e) { /* silent */ }
+  });
+
+  document.getElementById('copy-squad-btn')?.addEventListener('click', () => {
+    pendingBuilderDraft = {
+      refresh: true,   // squad payload has light card objects — re-fetch full details
+      name: t('squad.copy_name', { name: squad.name }),
+      nation: squad.nation,
+      notes: squad.notes || '',
+      mission: squad.mission,
+      objectives: squad.objectives || [],
+      situation: squad.situation,
+      soldiers: squad.soldiers.map(ss => ({ card: ss.card, gear: ss.gear, default_gear: ss.default_gear })),
+      parentSquadId: squad.id,
+      parentName: squad.name,
+    };
+    navigate('builder');
   });
 
   document.querySelectorAll('[data-export]').forEach(btn =>
@@ -1575,6 +1602,8 @@ register('builder', async function(squadId) {
       const data = await API.get('/squads/' + squadId);
       const sq = data.squad;
       builderState.squadId = sq.id;
+      builderState.parentSquadId = sq.parent?.id || null;
+      builderState.parentName = sq.parent?.name || '';
       builderState.name = sq.name;
       builderState.missionCard = sq.mission;
       builderState.objectiveCards = sq.objectives || [];
@@ -1593,7 +1622,12 @@ register('builder', async function(squadId) {
     // Fresh builder — always reset when navigating to #/builder without an ID,
     // unless an import / copy is waiting to be loaded
     resetBuilderState();
-    if (pendingBuilderDraft) { applyBuilderDraft(pendingBuilderDraft); pendingBuilderDraft = null; }
+    if (pendingBuilderDraft) {
+      const d = pendingBuilderDraft;
+      pendingBuilderDraft = null;
+      applyBuilderDraft(d);
+      if (d.refresh) { showSpinner(); await refreshBuilderCards(); }
+    }
   }
   builderState.pickerMode = null;
   renderBuilder();
@@ -1614,6 +1648,7 @@ function applyBuilderDraft(d) {
     nation: d.nation || '',
     notes: d.notes || '',
     parentSquadId: d.parentSquadId || null,
+    parentName: d.parentName || '',
     soldiers: (d.soldiers || []).map(s => ({
       card: s.card,
       gear: (s.gear || []).map(g => ({ card: g.card, quantity: g.quantity })),
@@ -1866,6 +1901,8 @@ function renderBuilder() {
       <button class="btn btn-ghost btn-sm" id="builder-import-btn">${esc(t('io.import'))}</button>
       ${builderState.squadId ? `<a href="#/squads/${builderState.squadId}" class="btn btn-ghost btn-sm">${esc(t('common.cancel'))}</a>` : ''}
     </div>
+    ${builderState.parentSquadId ? `<div class="squad-based-on">${t('squad.based_on_short_html', {
+      link: `<a href="#/squads/${builderState.parentSquadId}">${esc(builderState.parentName || '#' + builderState.parentSquadId)}</a>` })}</div>` : ''}
     <div id="builder-validation"></div>
     <div class="builder-layout">
       <!-- LEFT -->
@@ -2244,7 +2281,7 @@ async function validateSquad() {
 
 function resetBuilderState() {
   Object.assign(builderState, {
-    squadId: null, name: '', missionCard: null, objectiveCards: [],
+    squadId: null, parentSquadId: null, parentName: '', name: '', missionCard: null, objectiveCards: [],
     situationCard: null, nation: '', notes: '', soldiers: [],
     pickerMode: null, pickerTarget: null, pickerGearCat: null,
     pickerSort: 'module', pickerOrder: 'asc', pickerPage: 1,
@@ -2276,6 +2313,7 @@ async function saveSquad(status = 'draft') {
 function buildSquadPayload(status = 'draft') {
   return {
     name: builderState.name || t('builder.unnamed'),
+    parent_squad_id: builderState.parentSquadId || null,
     mission_card_id: builderState.missionCard?.id || null,
     objective_card_ids: builderState.objectiveCards.map(o => o.id),
     situation_card_id: builderState.situationCard?.id || null,

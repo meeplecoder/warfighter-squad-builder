@@ -151,6 +151,15 @@ def create_app():
             except Exception:
                 pass
 
+            # "Based on" link between squads (copy / fork)
+            try:
+                conn.execute(db.text(
+                    "ALTER TABLE squads ADD COLUMN parent_squad_id INTEGER REFERENCES squads(id) ON DELETE SET NULL"
+                ))
+                conn.commit()
+            except Exception:
+                pass  # Column already exists
+
             # i18n: user language preference + admin flag (translation editor)
             for ddl in (
                 "ALTER TABLE users ADD COLUMN language TEXT",

@@ -203,7 +203,9 @@ class Squad(db.Model):
     likes_count = db.Column(db.Integer, nullable=False, default=0)
     created_at = db.Column(db.Text, nullable=False, default=now_utc)
     updated_at = db.Column(db.Text, nullable=False, default=now_utc)
+    parent_squad_id = db.Column(db.Integer, db.ForeignKey('squads.id', ondelete='SET NULL'))  # "based on"
 
+    parent = db.relationship('Squad', remote_side=[id], foreign_keys=[parent_squad_id])
     mission_card = db.relationship('Card', foreign_keys=[mission_card_id])
     objective_card = db.relationship('Card', foreign_keys=[objective_card_id])
     situation_card = db.relationship('Card', foreign_keys=[situation_card_id])
@@ -235,7 +237,18 @@ class Squad(db.Model):
                 for so in self.objectives
             ],
             'soldier_count': len(self.soldiers),
+            'parent': self._parent_summary(),
         }
+
+    def _parent_summary(self):
+        """The squad this one was copied from, if it still exists and the viewer may see it."""
+        p = self.parent
+        if not p:
+            return None
+        from flask_login import current_user
+        if p.status != 'published' and not (current_user.is_authenticated and current_user.id == p.user_id):
+            return None
+        return {'id': p.id, 'name': p.name, 'owner': {'id': p.owner.id, 'username': p.owner.username}}
 
 
 class SquadSoldier(db.Model):

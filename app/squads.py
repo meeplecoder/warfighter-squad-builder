@@ -73,6 +73,7 @@ def _squad_detail(squad, liked_by_me=False):
     base['situation'] = situation
     base['objectives'] = [_objective_detail(so.card) for so in squad.objectives]
     base['notes'] = squad.notes
+    base['copies_count'] = Squad.query.filter_by(parent_squad_id=squad.id, status='published').count()
     # Enrich mission with full card attributes for the detail view
     mc = squad.mission_card
     base['mission'].update({
@@ -409,6 +410,11 @@ def create_squad():
         is_valid=1 if validation['valid'] else 0,
         status=target_status,
     )
+    parent_id = data.get('parent_squad_id')
+    if parent_id:
+        parent = db.session.get(Squad, int(parent_id))
+        if parent and _can_view(parent):
+            squad.parent_squad_id = parent.id
     db.session.add(squad)
     db.session.flush()
     _save_objectives(squad, objective_ids)
@@ -501,6 +507,8 @@ def delete_squad(squad_id):
         return jsonify(error=_('Squad not found.')), 404
     if squad.user_id != current_user.id:
         return jsonify(error=_('Not authorized.')), 403
+    # SQLite FK enforcement is off: unlink copies by hand
+    Squad.query.filter_by(parent_squad_id=squad.id).update({Squad.parent_squad_id: None})
     db.session.delete(squad)
     db.session.commit()
     return jsonify(ok=True)
