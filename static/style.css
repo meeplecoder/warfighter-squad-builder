@@ -883,8 +883,8 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
   margin-bottom: 10px;
 }
 
-/* Extra section labels within the same section get the same gap as between sections */
-.cd-section-label:not(:first-child) { margin-top: 22px; }
+/* Sub-labels within a section: single 16px gap (blocks above carry no bottom margin) */
+.cd-section-label:not(:first-child) { margin-top: 16px; }
 /* Drop the trailing margin of a section's last block so section gaps are uniform */
 .cd-section > :last-child { margin-bottom: 0; }
 
@@ -893,7 +893,6 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 6px;
 }
 .cd-vital {
   background: var(--surface2);
@@ -936,13 +935,13 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
 
 /* Data tables: weapon range/mode, spawn, health/actions, default gear */
 .cd-table-wrap {
-  display: inline-block;
+  display: block;
+  width: fit-content;
   max-width: 100%;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
   overflow-x: auto;
-  margin-bottom: 10px;
 }
 .cd-table {
   width: auto;
