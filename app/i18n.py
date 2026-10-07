@@ -152,11 +152,7 @@ def _(message, **params):
 _ui = {}
 
 
-def enum_label(ns, value):
-    """Display label of an enum value (nation, card_type, …) from static/i18n/<lang>.json."""
-    lang = get_lang()
-    if not value or lang == DEFAULT_LANG:
-        return value
+def _ui_dict(lang):
     if lang not in _ui:
         path = os.path.join(_BASE, 'static', 'i18n', f'{lang}.json')
         try:
@@ -164,7 +160,20 @@ def enum_label(ns, value):
                 _ui[lang] = json.load(f)
         except FileNotFoundError:
             _ui[lang] = {}
-    return _ui[lang].get(f'enum.{ns}.{value}', value)
+    return _ui[lang]
+
+
+def enum_label(ns, value, lang=None):
+    """Display label of an enum value (nation, card_type, …) from static/i18n/<lang>.json."""
+    lang = lang or get_lang()
+    if not value or lang == DEFAULT_LANG:
+        return value
+    return _ui_dict(lang).get(f'enum.{ns}.{value}', value)
+
+
+def enum_labels_all(ns, value):
+    """Value plus its label in every supported language (for search matching)."""
+    return {value} | {_ui_dict(l).get(f'enum.{ns}.{value}', value) for l in SUPPORTED_LANGS}
 
 
 def localize_validation(validation):

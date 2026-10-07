@@ -5,8 +5,8 @@
     t!=soldier          → negation (also n!=, x!=, …)
     plain words         → name or notes contain the word
 
-Enum keys (t, s, n, m) match the stored English value or its label in the
-request language, by substring, accent/case-insensitive.
+Enum keys (t, s, n, m) match the stored English value or its label in any
+supported language, by substring, accent/case-insensitive.
 """
 import re
 
@@ -81,7 +81,7 @@ def _enum_cond(attr, value):
     """Stored values whose code or translated label contains `value`."""
     needle = i18n.fold(value)
     matches = [v for v in _enum_values(attr)
-               if needle in i18n.fold(v) or needle in i18n.fold(i18n.enum_label(attr, v) or '')]
+               if any(needle in i18n.fold(label) for label in i18n.enum_labels_all(attr, v))]
     return getattr(Card, attr).in_(matches) if matches else None
 
 

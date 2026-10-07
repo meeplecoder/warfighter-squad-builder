@@ -31,5 +31,20 @@
  "{name} exceeds Loadout: carrying {used}, max {max}.": "{name} supera su Carga: lleva {used}, máximo {max}.",
  "{name} already has {skill}.": "{name} ya tiene {skill}.",
  "{name} has prerequisites. Verify them in the card Notes.": "{name} tiene requisitos previos. Compruébalos en el texto de la carta.",
- "This mission's budget suggests using {recommended} Player Soldiers.": "El presupuesto de esta misión sugiere usar {recommended} Soldados jugadores."
+ "This mission's budget suggests using {recommended} Player Soldiers.": "El presupuesto de esta misión sugiere usar {recommended} Soldados jugadores.",
+ "Squad": "Escuadra",
+ "Nation": "Nación",
+ "Mission": "Misión",
+ "Objective": "Objetivo",
+ "Situation": "Situación",
+ "Included": "Incluido",
+ "Strategy Notes": "Notas de estrategia",
+ "Unknown format.": "Formato desconocido.",
+ "Nothing to import.": "No hay nada que importar.",
+ "Import too large.": "Importación demasiado grande.",
+ "Line {n}: {name} has no soldier to attach to.": "Línea {n}: {name} no tiene soldado al que asignarse.",
+ "Line {n}: unknown card number {number}.": "Línea {n}: número de carta desconocido {number}.",
+ "Line {n}: card not found: {text}": "Línea {n}: carta no encontrada: {text}",
+ "CSV must have a header row with at least: section, number.": "El CSV debe tener una fila de cabecera con al menos: section, number.",
+ "No mission found — pick one in the builder.": "No se encontró misión — elige una en el creador."
 }

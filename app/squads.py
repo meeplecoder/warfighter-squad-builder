@@ -1,4 +1,6 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, Response, current_app
+import json
+import re
 from flask_login import current_user, login_required
 from sqlalchemy import or_, and_, func
 from sqlalchemy.orm import aliased
@@ -7,6 +9,7 @@ from app.models import CardTranslation
 from app.models import Card, Squad, SquadSoldier, SquadGear, SquadLike, SquadComment, CardAssociation, SquadObjective
 from app.models import now_utc
 from app import rules as rules_module
+from app import squad_io
 from app.utils import classify_objective_type, theater_from_raw_type
 from app import i18n
 from app.i18n import _
@@ -326,6 +329,47 @@ def get_squad(squad_id):
     if current_user.is_authenticated:
         liked_by_me = SquadLike.query.filter_by(squad_id=squad_id, user_id=current_user.id).first() is not None
     return jsonify(squad=_squad_detail(squad, liked_by_me=liked_by_me))
+
+
+def _can_view(squad):
+    return squad.status == 'published' or (current_user.is_authenticated and current_user.id == squad.user_id)
+
+
+@squads_bp.route('/<int:squad_id>/export', methods=['GET'])
+def export_squad(squad_id):
+    squad = db.session.get(Squad, squad_id)
+    if not squad or not _can_view(squad):
+        return jsonify(error=_('Squad not found.')), 404
+    fmt = request.args.get('format', 'text')
+    slug = re.sub(r'[^A-Za-z0-9_-]+', '_', squad.name).strip('_') or f'squad_{squad.id}'
+    if fmt == 'text':
+        return Response(squad_io.export_text(squad), mimetype='text/plain; charset=utf-8')
+    if fmt == 'csv':
+        return Response('\ufeff' + squad_io.export_csv(squad), mimetype='text/csv; charset=utf-8',
+                        headers={'Content-Disposition': f'attachment; filename={slug}.csv'})
+    if fmt == 'tts':
+        headers = {'Content-Disposition': f'attachment; filename={slug}.json'}
+        if not current_app.config.get('TTS_IMAGE_BASE_URL'):
+            headers['X-TTS-Warning'] = 'no-image-base-url'
+        return Response(json.dumps(squad_io.export_tts(squad), ensure_ascii=False, indent=1),
+                        mimetype='application/json', headers=headers)
+    return jsonify(error=_('Unknown format.')), 400
+
+
+@squads_bp.route('/import', methods=['POST'])
+def import_squad():
+    """Parse text/CSV into a builder draft. Nothing is saved."""
+    data = request.get_json(silent=True) or {}
+    content = data.get('content') or ''
+    if not content.strip():
+        return jsonify(error=_('Nothing to import.')), 400
+    if len(content) > 100_000:
+        return jsonify(error=_('Import too large.')), 400
+    fmt = data.get('format') or 'auto'
+    if fmt == 'auto':
+        fmt = squad_io.detect_format(content)
+    draft, warnings = squad_io.import_csv(content) if fmt == 'csv' else squad_io.import_text(content)
+    return jsonify(format=fmt, draft=squad_io.draft_to_json(draft, warnings), warnings=warnings)
 
 
 @squads_bp.route('/validate', methods=['POST'])

@@ -1023,3 +1023,9 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
 .smart-help-keys code { color: var(--accent-light); }
 .smart-errors { color: var(--warning); margin-left: 8px; }
 #picker-errors { font-size: 12px; margin-bottom: 4px; }
+
+/* ---- Modal / import-export --------------------------------------------- */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; width: min(640px, 100%); max-height: 90vh; overflow: auto; }
+.modal h2 { margin-bottom: 6px; }
+.export-group { display: inline-flex; gap: 4px; align-items: center; margin-left: 6px; }

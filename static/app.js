@@ -877,7 +877,10 @@ register('squads', async function(subId) {
 
 function renderSquadsShell() {
   const newBtn = currentUser
-    ? `<button class="btn btn-primary" id="new-squad-btn">+ ${esc(t('squads.new'))}</button>` : '';
+    ? `<span style="display:flex;gap:6px">
+        <button class="btn btn-ghost" id="import-squad-btn">${esc(t('io.import'))}</button>
+        <button class="btn btn-primary" id="new-squad-btn">+ ${esc(t('squads.new'))}</button>
+      </span>` : '';
   const myTab = currentUser
     ? `<button class="tab-btn ${squadsActiveTab === 'my' ? 'active' : ''}" data-tab="my">${esc(t('squads.tab_my'))}</button>` : '';
 
@@ -895,6 +898,7 @@ function renderSquadsShell() {
 
   const main = document.getElementById('app-main');
   main.querySelector('#new-squad-btn')?.addEventListener('click', () => navigate('builder'));
+  main.querySelector('#import-squad-btn')?.addEventListener('click', openImportDialog);
   main.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       squadsActiveTab = btn.dataset.tab;
@@ -1105,6 +1109,13 @@ async function showSquadDetail(squadId) {
   const deleteBtn = isOwner ? `<button class="btn btn-sm btn-danger" id="delete-squad-btn">${esc(t('common.delete'))}</button>` : '';
   const publishBtn = isOwner && isDraft ? `<button class="btn btn-sm btn-primary" id="publish-btn">${esc(t('squad.publish'))}</button>` : '';
   const draftBadge = isDraft ? `<span class="badge-draft">${esc(t('squad.draft_badge'))}</span>` : '';
+  const exportBtns = `
+    <span class="export-group">
+      <span class="text-muted" style="font-size:12px">${esc(t('io.export'))}:</span>
+      <button class="btn btn-sm btn-ghost" data-export="text" title="${esc(t('io.text_tip'))}">${esc(t('io.text'))}</button>
+      <button class="btn btn-sm btn-ghost" data-export="csv">CSV</button>
+      <button class="btn btn-sm btn-ghost" data-export="tts" title="${esc(t('io.tts_tip'))}">TTS</button>
+    </span>`;
 
   const likedClass = squad.liked_by_me ? 'liked' : '';
   const likeDisabled = !currentUser ? `disabled title="${esc(t('squad.login_to_like'))}"` : '';
@@ -1222,6 +1233,7 @@ async function showSquadDetail(squadId) {
     <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <a href="#/squads" class="btn btn-ghost btn-sm">← ${esc(t('nav.squads'))}</a>
       ${editBtn} ${deleteBtn} ${publishBtn}
+      ${exportBtns}
       <span style="flex:1"></span>
       ${squadNavPos}
       ${prevSqBtn}
@@ -1395,6 +1407,9 @@ async function showSquadDetail(squadId) {
       document.getElementById('likes-count').textContent = res.likes_count;
     } catch (e) { /* silent */ }
   });
+
+  document.querySelectorAll('[data-export]').forEach(btn =>
+    btn.addEventListener('click', () => exportSquad(squad, btn.dataset.export)));
 
   // Publish
   document.getElementById('publish-btn')?.addEventListener('click', async () => {
@@ -1575,12 +1590,106 @@ register('builder', async function(squadId) {
       return;
     }
   } else {
-    // Fresh builder — always reset when navigating to #/builder without an ID
+    // Fresh builder — always reset when navigating to #/builder without an ID,
+    // unless an import / copy is waiting to be loaded
     resetBuilderState();
+    if (pendingBuilderDraft) { applyBuilderDraft(pendingBuilderDraft); pendingBuilderDraft = null; }
   }
   builderState.pickerMode = null;
   renderBuilder();
 });
+
+// ---------------------------------------------------------------------------
+// Import / export (backend: app/squad_io.py)
+// ---------------------------------------------------------------------------
+let pendingBuilderDraft = null;   // {name, nation, mission, objectives, situation, soldiers, notes?, parentSquadId?}
+
+function applyBuilderDraft(d) {
+  Object.assign(builderState, {
+    squadId: null,
+    name: d.name || '',
+    missionCard: d.mission || null,
+    objectiveCards: d.objectives || [],
+    situationCard: d.situation || null,
+    nation: d.nation || '',
+    notes: d.notes || '',
+    parentSquadId: d.parentSquadId || null,
+    soldiers: (d.soldiers || []).map(s => ({
+      card: s.card,
+      gear: (s.gear || []).map(g => ({ card: g.card, quantity: g.quantity })),
+      defaultGear: s.card.associations || s.default_gear || [],
+    })),
+  });
+  sortSoldiers();
+}
+
+function downloadBlob(content, filename, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type }));
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+async function exportSquad(squad, format) {
+  const res = await fetch(`/api/squads/${squad.id}/export?format=${format}`, {
+    headers: { 'X-Lang': I18N.lang }, credentials: 'same-origin',
+  });
+  if (!res.ok) { alert(t('common.failed')); return; }
+  const body = await res.text();
+  const slug = (squad.name || 'squad').replace(/[^A-Za-z0-9_-]+/g, '_');
+  if (format === 'text') {
+    try { await navigator.clipboard.writeText(body); alert(t('io.copied')); }
+    catch (_) { downloadBlob(body, slug + '.txt', 'text/plain'); }
+  } else if (format === 'csv') {
+    downloadBlob(body, slug + '.csv', 'text/csv');
+  } else {
+    downloadBlob(body, slug + '.json', 'application/json');
+    alert(res.headers.get('X-TTS-Warning') ? t('io.tts_no_images') : t('io.tts_saved'));
+  }
+}
+
+function openImportDialog() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h2>${esc(t('io.import_title'))}</h2>
+      <p class="text-muted" style="font-size:12px">${esc(t('io.import_hint'))}</p>
+      <textarea id="import-content" rows="12" style="width:100%;font-family:monospace;font-size:12px"></textarea>
+      <div style="display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap">
+        <label class="btn btn-ghost btn-sm" style="margin:0">${esc(t('io.import_file'))}<input type="file" id="import-file" accept=".txt,.csv,text/plain,text/csv" style="display:none"></label>
+        <span style="flex:1"></span>
+        <button class="btn btn-ghost btn-sm" id="import-cancel">${esc(t('common.cancel'))}</button>
+        <button class="btn btn-primary btn-sm" id="import-go">${esc(t('io.import_go'))}</button>
+      </div>
+      <div id="import-msg"></div>
+    </div>`;
+  document.body.appendChild(overlay);
+  const close = () => overlay.remove();
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  overlay.querySelector('#import-cancel').addEventListener('click', close);
+  overlay.querySelector('#import-file').addEventListener('change', async e => {
+    const f = e.target.files[0];
+    if (f) overlay.querySelector('#import-content').value = await f.text();
+  });
+  overlay.querySelector('#import-go').addEventListener('click', async () => {
+    const content = overlay.querySelector('#import-content').value;
+    const msg = overlay.querySelector('#import-msg');
+    try {
+      const r = await API.post('/squads/import', { content });
+      if (!r.draft.soldiers.length && !r.draft.mission) {
+        msg.innerHTML = alertHtml([t('io.import_empty'), ...r.warnings].join(' · '));
+        return;
+      }
+      if (r.warnings.length && !confirm(t('io.import_warnings') + '\n\n' + r.warnings.join('\n'))) return;
+      pendingBuilderDraft = r.draft;
+      close();
+      if ((location.hash.slice(1) || '').replace(/^\//, '') === 'builder') route(); else navigate('builder');
+    } catch (e) { msg.innerHTML = alertHtml(e.error || t('common.failed')); }
+  });
+  overlay.querySelector('#import-content').focus();
+}
 
 function builderRpTotal() {
   let total = 0;
@@ -1754,6 +1863,7 @@ function renderBuilder() {
       <button class="btn btn-ghost btn-sm" id="save-draft-btn">${esc(t('builder.save_draft'))}</button>
       <button class="btn btn-primary" id="publish-squad-btn">${esc(t('squad.publish'))}</button>
       <button class="btn btn-ghost btn-sm" id="validate-btn">${esc(t('builder.validate'))}</button>
+      <button class="btn btn-ghost btn-sm" id="builder-import-btn">${esc(t('io.import'))}</button>
       ${builderState.squadId ? `<a href="#/squads/${builderState.squadId}" class="btn btn-ghost btn-sm">${esc(t('common.cancel'))}</a>` : ''}
     </div>
     <div id="builder-validation"></div>
@@ -1946,6 +2056,7 @@ function renderBuilder() {
   main.querySelector('#save-draft-btn')?.addEventListener('click', () => saveSquad('draft'));
   main.querySelector('#publish-squad-btn')?.addEventListener('click', () => saveSquad('published'));
   main.querySelector('#validate-btn')?.addEventListener('click', validateSquad);
+  main.querySelector('#builder-import-btn')?.addEventListener('click', openImportDialog);
   wireSmartHelp(main);
 
   // Restore scroll position (re-render must not jump the user back to the top)
