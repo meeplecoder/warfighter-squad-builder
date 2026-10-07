@@ -632,7 +632,7 @@ async function showCardDetail(idOrNumber) {
       ${sectionLabel('Specifications')}
       <div class="cd-vitals">
         ${vital('RP Cost', card.resource_cost)}
-        ${card.loadout != null ? vital('Loadout Wt.', card.loadout) : ''}
+        ${card.loadout != null ? vital('Loadout', card.loadout) : ''}
       </div>
       ${cdTable(card.weapon_range_table, 'Range')}
       ${cdTable(card.weapon_mode_table, 'Fire Mode')}
