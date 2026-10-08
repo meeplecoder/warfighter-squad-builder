@@ -1,4 +1,4 @@
-"""Cleanup of custom mission cards (module 'Custom') that no squad uses any more.
+"""Cleanup of custom mission cards (module 'Custom') that no squad or campaign uses any more.
 
 Orphans appear when a squad is deleted or switches mission, or when a mission made in the
 builder is replaced / never saved with a squad. See spec/08_squad_tools.md §6.
@@ -10,7 +10,7 @@ builder is replaced / never saved with a squad. See spec/08_squad_tools.md §6.
 from datetime import datetime, timedelta, timezone
 
 from app import db
-from app.models import Card, Squad, CUSTOM_MODULE
+from app.models import Card, Squad, CampaignMission, CUSTOM_MODULE
 
 GRACE_HOURS = 24
 
@@ -18,7 +18,8 @@ GRACE_HOURS = 24
 def purge(card_ids=None, owner_id=None):
     """Delete unreferenced custom missions; returns how many were deleted. Caller commits."""
     used = db.session.query(Squad.mission_card_id)
-    query = Card.query.filter(Card.module == CUSTOM_MODULE, ~Card.id.in_(used))
+    in_campaigns = db.session.query(CampaignMission.mission_card_id).filter(CampaignMission.mission_card_id.isnot(None))
+    query = Card.query.filter(Card.module == CUSTOM_MODULE, ~Card.id.in_(used), ~Card.id.in_(in_campaigns))
     if card_ids is not None:
         ids = [i for i in card_ids if i]
         if not ids:

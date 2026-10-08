@@ -2119,7 +2119,7 @@ function renderBuilder() {
   });
   main.querySelector('#pick-mission-btn')?.addEventListener('click', () => { setPickerMode('mission'); renderBuilder(); });
   main.querySelector('#change-mission-btn')?.addEventListener('click', () => { setPickerMode('mission'); renderBuilder(); });
-  main.querySelector('#custom-mission-btn')?.addEventListener('click', openCustomMissionDialog);
+  main.querySelector('#custom-mission-btn')?.addEventListener('click', () => openCustomMissionDialog());
   main.querySelector('#pick-obj-btn')?.addEventListener('click', () => { setPickerMode('objective'); renderBuilder(); });
   main.querySelector('#add-obj-btn')?.addEventListener('click', () => { setPickerMode('objective'); renderBuilder(); });
   main.querySelector('[data-change-obj]')?.addEventListener('click', () => {
@@ -2220,15 +2220,22 @@ function customMissionChip(m) {
 const CUSTOM_MISSION_TYPES = ['Standard', 'Raid', 'Holding Action', 'Hold the Line', 'Airborne', 'Shore Invasion'];
 const CUSTOM_MISSION_THEATERS = ['Europe', 'Russia', 'North Africa', 'Mediterranean', 'Jungle', 'Far East'];
 
-async function openCustomMissionDialog() {
+// opts.current: the mission currently selected (default: the squad builder's); opts.onSaved(card)
+async function openCustomMissionDialog(opts = {}) {
   if (!currentUser) { alert(t('custom.login_required')); return; }
+  const current = 'current' in opts ? opts.current : builderState.missionCard;
+  const onSaved = opts.onSaved || (card => {
+    builderState.missionCard = card;
+    builderState.pickerMode = null;
+    renderBuilder();
+  });
   // A custom mission already selected → prefill. Its owner saves in place; renaming it creates a new one.
-  let base = builderState.missionCard?.is_custom ? builderState.missionCard : null;
+  let base = current?.is_custom ? current : null;
   if (base) { try { base = (await API.get('/cards/' + base.id)).card; } catch (_) {} }
   const editable = !!base && base.owner_user_id === currentUser.id;
   const theater = base ? (base.theater || 'Europe') : 'Europe';
 
-  const opts = (list, ns, sel) => list.map(v =>
+  const optionList = (list, ns, sel) => list.map(v =>
     `<option value="${esc(v)}"${v === sel ? ' selected' : ''}>${esc(tv(ns, v))}</option>`).join('');
   const num = (id, label, attrs, v) => `<div class="form-field"><label for="${id}">${esc(label)}</label>` +
     `<input type="number" id="${id}" ${attrs} value="${v ?? ''}"></div>`;
@@ -2240,8 +2247,8 @@ async function openCustomMissionDialog() {
       <p class="text-muted" style="font-size:12px">${esc(t('custom.hint'))}</p>
       <form id="cm-form" class="custom-mission-form">
         <div class="form-field cm-wide"><label for="cm-name">${esc(t('custom.name'))}</label><input type="text" id="cm-name" maxlength="80" required value="${esc(base?.name_en ?? base?.name ?? '')}"></div>
-        <div class="form-field"><label for="cm-type">${esc(t('custom.type'))}</label><select id="cm-type">${opts(CUSTOM_MISSION_TYPES, 'card_subtype', base?.mission_type)}</select></div>
-        <div class="form-field"><label for="cm-theater">${esc(t('stat.theater'))}</label><select id="cm-theater">${opts(CUSTOM_MISSION_THEATERS, 'theater', theater)}</select></div>
+        <div class="form-field"><label for="cm-type">${esc(t('custom.type'))}</label><select id="cm-type">${optionList(CUSTOM_MISSION_TYPES, 'card_subtype', base?.mission_type)}</select></div>
+        <div class="form-field"><label for="cm-theater">${esc(t('stat.theater'))}</label><select id="cm-theater">${optionList(CUSTOM_MISSION_THEATERS, 'theater', theater)}</select></div>
         ${num('cm-rp', t('stat.rp_budget'), 'min="1" max="300" required', base?.resources)}
         ${num('cm-time', t('stat.turns'), 'min="1" max="50"', base?.time)}
         ${num('cm-obj', t('stat.obj_location'), 'min="1" max="20"', base?.objective_position)}
@@ -2284,10 +2291,8 @@ async function openCustomMissionDialog() {
       const r = isSave()
         ? await API.put('/cards/custom-missions/' + base.id, body)
         : await API.post('/cards/custom-missions', body);
-      builderState.missionCard = r.card;
-      builderState.pickerMode = null;
       close();
-      renderBuilder();
+      onSaved(r.card);
     } catch (err) {
       $('cm-msg').innerHTML = alertHtml(err.error || t('common.failed'));
     }

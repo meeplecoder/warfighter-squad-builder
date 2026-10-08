@@ -7,7 +7,7 @@ from sqlalchemy.orm import aliased
 from app import db
 from app.models import CardTranslation
 from app.models import Card, Squad, SquadSoldier, SquadGear, SquadLike, SquadComment, CardAssociation, SquadObjective
-from app.models import now_utc
+from app.models import now_utc, CampaignMission
 from app import rules as rules_module
 from app import squad_io
 from app import mentions
@@ -487,6 +487,7 @@ def delete_squad(squad_id):
     # SQLite FK enforcement is off: unlink copies by hand
     Squad.query.filter_by(parent_squad_id=squad.id).update({Squad.parent_squad_id: None})
     mission_id = squad.mission_card_id
+    CampaignMission.query.filter_by(squad_id=squad.id).update({CampaignMission.squad_id: None})
     db.session.delete(squad)
     db.session.flush()
     custom_missions.purge([mission_id])

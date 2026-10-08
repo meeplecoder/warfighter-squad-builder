@@ -53,5 +53,17 @@
  "{field} must be a number.": "{field} debe ser un número.",
  "{field} must be between {lo} and {hi}.": "{field} debe estar entre {lo} y {hi}.",
  "Turns must be greater than the objective location.": "Los turnos deben ser más que la posición del objetivo.",
- "You can only edit your own custom missions.": "Solo puedes editar tus propias misiones personalizadas."
+ "You can only edit your own custom missions.": "Solo puedes editar tus propias misiones personalizadas.",
+ "Duplicate mission key {key}.": "Clave de misión duplicada {key}.",
+ "{mission}: invalid mission card.": "{mission}: carta de misión no válida.",
+ "{mission}: overrides must be numbers.": "{mission}: los valores modificados deben ser números.",
+ "{mission}: override out of range ({lo} to {hi}).": "{mission}: valor modificado fuera de rango ({lo} a {hi}).",
+ "Campaign name is required.": "El nombre de la campaña es obligatorio.",
+ "Add at least one mission.": "Añade al menos una misión.",
+ "Mission #{n} needs a title.": "La misión n.º {n} necesita un título.",
+ "{mission}: choose a mission card.": "{mission}: elige una carta de misión.",
+ "Branching campaigns need at least one starting mission.": "Las campañas ramificadas necesitan al menos una misión de inicio.",
+ "Unnamed campaign": "Campaña sin nombre",
+ "Campaign not found.": "Campaña no encontrada.",
+ "Campaign cannot be published yet.": "La campaña aún no se puede publicar."
 }

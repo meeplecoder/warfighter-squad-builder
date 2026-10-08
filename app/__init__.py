@@ -22,7 +22,7 @@ def create_app():
     limiter.init_app(app)
     login_manager.login_view = None  # API-only; return 401 instead of redirect
 
-    from app.models import User, CardAssociation, SquadObjective, CardTranslation  # noqa: F401 — ensure tables are registered
+    from app.models import User, CardAssociation, SquadObjective, CardTranslation, Campaign, CampaignMission, CampaignLink  # noqa: F401 — ensure tables are registered
     from app.i18n import register_sqlite_functions
     from sqlalchemy import event
 
@@ -44,12 +44,14 @@ def create_app():
     from app.squads import squads_bp
     from app.profile import profile_bp
     from app.translations import translations_bp
+    from app.campaigns import campaigns_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(cards_bp, url_prefix='/api/cards')
     app.register_blueprint(squads_bp, url_prefix='/api/squads')
     app.register_blueprint(profile_bp, url_prefix='/api/profile')
     app.register_blueprint(translations_bp, url_prefix='/api/translations')
+    app.register_blueprint(campaigns_bp, url_prefix='/api/campaigns')
 
     @app.route('/api/modules')
     def get_modules():

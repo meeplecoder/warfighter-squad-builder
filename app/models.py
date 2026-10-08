@@ -372,3 +372,85 @@ class CardTranslation(db.Model):
     updated_at = db.Column(db.Text, nullable=False, default=i18n.now_precise)
 
     __table_args__ = (db.UniqueConstraint('card_number', 'lang', 'field'),)
+
+
+# ---------------------------------------------------------------------------
+# Campaigns (spec/09_campaigns.md)
+# ---------------------------------------------------------------------------
+CAMPAIGN_FLOW_TYPES = ('linear', 'branching', 'free')
+CAMPAIGN_LINK_CONDITIONS = ('success', 'failure', 'always', 'choice')
+
+
+class Campaign(db.Model):
+    __tablename__ = 'campaigns'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    name = db.Column(db.Text, nullable=False)
+    summary = db.Column(db.Text)
+    intro = db.Column(db.Text)              # stage-setting read
+    nation = db.Column(db.Text)
+    theater = db.Column(db.Text)
+    enemy = db.Column(db.Text)
+    period = db.Column(db.Text)
+    flow_type = db.Column(db.Text, nullable=False, default='linear')
+    settings = db.Column(db.Text)           # JSON: force, persistence, rules, scoring, outcomes
+    status = db.Column(db.Text, nullable=False, default='draft')
+    created_at = db.Column(db.Text, nullable=False, default=now_utc)
+    updated_at = db.Column(db.Text, nullable=False, default=now_utc)
+
+    owner = db.relationship('User')
+    missions = db.relationship('CampaignMission', backref='campaign', cascade='all, delete-orphan',
+                               order_by='CampaignMission.sort_order')
+    links = db.relationship('CampaignLink', cascade='all, delete-orphan')
+
+    def settings_dict(self):
+        try:
+            return json.loads(self.settings) if self.settings else {}
+        except ValueError:
+            return {}
+
+
+class CampaignMission(db.Model):
+    __tablename__ = 'campaign_missions'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    campaign_id = db.Column(db.Integer, db.ForeignKey('campaigns.id', ondelete='CASCADE'), nullable=False, index=True)
+    sort_order = db.Column(db.Integer, nullable=False, default=0)
+    code = db.Column(db.Text)                # short label: "1", "502-2"
+    title = db.Column(db.Text)
+    briefing = db.Column(db.Text)            # pre-read
+    debrief = db.Column(db.Text)             # post-read
+    mission_card_id = db.Column(db.Integer, db.ForeignKey('cards.id'), index=True)
+    situation_card_id = db.Column(db.Integer, db.ForeignKey('cards.id'))
+    objective_card_ids = db.Column(db.Text)  # JSON list of card ids
+    squad_id = db.Column(db.Integer, db.ForeignKey('squads.id', ondelete='SET NULL'))
+    rp_override = db.Column(db.Integer)
+    time_override = db.Column(db.Integer)
+    loadout_override = db.Column(db.Integer)
+    is_entry = db.Column(db.Integer, nullable=False, default=0)
+    requirements = db.Column(db.Text)
+    setup = db.Column(db.Text)
+    victory = db.Column(db.Text)
+    rewards = db.Column(db.Text)
+
+    mission_card = db.relationship('Card', foreign_keys=[mission_card_id])
+    situation_card = db.relationship('Card', foreign_keys=[situation_card_id])
+    squad = db.relationship('Squad')
+
+    def objective_ids(self):
+        try:
+            return [int(i) for i in json.loads(self.objective_card_ids or '[]')]
+        except (ValueError, TypeError):
+            return []
+
+
+class CampaignLink(db.Model):
+    __tablename__ = 'campaign_links'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    campaign_id = db.Column(db.Integer, db.ForeignKey('campaigns.id', ondelete='CASCADE'), nullable=False, index=True)
+    from_mission_id = db.Column(db.Integer, db.ForeignKey('campaign_missions.id', ondelete='CASCADE'), nullable=False)
+    to_mission_id = db.Column(db.Integer, db.ForeignKey('campaign_missions.id', ondelete='CASCADE'), nullable=False)
+    condition = db.Column(db.Text, nullable=False, default='success')
+    label = db.Column(db.Text)
