@@ -877,18 +877,15 @@ async function showCardDetail(idOrNumber) {
 // ---------------------------------------------------------------------------
 // VIEW: Squads List
 // ---------------------------------------------------------------------------
-let squadsActiveTab = 'community';  // 'my' | 'community'
-let mySquadFilters = { q: '', sort: 'updated_at', order: 'desc', page: 1, myModules: false };
-let communityFilters = { q: '', liked: false, sort: 'created_at', order: 'desc', page: 1, myModules: false };
+// One list: everyone's published squads plus the user's own (drafts included).
+// 'My Squads' narrows it to the user's own squads.
+let squadFilters = { q: '', mine: false, liked: false, sort: 'updated_at', order: 'desc', page: 1, myModules: false };
 // IDs of squads currently visible in the browser list (for prev/next navigation)
 let squadNavList = [];
 
 register('squads', async function(subId) {
   if (subId === 'new') { renderBuilder(null); return; }
   if (subId) { await showSquadDetail(parseInt(subId)); return; }
-  // Default to 'my' tab when logged in, 'community' otherwise
-  if (currentUser && squadsActiveTab !== 'my') squadsActiveTab = squadsActiveTab;
-  if (!currentUser) squadsActiveTab = 'community';
   showSpinner();
   renderSquadsShell();
 });
@@ -899,45 +896,19 @@ function renderSquadsShell() {
         <button class="btn btn-ghost" id="import-squad-btn">${esc(t('io.import'))}</button>
         <button class="btn btn-primary" id="new-squad-btn">+ ${esc(t('squads.new'))}</button>
       </span>` : '';
-  const myTab = currentUser
-    ? `<button class="tab-btn ${squadsActiveTab === 'my' ? 'active' : ''}" data-tab="my">${esc(t('squads.tab_my'))}</button>` : '';
 
   setMain(`
     <div class="flex justify-between items-center" style="margin-bottom:12px">
       <h1>${esc(t('squads.title'))}</h1>
       ${newBtn}
     </div>
-    <div class="tabs" style="margin-bottom:16px">
-      ${myTab}
-      <button class="tab-btn ${squadsActiveTab === 'community' ? 'active' : ''}" data-tab="community">${esc(t('squads.tab_community'))}</button>
-    </div>
-    <div id="squads-tab-content"></div>
+    <div id="squads-list"></div>
   `);
 
   const main = document.getElementById('app-main');
   main.querySelector('#new-squad-btn')?.addEventListener('click', () => navigate('builder'));
   main.querySelector('#import-squad-btn')?.addEventListener('click', openImportDialog);
-  main.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      squadsActiveTab = btn.dataset.tab;
-      main.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === squadsActiveTab));
-      loadSquadsTab();
-    });
-  });
-
-  loadSquadsTab();
-}
-
-async function loadSquadsTab() {
-  const contentDiv = document.getElementById('squads-tab-content');
-  if (!contentDiv) return;
-  contentDiv.innerHTML = '<div class="spinner" style="margin:24px auto"></div>';
-
-  if (squadsActiveTab === 'my' && currentUser) {
-    await renderMySquads(contentDiv);
-  } else {
-    await renderCommunitySquads(contentDiv);
-  }
+  renderSquadList(document.getElementById('squads-list'));
 }
 
 function _squadSortTh(label, col, f) {
@@ -946,84 +917,12 @@ function _squadSortTh(label, col, f) {
   return `<th class="sort-header${active ? ' sort-active' : ''}" data-sort="${col}">${esc(label)}${arrow}</th>`;
 }
 
-async function renderMySquads(containerEl) {
-  const f = mySquadFilters;
+async function renderSquadList(containerEl) {
+  if (!containerEl) return;
+  const f = squadFilters;
+  const mine = f.mine && currentUser;
   const params = new URLSearchParams();
-  params.set('user_id', currentUser.id);
-  params.set('sort', f.sort);
-  params.set('order', f.order);
-  params.set('page', f.page);
-  if (f.q) params.set('q', f.q);
-  if (f.myModules) params.set('my_modules', 'true');
-
-  let data;
-  try { data = await API.get('/squads?' + params.toString()); }
-  catch (e) { containerEl.innerHTML = `<div class="alert alert-error">${esc(e.error||t('common.failed'))}</div>`; return; }
-
-  const { items, total, page, pages } = data;
-  const rows = items.map(s => `
-    <tr class="clickable" data-id="${s.id}">
-      <td><strong>${esc(s.name)}</strong></td>
-      <td>${esc(nationLabel(s.nation))}</td>
-      <td>${s.mission ? `${cardName(s.mission)}${customMissionChip(s.mission)} <span class="text-muted">· ${s.mission.resources} ${esc(t('stat.rp'))}</span>` : '—'}</td>
-      <td>${s.rp_total}</td>
-      <td>${s.likes_count} ♥</td>
-      <td><span class="${s.status === 'draft' ? 'badge badge-draft' : 'badge badge-ok'}">${esc(tv('squad_status', s.status))}</span></td>
-      <td class="text-muted">${fmtDate(s.updated_at)}</td>
-    </tr>`).join('');
-
-  const _myActive = document.activeElement;
-  const hadFocus = _myActive?.id === 'my-q';
-  const savedSel = hadFocus ? [_myActive.selectionStart, _myActive.selectionEnd] : null;
-  containerEl.innerHTML = `
-    <div class="filter-bar" style="margin-bottom:8px">
-      <input type="text" id="my-q" placeholder="${esc(t('squads.search_placeholder'))}" value="${esc(f.q)}" style="flex:1;min-width:160px">
-      <button class="quick-filter ${f.myModules ? 'active-accent' : ''}" id="my-modules-filter-my">${esc(t('squads.my_modules'))}</button>
-    </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">${esc(tn('squads.count', total))}</div>
-    <table class="data-table">
-      <thead><tr>
-        ${_squadSortTh(t('col.name'), 'name', f)}
-        ${_squadSortTh(t('col.nation'), 'nation', f)}
-        ${_squadSortTh(t('col.mission'), 'mission_name', f)}
-        ${_squadSortTh(t('col.team_rp'), 'rp_total', f)}
-        ${_squadSortTh(t('col.likes'), 'likes_count', f)}
-        <th>${esc(t('col.status'))}</th>
-        ${_squadSortTh(t('col.updated'), 'updated_at', f)}
-      </tr></thead>
-      <tbody>${rows||`<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">${esc(t('squads.none_mine'))}</td></tr>`}</tbody>
-    </table>
-    ${paginationHtml(page, pages)}`;
-
-  const qInput = containerEl.querySelector('#my-q');
-  if (qInput) {
-    if (hadFocus) { qInput.focus(); if (savedSel) qInput.setSelectionRange(savedSel[0], savedSel[1]); }
-    qInput.addEventListener('input', e => {
-      clearTimeout(qInput._t);
-      qInput._t = setTimeout(() => { f.q = e.target.value; f.page = 1; renderMySquads(containerEl); }, 300);
-    });
-  }
-  containerEl.querySelector('#my-modules-filter-my')?.addEventListener('click', () => {
-    f.myModules = !f.myModules; f.page = 1; renderMySquads(containerEl);
-  });
-  containerEl.querySelectorAll('th.sort-header[data-sort]').forEach(th =>
-    th.addEventListener('click', () => {
-      const col = th.dataset.sort;
-      if (f.sort === col) f.order = f.order === 'asc' ? 'desc' : 'asc';
-      else { f.sort = col; f.order = ['name', 'nation', 'mission_name'].includes(col) ? 'asc' : 'desc'; }
-      f.page = 1; renderMySquads(containerEl);
-    })
-  );
-  squadNavList = items.map(s => s.id);
-  containerEl.querySelectorAll('tr[data-id]').forEach(row =>
-    row.addEventListener('click', () => navigate('squads/' + row.dataset.id)));
-  containerEl.querySelectorAll('[data-pg]').forEach(btn =>
-    btn.addEventListener('click', () => { f.page = parseInt(btn.dataset.pg); renderMySquads(containerEl); }));
-}
-
-async function renderCommunitySquads(containerEl) {
-  const f = communityFilters;
-  const params = new URLSearchParams();
+  if (mine) params.set('user_id', currentUser.id);
   if (f.liked && currentUser) params.set('liked', 'true');
   params.set('sort', f.sort);
   params.set('order', f.order);
@@ -1036,32 +935,36 @@ async function renderCommunitySquads(containerEl) {
   catch (e) { containerEl.innerHTML = `<div class="alert alert-error">${esc(e.error||t('common.failed'))}</div>`; return; }
 
   const { items, total, page, pages } = data;
-  const likedBtn = currentUser ? `
-    <button class="quick-filter ${f.liked ? 'active' : ''}" id="liked-filter">♥ ${esc(t('squads.liked_by_me'))}</button>` : '';
-  const myModulesBtn = currentUser ? `
-    <button class="quick-filter ${f.myModules ? 'active-accent' : ''}" id="my-modules-filter-comm">${esc(t('squads.my_modules'))}</button>` : '';
+  const userBtns = currentUser ? `
+    <button class="quick-filter ${f.mine ? 'active' : ''}" id="mine-filter">${esc(t('squads.tab_my'))}</button>
+    <button class="quick-filter ${f.liked ? 'active' : ''}" id="liked-filter">♥ ${esc(t('squads.liked_by_me'))}</button>
+    <button class="quick-filter ${f.myModules ? 'active-accent' : ''}" id="my-modules-filter">${esc(t('squads.my_modules'))}</button>` : '';
 
-  const rows = items.map(s => `
+  const rows = items.map(s => {
+    const own = currentUser && s.owner && s.owner.id === currentUser.id;
+    const draft = s.status === 'draft'
+      ? ` <span class="badge badge-draft">${esc(tv('squad_status', s.status))}</span>` : '';
+    return `
     <tr class="clickable" data-id="${s.id}">
-      <td><strong>${esc(s.name)}</strong></td>
+      <td><strong>${esc(s.name)}</strong>${draft}</td>
       <td>${esc(nationLabel(s.nation))}</td>
       <td>${s.mission ? `${cardName(s.mission)}${customMissionChip(s.mission)} <span class="text-muted">· ${s.mission.resources} ${esc(t('stat.rp'))}</span>` : '—'}</td>
       <td>${s.rp_total}</td>
       <td>${s.likes_count} ♥</td>
-      <td>${esc(s.owner ? s.owner.username : '—')}</td>
-      <td class="text-muted">${fmtDate(s.created_at)}</td>
-    </tr>`).join('');
+      <td>${own ? `<strong>${esc(s.owner.username)}</strong>` : esc(s.owner ? s.owner.username : '—')}</td>
+      <td class="text-muted">${fmtDate(s.updated_at)}</td>
+    </tr>`;
+  }).join('');
 
-  const _commActive = document.activeElement;
-  const hadFocus = _commActive?.id === 'comm-q';
-  const savedSel = hadFocus ? [_commActive.selectionStart, _commActive.selectionEnd] : null;
+  const _active = document.activeElement;
+  const hadFocus = _active?.id === 'squads-q';
+  const savedSel = hadFocus ? [_active.selectionStart, _active.selectionEnd] : null;
   containerEl.innerHTML = `
     <div class="filter-bar" style="margin-bottom:8px">
-      <input type="text" id="comm-q" placeholder="${esc(t('squads.search_placeholder'))}" value="${esc(f.q)}" style="flex:1;min-width:160px">
-      ${likedBtn}
-      ${myModulesBtn}
+      <input type="text" id="squads-q" placeholder="${esc(t('squads.search_placeholder'))}" value="${esc(f.q)}" style="flex:1;min-width:160px">
+      ${userBtns}
     </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">${esc(tn('squads.published_count', total))}</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">${esc(tn('squads.count', total))}</div>
     <table class="data-table">
       <thead><tr>
         ${_squadSortTh(t('col.name'), 'name', f)}
@@ -1070,39 +973,37 @@ async function renderCommunitySquads(containerEl) {
         ${_squadSortTh(t('col.team_rp'), 'rp_total', f)}
         ${_squadSortTh(t('col.likes'), 'likes_count', f)}
         <th>${esc(t('col.owner'))}</th>
-        ${_squadSortTh(t('col.date'), 'created_at', f)}
+        ${_squadSortTh(t('col.updated'), 'updated_at', f)}
       </tr></thead>
-      <tbody>${rows||`<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">${esc(t('squads.none_published'))}</td></tr>`}</tbody>
+      <tbody>${rows||`<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">${esc(t(mine ? 'squads.none_mine' : 'squads.none_published'))}</td></tr>`}</tbody>
     </table>
     ${paginationHtml(page, pages)}`;
 
-  const qInput = containerEl.querySelector('#comm-q');
+  const rerender = () => { f.page = 1; renderSquadList(containerEl); };
+  const qInput = containerEl.querySelector('#squads-q');
   if (qInput) {
     if (hadFocus) { qInput.focus(); if (savedSel) qInput.setSelectionRange(savedSel[0], savedSel[1]); }
     qInput.addEventListener('input', e => {
       clearTimeout(qInput._t);
-      qInput._t = setTimeout(() => { f.q = e.target.value; f.page = 1; renderCommunitySquads(containerEl); }, 300);
+      qInput._t = setTimeout(() => { f.q = e.target.value; rerender(); }, 300);
     });
   }
-  containerEl.querySelector('#liked-filter')?.addEventListener('click', () => {
-    f.liked = !f.liked; f.page = 1; renderCommunitySquads(containerEl);
-  });
-  containerEl.querySelector('#my-modules-filter-comm')?.addEventListener('click', () => {
-    f.myModules = !f.myModules; f.page = 1; renderCommunitySquads(containerEl);
-  });
+  containerEl.querySelector('#mine-filter')?.addEventListener('click', () => { f.mine = !f.mine; rerender(); });
+  containerEl.querySelector('#liked-filter')?.addEventListener('click', () => { f.liked = !f.liked; rerender(); });
+  containerEl.querySelector('#my-modules-filter')?.addEventListener('click', () => { f.myModules = !f.myModules; rerender(); });
   containerEl.querySelectorAll('th.sort-header[data-sort]').forEach(th =>
     th.addEventListener('click', () => {
       const col = th.dataset.sort;
       if (f.sort === col) f.order = f.order === 'asc' ? 'desc' : 'asc';
       else { f.sort = col; f.order = ['name', 'nation', 'mission_name'].includes(col) ? 'asc' : 'desc'; }
-      f.page = 1; renderCommunitySquads(containerEl);
+      rerender();
     })
   );
   squadNavList = items.map(s => s.id);
   containerEl.querySelectorAll('tr[data-id]').forEach(row =>
     row.addEventListener('click', () => navigate('squads/' + row.dataset.id)));
   containerEl.querySelectorAll('[data-pg]').forEach(btn =>
-    btn.addEventListener('click', () => { f.page = parseInt(btn.dataset.pg); renderCommunitySquads(containerEl); }));
+    btn.addEventListener('click', () => { f.page = parseInt(btn.dataset.pg); renderSquadList(containerEl); }));
 }
 
 // ---------------------------------------------------------------------------

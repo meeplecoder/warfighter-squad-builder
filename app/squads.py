@@ -229,12 +229,11 @@ def list_squads():
         # Owner sees all their squads; honour optional status filter
         if status_filter in ('draft', 'published'):
             query = query.filter(Squad.status == status_filter)
+    elif current_user.is_authenticated:
+        # Combined list: everyone's published squads plus the user's own drafts
+        query = query.filter(or_(Squad.status == 'published', Squad.user_id == current_user.id))
     else:
-        # Everyone else only sees published squads
         query = query.filter(Squad.status == 'published')
-        # Exclude the logged-in user's own squads from community view
-        if current_user.is_authenticated:
-            query = query.filter(Squad.user_id != current_user.id)
 
     if q:
         query = query.filter(Squad.name.ilike(f'%{q}%'))
