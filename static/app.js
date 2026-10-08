@@ -1406,6 +1406,13 @@ async function showSquadDetail(squadId) {
             'Escape':                 '#7c3aed',
             'Kill Specified Hostile': '#0e7490',
           };
+          // Badge text is an acronym of the (translated) label; full label goes in the tooltip.
+          // "Keep Clear" → KC, single words → first 3 letters ("Escape" → ESC).
+          const objBadge = (label, color, extraStyle = '') => {
+            const words = label.split(/\s+/).filter(w => w && !/^(of|the|a|de|del|la|el|los|las)$/i.test(w));
+            const abbr = words.length > 1 ? words.map(w => w[0]).join('') : (words[0] || '').slice(0, 3);
+            return `<span class="obj-type-badge" style="background:${color}${extraStyle}" title="${esc(label)}">${esc(abbr.toUpperCase())}</span>`;
+          };
           const OBJ_FAMILY_COLOR = {
             'Fallback':      '#92400e', 'Right Flank': '#166534', 'Shore':    '#075985',
             'Fortification': '#7f1d1d', 'Airborne':    '#3730a3', 'Embedded': '#4a044e',
@@ -1435,8 +1442,8 @@ async function showSquadDetail(squadId) {
               const chips = attrDefs.map(([k,v]) =>
                 `<span class="mission-attr">${esc(k)} <strong>${esc(v)}</strong></span>`).join('');
               return `<div class="mission-name">
-                ${o.objective_mechanic ? `<span class="obj-type-badge" style="background:${typeColor}">${esc(tv('card_subtype', o.objective_mechanic))}</span>` : ''}
-                ${familyColor ? `<span class="obj-type-badge" style="background:${familyColor}">${esc(tv('card_subtype', o.objective_family))}</span>` : ''}
+                ${o.objective_mechanic ? objBadge(tv('card_subtype', o.objective_mechanic), typeColor) : ''}
+                ${familyColor ? objBadge(tv('card_subtype', o.objective_family), familyColor) : ''}
                 <span ${cardImageAttr(o)}>${esc(o.name)}</span>
                 ${o.nation ? `<span class="chip chip-mission" style="margin-left:6px;vertical-align:middle">${esc(tv('nation', o.nation))}</span>` : ''}
               </div>
@@ -1446,7 +1453,7 @@ async function showSquadDetail(squadId) {
               // Compact row — name + tiny badges only
               return `<div class="flex items-center obj-compact-row" style="${idx > 0 ? 'margin-top:6px;padding-top:6px;border-top:1px solid var(--border)' : ''}">
                 <span style="font-size:13px"><span ${cardImageAttr(o)}>${esc(o.name)}</span></span>
-                ${o.objective_mechanic ? `<span class="obj-type-badge" style="background:${typeColor};margin-left:6px;font-size:10px;padding:1px 5px">${esc(tv('card_subtype', o.objective_mechanic))}</span>` : ''}
+                ${o.objective_mechanic ? objBadge(tv('card_subtype', o.objective_mechanic), typeColor, ';margin-left:6px;font-size:10px;padding:1px 5px') : ''}
               </div>`;
             }
           }).join('');
