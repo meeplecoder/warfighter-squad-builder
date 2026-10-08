@@ -162,6 +162,12 @@ h3 { font-size: 1rem; font-weight: 600; }
 .data-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); }
 .data-table tbody tr:hover { background: var(--surface); cursor: pointer; }
 .data-table .clickable { cursor: pointer; }
+/* Squad list: long names truncate with … on one line (full name in the tooltip) */
+.squad-name-cell { white-space: nowrap; }
+.squad-name-cell .ellipsis {
+  display: inline-block; max-width: 280px; vertical-align: bottom;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 
 /* ---- Chips --------------------------------------------------------- */
 .chip {
