@@ -531,21 +531,10 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
 .required-modules {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   align-items: center;
   gap: 6px;
-  padding: 4px 12px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-}
-.required-modules-label {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  color: var(--text-muted);
-  margin-right: 4px;
-  white-space: nowrap;
+  margin-left: auto;
 }
 
 /* ---- Author notes -------------------------------------------------- */

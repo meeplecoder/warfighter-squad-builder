@@ -1217,8 +1217,7 @@ async function showSquadDetail(squadId) {
 
   // Minimal module set for soldiers + gear, any equivalent printing (app/required_modules.py)
   const requiredModules = (squad.required_modules || []).length ? `
-    <div class="required-modules">
-      <span class="required-modules-label">${esc(t('squad.required_modules'))}</span>
+    <div class="required-modules" title="${esc(t('squad.required_modules'))}">
       ${squad.required_modules.map(m => `<span class="chip">${esc(tv('module', m))}</span>`).join('')}
     </div>` : '';
 
