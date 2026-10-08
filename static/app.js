@@ -1005,7 +1005,9 @@ async function renderSquadList(containerEl) {
   containerEl.querySelectorAll('tr[data-id]').forEach(row =>
     row.addEventListener('click', () => navigate('squads/' + row.dataset.id)));
   containerEl.querySelectorAll('[data-edit]').forEach(btn =>
-    btn.addEventListener('click', e => { e.stopPropagation(); navigate('builder/' + btn.dataset.edit); }));
+    btn.addEventListener('click', e => {
+      e.stopPropagation(); builderFromSquadList = true; navigate('builder/' + btn.dataset.edit);
+    }));
   containerEl.querySelectorAll('[data-pg]').forEach(btn =>
     btn.addEventListener('click', () => { f.page = parseInt(btn.dataset.pg); renderSquadList(containerEl); }));
 }
@@ -1511,7 +1513,12 @@ function renderCardTable(containerEl, items, opts = {}) {
 // ---------------------------------------------------------------------------
 // VIEW: Squad Builder
 // ---------------------------------------------------------------------------
+// Set by the squad list's edit pencil: the builder then shows a '← Squads' back button
+let builderFromSquadList = false;
+
 register('builder', async function(squadId) {
+  const fromList = builderFromSquadList;
+  builderFromSquadList = false;
   if (squadId) {
     // Load existing squad
     showSpinner();
@@ -1519,6 +1526,7 @@ register('builder', async function(squadId) {
       const data = await API.get('/squads/' + squadId);
       const sq = data.squad;
       builderState.squadId = sq.id;
+      builderState.fromSquadList = fromList;
       builderState.parentSquadId = sq.parent?.id || null;
       builderState.parentName = sq.parent?.name || '';
       builderState.name = sq.name;
@@ -1812,6 +1820,7 @@ function renderBuilder() {
 
   setMain(`
     <div class="builder-actions">
+      ${builderState.fromSquadList ? `<a href="#/squads" class="btn btn-ghost btn-sm">← ${esc(t('nav.squads'))}</a>` : ''}
       <button class="btn btn-ghost btn-sm" id="save-draft-btn">${esc(t('builder.save_draft'))}</button>
       <button class="btn btn-primary" id="publish-squad-btn">${esc(t('squad.publish'))}</button>
       <button class="btn btn-ghost btn-sm" id="validate-btn">${esc(t('builder.validate'))}</button>
@@ -2297,7 +2306,7 @@ async function validateSquad() {
 
 function resetBuilderState() {
   Object.assign(builderState, {
-    squadId: null, parentSquadId: null, parentName: '', name: '', missionCard: null, objectiveCards: [],
+    squadId: null, fromSquadList: false, parentSquadId: null, parentName: '', name: '', missionCard: null, objectiveCards: [],
     situationCard: null, nation: '', notes: '', soldiers: [],
     pickerMode: null, pickerTarget: null, pickerGearCat: null,
     pickerSort: 'module', pickerOrder: 'asc', pickerPage: 1,
