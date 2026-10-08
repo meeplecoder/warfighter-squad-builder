@@ -167,9 +167,9 @@ h3 { font-size: 1rem; font-weight: 600; }
 .data-table .squad-edit-cell { width: 28px; padding-left: 6px; padding-right: 0; text-align: center; }
 .squad-edit-btn {
   background: none; border: none; padding: 0 2px; cursor: pointer;
-  font-size: 13px; line-height: 1; opacity: .7;
+  line-height: 0; color: var(--text-muted);
 }
-.squad-edit-btn:hover { opacity: 1; }
+.squad-edit-btn:hover { color: var(--text); }
 .squad-name-cell .ellipsis {
   display: inline-block; max-width: 280px; vertical-align: bottom;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;

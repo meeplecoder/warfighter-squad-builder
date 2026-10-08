@@ -946,7 +946,7 @@ async function renderSquadList(containerEl) {
       ? ` <span class="badge badge-draft">${esc(tv('squad_status', s.status))}</span>` : '';
     return `
     <tr class="clickable" data-id="${s.id}">
-      <td class="squad-edit-cell">${own ? `<button class="squad-edit-btn" data-edit="${s.id}" title="${esc(t('common.edit'))}">✏️</button>` : ''}</td>
+      <td class="squad-edit-cell">${own ? `<button class="squad-edit-btn" data-edit="${s.id}" title="${esc(t('common.edit'))}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>` : ''}</td>
       <td class="squad-name-cell"><strong class="ellipsis" title="${esc(s.name)}">${esc(s.name)}</strong>${draft}</td>
       <td>${esc(nationLabel(s.nation))}</td>
       <td>${s.mission ? `${cardName(s.mission)}${customMissionChip(s.mission)} <span class="text-muted">· ${s.mission.resources} ${esc(t('stat.rp'))}</span>` : '—'}</td>
