@@ -946,6 +946,7 @@ async function renderSquadList(containerEl) {
       ? ` <span class="badge badge-draft">${esc(tv('squad_status', s.status))}</span>` : '';
     return `
     <tr class="clickable" data-id="${s.id}">
+      <td class="squad-edit-cell">${own ? `<button class="squad-edit-btn" data-edit="${s.id}" title="${esc(t('common.edit'))}">✏️</button>` : ''}</td>
       <td class="squad-name-cell"><strong class="ellipsis" title="${esc(s.name)}">${esc(s.name)}</strong>${draft}</td>
       <td>${esc(nationLabel(s.nation))}</td>
       <td>${s.mission ? `${cardName(s.mission)}${customMissionChip(s.mission)} <span class="text-muted">· ${s.mission.resources} ${esc(t('stat.rp'))}</span>` : '—'}</td>
@@ -965,8 +966,9 @@ async function renderSquadList(containerEl) {
       ${userBtns}
     </div>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">${esc(tn('squads.count', total))}</div>
-    <table class="data-table">
+    <table class="data-table squads-table">
       <thead><tr>
+        <th class="squad-edit-cell"></th>
         ${_squadSortTh(t('col.name'), 'name', f)}
         ${_squadSortTh(t('col.nation'), 'nation', f)}
         ${_squadSortTh(t('col.mission'), 'mission_name', f)}
@@ -975,7 +977,7 @@ async function renderSquadList(containerEl) {
         <th>${esc(t('col.owner'))}</th>
         ${_squadSortTh(t('col.updated'), 'updated_at', f)}
       </tr></thead>
-      <tbody>${rows||`<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">${esc(t(mine ? 'squads.none_mine' : 'squads.none_published'))}</td></tr>`}</tbody>
+      <tbody>${rows||`<tr><td colspan="8" style="text-align:center;color:var(--text-muted)">${esc(t(mine ? 'squads.none_mine' : 'squads.none_published'))}</td></tr>`}</tbody>
     </table>
     ${paginationHtml(page, pages)}`;
 
@@ -1002,6 +1004,8 @@ async function renderSquadList(containerEl) {
   squadNavList = items.map(s => s.id);
   containerEl.querySelectorAll('tr[data-id]').forEach(row =>
     row.addEventListener('click', () => navigate('squads/' + row.dataset.id)));
+  containerEl.querySelectorAll('[data-edit]').forEach(btn =>
+    btn.addEventListener('click', e => { e.stopPropagation(); navigate('builder/' + btn.dataset.edit); }));
   containerEl.querySelectorAll('[data-pg]').forEach(btn =>
     btn.addEventListener('click', () => { f.page = parseInt(btn.dataset.pg); renderSquadList(containerEl); }));
 }

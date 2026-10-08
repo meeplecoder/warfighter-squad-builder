@@ -164,6 +164,12 @@ h3 { font-size: 1rem; font-weight: 600; }
 .data-table .clickable { cursor: pointer; }
 /* Squad list: long names truncate with … on one line (full name in the tooltip) */
 .squad-name-cell { white-space: nowrap; }
+.data-table .squad-edit-cell { width: 28px; padding-left: 6px; padding-right: 0; text-align: center; }
+.squad-edit-btn {
+  background: none; border: none; padding: 0 2px; cursor: pointer;
+  font-size: 13px; line-height: 1; opacity: .7;
+}
+.squad-edit-btn:hover { opacity: 1; }
 .squad-name-cell .ellipsis {
   display: inline-block; max-width: 280px; vertical-align: bottom;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -711,6 +717,8 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
   .builder-layout { grid-template-columns: 1fr; height: auto; }
   .builder-right { order: -1; }
   .data-table th:nth-child(n+4), .data-table td:nth-child(n+4) { display: none; }
+  /* squads table has a leading edit column: keep name, nation, mission */
+  .squads-table th:nth-child(4), .squads-table td:nth-child(4) { display: table-cell; }
 }
 
 /* ---- Sortable table headers ----------------------------------------- */
