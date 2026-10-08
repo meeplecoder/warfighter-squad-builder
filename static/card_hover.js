@@ -4,7 +4,7 @@
 // Any element with data-card-image-url shows the card image as a floating preview
 // while the mouse is over it, and hides it as soon as the mouse leaves.
 //   cardImageAttr(card)      → 'data-card-image-url="…"' to put on an existing element
-//   cardName(card, inner?)   → '<span class="card-name" data-card-image-url="…">name</span>'
+//   cardName(card, inner?)   → '<span class="card-ref" data-card-image-url="…">name</span>'
 // One delegated listener on document handles every element, including ones rendered later.
 // ---------------------------------------------------------------------------
 function cardImageAttr(card) {
@@ -14,7 +14,7 @@ function cardImageAttr(card) {
 
 function cardName(card, inner) {
   if (!card) return '';
-  return `<span class="card-name" ${cardImageAttr(card)}>${inner ?? esc(card.name)}</span>`;
+  return `<span class="card-ref" ${cardImageAttr(card)}>${inner ?? esc(card.name)}</span>`;
 }
 
 (() => {
@@ -29,8 +29,8 @@ function cardName(card, inner) {
 
   function position() {
     const vw = window.innerWidth, vh = window.innerHeight;
-    const w = thumb.offsetWidth || 162;
-    const h = thumb.offsetHeight || 240;
+    const w = thumb.offsetWidth || 262;
+    const h = thumb.offsetHeight || 390;
     let left = mouse.x + 16;
     let top = mouse.y - h / 2;
     if (left + w > vw - 8) left = mouse.x - w - 16;

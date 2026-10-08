@@ -225,7 +225,7 @@ def update_custom_mission(card_id):
 
 
 _PREFIX_RE = re.compile(r'^[a-z0-9]+$')
-_FILENAME_RE = re.compile(r'^[a-z0-9]+-\d+\.jpg$')
+_FILENAME_RE = re.compile(r'^[a-z0-9]+-\d+\.(jpg|png|webp)$')
 
 
 @cards_bp.route('/images/<lang>/<prefix>/<filename>')

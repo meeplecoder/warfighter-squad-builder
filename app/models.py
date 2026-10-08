@@ -81,12 +81,10 @@ class Card(db.Model):
         return i18n.card_text(self.number, 'name', self.name)
 
     def image_url(self):
-        """Image in the request language (→ en → any), or None."""
-        if not self.has_image:
-            return None
-        img_lang = card_images.resolve_lang(current_app.config['CARD_IMAGES_DIR'],
-                                            self.number, i18n.get_lang())
-        return f'/api/cards/images/{card_images.rel_path(img_lang, self.number)}' if img_lang else None
+        """Image in the request language (→ en → any) if the file exists on disk, or None."""
+        rel = card_images.resolve(current_app.config['CARD_IMAGES_DIR'],
+                                  self.number, i18n.get_lang())
+        return f'/api/cards/images/{rel}' if rel else None
 
     def to_card_object(self):
         d = {

@@ -617,7 +617,7 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
   position: fixed;
   z-index: 9999;
   pointer-events: none;
-  width: 160px;
+  width: min(260px, 45vw);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);

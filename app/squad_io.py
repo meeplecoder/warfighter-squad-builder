@@ -91,9 +91,9 @@ def _tts_image_url(card):
     base = (current_app.config.get('TTS_IMAGE_BASE_URL') or '').rstrip('/')
     if not base:
         return ''
-    lang = card_images.resolve_lang(current_app.config['CARD_IMAGES_DIR'],
-                                    card.number, i18n.get_lang()) or i18n.DEFAULT_LANG
-    return f'{base}/{card_images.rel_path(lang, card.number)}'
+    rel = (card_images.resolve(current_app.config['CARD_IMAGES_DIR'], card.number, i18n.get_lang())
+           or card_images.rel_path(i18n.DEFAULT_LANG, card.number))
+    return f'{base}/{rel}'
 
 
 def _tts_card(card, deck_id, x, z):
