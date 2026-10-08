@@ -936,9 +936,9 @@ async function renderSquadList(containerEl) {
 
   const { items, total, page, pages } = data;
   const userBtns = currentUser ? `
-    <button class="quick-filter ${f.mine ? 'active' : ''}" id="mine-filter">${esc(t('squads.tab_my'))}</button>
     <button class="quick-filter ${f.liked ? 'active' : ''}" id="liked-filter">♥ ${esc(t('squads.liked_by_me'))}</button>
-    <button class="quick-filter ${f.myModules ? 'active-accent' : ''}" id="my-modules-filter">${esc(t('squads.my_modules'))}</button>` : '';
+    <button class="quick-filter ${f.mine ? 'active-purple' : ''}" id="mine-filter">${esc(t('squads.tab_my'))}</button>
+    <button class="quick-filter ${f.myModules ? 'active-blue' : ''}" id="my-modules-filter">${esc(t('squads.my_modules'))}</button>` : '';
 
   const rows = items.map(s => {
     const own = currentUser && s.owner && s.owner.id === currentUser.id;
