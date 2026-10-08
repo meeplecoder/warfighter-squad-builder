@@ -206,7 +206,7 @@ def parse_stats(stats_str):
 # ---------------------------------------------------------------------------
 
 def check_has_image(images_dir, number):
-    """1 if any language has static/card_images/<lang>/<prefix>/<number>.jpg"""
+    """1 if any language has static/card_images/<lang>/<prefix>/<number>.jpg (lowercase)"""
     return 1 if card_images.resolve_lang(images_dir, number, i18n.DEFAULT_LANG) else 0
 
 

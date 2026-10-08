@@ -86,8 +86,7 @@ class Card(db.Model):
             img_lang = card_images.resolve_lang(current_app.config['CARD_IMAGES_DIR'],
                                                 self.number, i18n.get_lang())
             if img_lang:
-                image_url = (f'/api/cards/images/{img_lang}/'
-                             f'{card_images.prefix_of(self.number)}/{self.number}.jpg')
+                image_url = f'/api/cards/images/{card_images.rel_path(img_lang, self.number)}'
         d = {
             'id': self.id,
             'number': self.number,

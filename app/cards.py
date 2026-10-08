@@ -224,8 +224,8 @@ def update_custom_mission(card_id):
     return jsonify(card=card.to_card_detail())
 
 
-_PREFIX_RE = re.compile(r'^[A-Za-z0-9]+$')
-_FILENAME_RE = re.compile(r'^[A-Za-z0-9]+-\d+\.jpg$', re.IGNORECASE)
+_PREFIX_RE = re.compile(r'^[a-z0-9]+$')
+_FILENAME_RE = re.compile(r'^[a-z0-9]+-\d+\.jpg$')
 
 
 @cards_bp.route('/images/<lang>/<prefix>/<filename>')
