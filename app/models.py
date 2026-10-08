@@ -109,6 +109,8 @@ class Card(db.Model):
             'xp': self.xp or 0,
             'is_custom': self.module == CUSTOM_MODULE,
         }
+        if self.module == CUSTOM_MODULE:
+            d['owner_user_id'] = self.owner_user_id
         tr_status = i18n.card_status_for_admin(self.number)
         if tr_status is not None:
             d['translation_status'] = tr_status

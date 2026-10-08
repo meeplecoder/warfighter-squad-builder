@@ -149,48 +149,72 @@ _CUSTOM_MISSION_INTS = {
 }
 
 
-@cards_bp.route('/custom-missions', methods=['POST'])
-@login_required
-@limiter.limit('30 per hour')
-def create_custom_mission():
-    data = request.get_json(silent=True) or {}
+def _parse_custom_mission(data):
+    """Validate the popup payload → (card field dict, None) or (None, error message)."""
     name = (data.get('name') or '').strip()
     if not name or len(name) > 80:
-        return jsonify(error=_('Mission name is required (max 80 characters).')), 400
+        return None, _('Mission name is required (max 80 characters).')
     mission_type = data.get('mission_type') or 'Standard'
     theater = data.get('theater') or 'Europe'
     if mission_type not in CUSTOM_MISSION_TYPES or theater not in CUSTOM_MISSION_THEATERS:
-        return jsonify(error=_('Invalid mission type or theater.')), 400
+        return None, _('Invalid mission type or theater.')
     values = {}
     for field, (lo, hi, required) in _CUSTOM_MISSION_INTS.items():
         raw = data.get(field)
         if raw in (None, ''):
             if required:
-                return jsonify(error=_('{field} is required.', field=field)), 400
+                return None, _('{field} is required.', field=field)
             values[field] = 0 if field == 'loadout_modifier' else None
             continue
         try:
             v = int(raw)
         except (TypeError, ValueError):
-            return jsonify(error=_('{field} must be a number.', field=field)), 400
+            return None, _('{field} must be a number.', field=field)
         if not lo <= v <= hi:
-            return jsonify(error=_('{field} must be between {lo} and {hi}.', field=field, lo=lo, hi=hi)), 400
+            return None, _('{field} must be between {lo} and {hi}.', field=field, lo=lo, hi=hi)
         values[field] = v
     if values['time'] and values['objective_position'] and values['time'] <= values['objective_position']:
-        return jsonify(error=_('Turns must be greater than the objective location.')), 400
-
+        return None, _('Turns must be greater than the objective location.')
     prefix = 'Airborne Mission' if mission_type == 'Airborne' else 'Mission'
+    return dict(name=name, raw_type=f'{prefix} {theater}', card_subtype=mission_type,
+                notes=(data.get('notes') or '').strip()[:1000] or None, **values), None
+
+
+@cards_bp.route('/custom-missions', methods=['POST'])
+@login_required
+@limiter.limit('30 per hour')
+def create_custom_mission():
+    fields, err = _parse_custom_mission(request.get_json(silent=True) or {})
+    if err:
+        return jsonify(error=err), 400
     card = Card(
         number=f'CM-new-{current_user.id}-{os.urandom(4).hex()}',  # real number needs the id
-        name=name, raw_type=f'{prefix} {theater}', card_type='Mission', card_subtype=mission_type,
-        module=CUSTOM_MODULE, notes=(data.get('notes') or '').strip()[:1000] or None,
-        owner_user_id=current_user.id, **values,
+        card_type='Mission', module=CUSTOM_MODULE, owner_user_id=current_user.id, **fields,
     )
     db.session.add(card)
     db.session.flush()
     card.number = f'CM-{card.id}'
     db.session.commit()
     return jsonify(card=card.to_card_detail()), 201
+
+
+@cards_bp.route('/custom-missions/<int:card_id>', methods=['PUT'])
+@login_required
+@limiter.limit('60 per hour')
+def update_custom_mission(card_id):
+    """Owner edits their custom mission in place (affects every squad that uses it)."""
+    card = db.session.get(Card, card_id)
+    if not card or card.module != CUSTOM_MODULE:
+        return jsonify(error=_('Card not found.')), 404
+    if card.owner_user_id != current_user.id:
+        return jsonify(error=_('You can only edit your own custom missions.')), 403
+    fields, err = _parse_custom_mission(request.get_json(silent=True) or {})
+    if err:
+        return jsonify(error=err), 400
+    for k, v in fields.items():
+        setattr(card, k, v)
+    db.session.commit()
+    return jsonify(card=card.to_card_detail())
 
 
 _PREFIX_RE = re.compile(r'^[A-Za-z0-9]+$')

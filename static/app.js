@@ -2220,10 +2220,18 @@ function customMissionChip(m) {
 const CUSTOM_MISSION_TYPES = ['Standard', 'Raid', 'Holding Action', 'Hold the Line', 'Airborne', 'Shore Invasion'];
 const CUSTOM_MISSION_THEATERS = ['Europe', 'Russia', 'North Africa', 'Mediterranean', 'Jungle', 'Far East'];
 
-function openCustomMissionDialog() {
+async function openCustomMissionDialog() {
   if (!currentUser) { alert(t('custom.login_required')); return; }
-  const opts = (list, ns) => list.map(v => `<option value="${esc(v)}">${esc(tv(ns, v))}</option>`).join('');
-  const num = (id, label, attrs) => `<div class="form-field"><label for="${id}">${esc(label)}</label><input type="number" id="${id}" ${attrs}></div>`;
+  // A custom mission already selected → prefill. Its owner saves in place; renaming it creates a new one.
+  let base = builderState.missionCard?.is_custom ? builderState.missionCard : null;
+  if (base) { try { base = (await API.get('/cards/' + base.id)).card; } catch (_) {} }
+  const editable = !!base && base.owner_user_id === currentUser.id;
+  const theater = base ? (base.theater || 'Europe') : 'Europe';
+
+  const opts = (list, ns, sel) => list.map(v =>
+    `<option value="${esc(v)}"${v === sel ? ' selected' : ''}>${esc(tv(ns, v))}</option>`).join('');
+  const num = (id, label, attrs, v) => `<div class="form-field"><label for="${id}">${esc(label)}</label>` +
+    `<input type="number" id="${id}" ${attrs} value="${v ?? ''}"></div>`;
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
@@ -2231,41 +2239,55 @@ function openCustomMissionDialog() {
       <h2>${esc(t('custom.title'))}</h2>
       <p class="text-muted" style="font-size:12px">${esc(t('custom.hint'))}</p>
       <form id="cm-form" class="custom-mission-form">
-        <div class="form-field cm-wide"><label for="cm-name">${esc(t('custom.name'))}</label><input type="text" id="cm-name" maxlength="80" required></div>
-        <div class="form-field"><label for="cm-type">${esc(t('custom.type'))}</label><select id="cm-type">${opts(CUSTOM_MISSION_TYPES, 'card_subtype')}</select></div>
-        <div class="form-field"><label for="cm-theater">${esc(t('stat.theater'))}</label><select id="cm-theater">${opts(CUSTOM_MISSION_THEATERS, 'theater')}</select></div>
-        ${num('cm-rp', t('stat.rp_budget'), 'min="1" max="300" required')}
-        ${num('cm-time', t('stat.turns'), 'min="1" max="50"')}
-        ${num('cm-obj', t('stat.obj_location'), 'min="1" max="20"')}
-        ${num('cm-lm', t('stat.loadout_mod'), 'min="-10" max="10" value="0"')}
-        <div class="form-field cm-wide"><label for="cm-notes">${esc(t('custom.notes'))}</label><textarea id="cm-notes" rows="3" maxlength="1000" style="width:100%"></textarea></div>
+        <div class="form-field cm-wide"><label for="cm-name">${esc(t('custom.name'))}</label><input type="text" id="cm-name" maxlength="80" required value="${esc(base?.name_en ?? base?.name ?? '')}"></div>
+        <div class="form-field"><label for="cm-type">${esc(t('custom.type'))}</label><select id="cm-type">${opts(CUSTOM_MISSION_TYPES, 'card_subtype', base?.mission_type)}</select></div>
+        <div class="form-field"><label for="cm-theater">${esc(t('stat.theater'))}</label><select id="cm-theater">${opts(CUSTOM_MISSION_THEATERS, 'theater', theater)}</select></div>
+        ${num('cm-rp', t('stat.rp_budget'), 'min="1" max="300" required', base?.resources)}
+        ${num('cm-time', t('stat.turns'), 'min="1" max="50"', base?.time)}
+        ${num('cm-obj', t('stat.obj_location'), 'min="1" max="20"', base?.objective_position)}
+        ${num('cm-lm', t('stat.loadout_mod'), 'min="-10" max="10"', base ? (base.loadout_modifier ?? 0) : 0)}
+        <div class="form-field cm-wide"><label for="cm-notes">${esc(t('custom.notes'))}</label><textarea id="cm-notes" rows="3" maxlength="1000" style="width:100%">${esc(base?.notes_en ?? base?.notes ?? '')}</textarea></div>
+        <div id="cm-mode-hint" class="cm-wide text-muted" style="font-size:12px"></div>
         <div id="cm-msg" class="cm-wide"></div>
         <div class="cm-wide" style="display:flex;gap:6px;justify-content:flex-end">
           <button type="button" class="btn btn-ghost btn-sm" id="cm-cancel">${esc(t('common.cancel'))}</button>
-          <button type="submit" class="btn btn-primary btn-sm">${esc(t('custom.create'))}</button>
+          <button type="submit" class="btn btn-primary btn-sm" id="cm-submit"></button>
         </div>
       </form>
     </div>`;
   document.body.appendChild(overlay);
   const close = () => overlay.remove();
-  const val = id => overlay.querySelector('#' + id).value;
+  const $ = id => overlay.querySelector('#' + id);
+  const originalName = $('cm-name').value.trim();
+  // Save (update in place) only for the owner and while the name is unchanged
+  const isSave = () => editable && $('cm-name').value.trim() === originalName;
+  const syncMode = () => {
+    $('cm-submit').textContent = t(isSave() ? 'common.save' : 'custom.create');
+    $('cm-mode-hint').textContent = isSave() ? t('custom.save_hint')
+      : (base ? t(editable ? 'custom.rename_hint' : 'custom.copy_hint') : '');
+  };
+  syncMode();
+  $('cm-name').addEventListener('input', syncMode);
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
-  overlay.querySelector('#cm-cancel').addEventListener('click', close);
-  overlay.querySelector('#cm-name').focus();
-  overlay.querySelector('#cm-form').addEventListener('submit', async e => {
+  $('cm-cancel').addEventListener('click', close);
+  $('cm-name').focus();
+  $('cm-form').addEventListener('submit', async e => {
     e.preventDefault();
+    const body = {
+      name: $('cm-name').value, mission_type: $('cm-type').value, theater: $('cm-theater').value,
+      resources: $('cm-rp').value, time: $('cm-time').value, objective_position: $('cm-obj').value,
+      loadout_modifier: $('cm-lm').value, notes: $('cm-notes').value,
+    };
     try {
-      const r = await API.post('/cards/custom-missions', {
-        name: val('cm-name'), mission_type: val('cm-type'), theater: val('cm-theater'),
-        resources: val('cm-rp'), time: val('cm-time'), objective_position: val('cm-obj'),
-        loadout_modifier: val('cm-lm'), notes: val('cm-notes'),
-      });
+      const r = isSave()
+        ? await API.put('/cards/custom-missions/' + base.id, body)
+        : await API.post('/cards/custom-missions', body);
       builderState.missionCard = r.card;
       builderState.pickerMode = null;
       close();
       renderBuilder();
     } catch (err) {
-      overlay.querySelector('#cm-msg').innerHTML = alertHtml(err.error || t('common.failed'));
+      $('cm-msg').innerHTML = alertHtml(err.error || t('common.failed'));
     }
   });
 }

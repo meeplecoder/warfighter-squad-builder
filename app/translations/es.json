@@ -52,5 +52,6 @@
  "{field} is required.": "{field} es obligatorio.",
  "{field} must be a number.": "{field} debe ser un número.",
  "{field} must be between {lo} and {hi}.": "{field} debe estar entre {lo} y {hi}.",
- "Turns must be greater than the objective location.": "Los turnos deben ser más que la posición del objetivo."
+ "Turns must be greater than the objective location.": "Los turnos deben ser más que la posición del objetivo.",
+ "You can only edit your own custom missions.": "Solo puedes editar tus propias misiones personalizadas."
 }
