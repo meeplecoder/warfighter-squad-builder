@@ -107,6 +107,7 @@ class Card(db.Model):
             'image_url': image_url,
             'cx': self.cx or 0,
             'xp': self.xp or 0,
+            'is_custom': self.module == CUSTOM_MODULE,
         }
         tr_status = i18n.card_status_for_admin(self.number)
         if tr_status is not None:
@@ -241,6 +242,7 @@ class Squad(db.Model):
                 'id': self.mission_card.id,
                 'name': self.mission_card.display_name(),
                 'resources': self.mission_card.resources,
+                'is_custom': self.mission_card.module == CUSTOM_MODULE,
             },
             'objectives': [
                 {'id': so.card.id, 'name': so.card.display_name()}

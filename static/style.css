@@ -175,6 +175,7 @@ h3 { font-size: 1rem; font-weight: 600; }
 .chip-equipment { background: #1e2e3a; color: #6d9bbf; border-color: #2e4a5c; }
 .chip-skill   { background: #2e1e3a; color: #9b6dbf; border-color: #4a2e5c; }
 .chip-mission { background: #3a2e1e; color: #bf9b6d; border-color: #5c4a2e; }
+.chip-custom  { background: #2e2a3a; color: #b3a6e0; border-color: #4a425c; margin-left: 6px; vertical-align: middle; cursor: help; }
 .chip-hostile { background: #3a1e1e; color: #bf6d6d; border-color: #5c2e2e; }
 .chip-ps  { background: #1e3340; color: #68b5d4; }
 .chip-nps { background: #332211; color: #c9a45a; }

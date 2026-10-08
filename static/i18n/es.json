@@ -277,6 +277,8 @@
  "io.tts_tip": "Objeto guardado de Tabletop Simulator (.json)",
  "mention.hint_html": "Escribe <code>[[</code> para mencionar una carta.",
  "mention.unknown": "Carta no encontrada",
+ "mission.custom": "Personalizada",
+ "mission.custom_hint": "Misión personalizada creada por un usuario — no es una carta impresa.",
  "nav.builder": "Creador",
  "nav.cards": "Cartas",
  "nav.profile": "Perfil",

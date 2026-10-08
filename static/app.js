@@ -1029,7 +1029,7 @@ async function renderMySquads(containerEl) {
     <tr class="clickable" data-id="${s.id}">
       <td><strong>${esc(s.name)}</strong></td>
       <td>${esc(nationLabel(s.nation))}</td>
-      <td>${s.mission ? `${esc(s.mission.name)} <span class="text-muted">· ${s.mission.resources} ${esc(t('stat.rp'))}</span>` : '—'}</td>
+      <td>${s.mission ? `${esc(s.mission.name)}${customMissionChip(s.mission)} <span class="text-muted">· ${s.mission.resources} ${esc(t('stat.rp'))}</span>` : '—'}</td>
       <td>${s.rp_total}</td>
       <td>${s.likes_count} ♥</td>
       <td><span class="${s.status === 'draft' ? 'badge badge-draft' : 'badge badge-ok'}">${esc(tv('squad_status', s.status))}</span></td>
@@ -1109,7 +1109,7 @@ async function renderCommunitySquads(containerEl) {
     <tr class="clickable" data-id="${s.id}">
       <td><strong>${esc(s.name)}</strong></td>
       <td>${esc(nationLabel(s.nation))}</td>
-      <td>${s.mission ? `${esc(s.mission.name)} <span class="text-muted">· ${s.mission.resources} ${esc(t('stat.rp'))}</span>` : '—'}</td>
+      <td>${s.mission ? `${esc(s.mission.name)}${customMissionChip(s.mission)} <span class="text-muted">· ${s.mission.resources} ${esc(t('stat.rp'))}</span>` : '—'}</td>
       <td>${s.rp_total}</td>
       <td>${s.likes_count} ♥</td>
       <td>${esc(s.owner ? s.owner.username : '—')}</td>
@@ -1378,7 +1378,7 @@ async function showSquadDetail(squadId) {
           const isFortified = squad.objectives?.some(o => o.objective_family === 'Fortification');
           return `
             <div class="mission-name">
-              <span ${cardImageAttr(m)}>${esc(m.name)}</span>
+              <span ${cardImageAttr(m)}>${esc(m.name)}</span>${customMissionChip(m)}
               ${m.nation ? `<span class="chip chip-mission" style="margin-left:6px;vertical-align:middle">${esc(tv('nation', m.nation))}</span>` : ''}
             </div>
             <div class="mission-meta-row">
@@ -1386,7 +1386,7 @@ async function showSquadDetail(squadId) {
               ${isFortified ? `<span class="obj-type-badge" style="background:#7f1d1d">${esc(tv('card_subtype', 'Fortification'))}</span>` : ''}
               ${m.theater ? `<span class="text-muted" style="font-size:12px">${esc(tv('theater', m.theater))}</span>` : ''}
             </div>
-            ${m.module ? `<div class="mission-subtitle">${esc(tv('module', m.module))}</div>` : ''}
+            ${m.module && !m.is_custom ? `<div class="mission-subtitle">${esc(tv('module', m.module))}</div>` : ''}
             <div class="mission-rp-track"><div class="mission-rp-fill ${over ? 'over' : ''}" style="width:${pct}%"></div></div>
             <div class="mission-rp-row">
               <span class="${over ? 'text-danger' : ''}">${rp} / ${budget} ${esc(t('stat.rp'))}</span>
@@ -2001,7 +2001,7 @@ function renderBuilder() {
                 return `<div class="flex justify-between items-center">
                   <span>
                     ${bmColor ? `<span class="obj-type-badge" style="background:${bmColor}">${esc(tv('card_subtype', mc.card_subtype))}</span>` : ''}
-                    <span ${cardImageAttr(mc)}><strong>${esc(mc.name)}</strong></span>
+                    <span ${cardImageAttr(mc)}><strong>${esc(mc.name)}</strong></span>${customMissionChip(mc)}
                   </span>
                   <span class="flex" style="gap:6px">
                     <button class="btn btn-sm btn-ghost" id="change-mission-btn">${esc(t('common.change'))}</button>
@@ -2206,6 +2206,13 @@ function _pickerTitle(mode) {
     }),
   };
   return titles[mode] || '';
+}
+
+// Marks a user-made mission (module 'Custom') wherever a mission is shown
+function customMissionChip(m) {
+  return m?.is_custom
+    ? ` <span class="chip chip-custom" title="${esc(t('mission.custom_hint'))}">${esc(t('mission.custom'))}</span>`
+    : '';
 }
 
 // Custom mission: generic mission parameters → saved as a 'Custom' Mission card (CM-<id>)

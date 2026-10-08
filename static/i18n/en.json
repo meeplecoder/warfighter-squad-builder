@@ -141,6 +141,8 @@
  "io.tts_tip": "Tabletop Simulator saved object (.json)",
  "mention.hint_html": "Type <code>[[</code> to mention a card.",
  "mention.unknown": "Card not found",
+ "mission.custom": "Custom",
+ "mission.custom_hint": "Custom mission created by a user — not a printed card.",
  "nav.builder": "Builder",
  "nav.cards": "Cards",
  "nav.profile": "Profile",
