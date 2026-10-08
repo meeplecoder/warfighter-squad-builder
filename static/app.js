@@ -199,11 +199,6 @@ function trMarker(card) {
   return `<span class="tr-marker tr-${st}" title="${esc(t('tr.marker.' + st))}">⚑</span>`;
 }
 
-function cardImageAttr(card) {
-  if (!card || !card.image_url) return '';
-  return `data-card-image-url="${esc(card.image_url)}"`;
-}
-
 // ---------------------------------------------------------------------------
 // Card mentions: [[W-001]] / [[Card name]] in notes and comments (backend: app/mentions.py)
 // ---------------------------------------------------------------------------
@@ -239,7 +234,7 @@ function attachMentionAutocomplete(ta) {
     if (!items.length) { close(); return; }
     box.innerHTML = items.map((c, i) =>
       `<div class="mention-item ${i === active ? 'active' : ''}" data-i="${i}">
-        <span>${esc(c.name)}</span> <span class="text-muted">${esc(tv('card_type', c.card_type))} · ${esc(c.number)}</span>
+        ${cardName(c)} <span class="text-muted">${esc(tv('card_type', c.card_type))} · ${esc(c.number)}</span>
       </div>`).join('');
     box.hidden = false;
   };
@@ -323,65 +318,6 @@ function paginationHtml(page, pages, onNav) {
       <button class="btn btn-sm btn-ghost" ${page >= pages ? 'disabled' : ''} data-pg="${page + 1}">${esc(t('common.next'))} ▶</button>
     </div>`;
 }
-
-// ---------------------------------------------------------------------------
-// Card Image Hover Tooltip
-// ---------------------------------------------------------------------------
-let thumbTimer = null;
-let thumbVisible = false;
-let lastMouse = { x: 0, y: 0 };
-const thumb = document.getElementById('card-thumb');
-
-function showThumb(url) {
-  thumb.innerHTML = `<img src="${esc(url)}" alt="card">`;
-  thumb.style.display = 'block';
-  thumbVisible = true;
-  positionThumb();
-}
-
-function hideThumb() {
-  thumb.style.display = 'none';
-  thumbVisible = false;
-}
-
-function positionThumb() {
-  const { x, y } = lastMouse;
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  const w = 160 + 2;  // thumb width + border
-  const h = 240;       // estimated height
-
-  let left = x + 16;
-  let top = y - h / 2;
-
-  if (left + w > vw - 8) left = x - w - 8;
-  if (top < 8) top = 8;
-  if (top + h > vh - 8) top = vh - h - 8;
-
-  thumb.style.left = left + 'px';
-  thumb.style.top = top + 'px';
-}
-
-document.addEventListener('mousemove', e => {
-  lastMouse = { x: e.clientX, y: e.clientY };
-  if (thumbVisible) positionThumb();
-});
-
-document.addEventListener('mouseover', e => {
-  const el = e.target.closest('[data-card-image-url]');
-  clearTimeout(thumbTimer);
-  if (!el || !el.dataset.cardImageUrl) { hideThumb(); return; }
-  const url = el.dataset.cardImageUrl;
-  thumbTimer = setTimeout(() => showThumb(url), 200);
-});
-
-document.addEventListener('mouseout', e => {
-  const to = e.relatedTarget;
-  if (!to || !to.closest('[data-card-image-url]')) {
-    clearTimeout(thumbTimer);
-    hideThumb();
-  }
-});
 
 // ---------------------------------------------------------------------------
 // Lightbox
@@ -1029,7 +965,7 @@ async function renderMySquads(containerEl) {
     <tr class="clickable" data-id="${s.id}">
       <td><strong>${esc(s.name)}</strong></td>
       <td>${esc(nationLabel(s.nation))}</td>
-      <td>${s.mission ? `${esc(s.mission.name)}${customMissionChip(s.mission)} <span class="text-muted">· ${s.mission.resources} ${esc(t('stat.rp'))}</span>` : '—'}</td>
+      <td>${s.mission ? `${cardName(s.mission)}${customMissionChip(s.mission)} <span class="text-muted">· ${s.mission.resources} ${esc(t('stat.rp'))}</span>` : '—'}</td>
       <td>${s.rp_total}</td>
       <td>${s.likes_count} ♥</td>
       <td><span class="${s.status === 'draft' ? 'badge badge-draft' : 'badge badge-ok'}">${esc(tv('squad_status', s.status))}</span></td>
@@ -1109,7 +1045,7 @@ async function renderCommunitySquads(containerEl) {
     <tr class="clickable" data-id="${s.id}">
       <td><strong>${esc(s.name)}</strong></td>
       <td>${esc(nationLabel(s.nation))}</td>
-      <td>${s.mission ? `${esc(s.mission.name)}${customMissionChip(s.mission)} <span class="text-muted">· ${s.mission.resources} ${esc(t('stat.rp'))}</span>` : '—'}</td>
+      <td>${s.mission ? `${cardName(s.mission)}${customMissionChip(s.mission)} <span class="text-muted">· ${s.mission.resources} ${esc(t('stat.rp'))}</span>` : '—'}</td>
       <td>${s.rp_total}</td>
       <td>${s.likes_count} ♥</td>
       <td>${esc(s.owner ? s.owner.username : '—')}</td>

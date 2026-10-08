@@ -59,6 +59,7 @@ def _objective_detail(oc):
     return {
         'id': oc.id,
         'name': oc.display_name(),
+        'image_url': oc.image_url(),
         'nation': oc.nation,
         'module': oc.module,
         'theater': theater_from_raw_type(oc.raw_type or ''),
@@ -72,7 +73,8 @@ def _objective_detail(oc):
 def _squad_detail(squad, liked_by_me=False):
     base = squad.to_summary(liked_by_me=liked_by_me)
     sc_card = squad.situation_card
-    situation = {'id': sc_card.id, 'name': sc_card.display_name(), 'nation': sc_card.nation, 'module': sc_card.module} if sc_card else None
+    situation = {'id': sc_card.id, 'name': sc_card.display_name(), 'nation': sc_card.nation, 'module': sc_card.module,
+                 'image_url': sc_card.image_url()} if sc_card else None
     base['situation'] = situation
     base['objectives'] = [_objective_detail(so.card) for so in squad.objectives]
     base['notes'] = squad.notes

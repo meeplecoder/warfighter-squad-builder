@@ -298,7 +298,7 @@ function renderCampaignMissionEditor(m, i) {
       <div class="ce-mission-head">
         <button class="btn btn-sm btn-ghost ce-toggle" data-act="toggle" data-mi="${i}">${m._open ? '▾' : '▸'}</button>
         <strong class="ce-mission-title">${esc(missionLabel(m, i))}</strong>
-        ${card ? `<span class="text-muted" style="font-size:12px">${esc(card.name)}${customMissionChip(card)}</span>`
+        ${card ? `<span class="text-muted" style="font-size:12px">${cardName(card)}${customMissionChip(card)}</span>`
                : `<span class="text-danger" style="font-size:12px">${esc(t('campaign.no_card'))}</span>`}
         ${st.flow_type === 'branching' && m.is_entry ? `<span class="chip chip-entry">${esc(t('campaign.entry'))}</span>` : ''}
         <span style="flex:1"></span>
@@ -322,7 +322,7 @@ function renderCampaignMissionEditor(m, i) {
             <button class="btn btn-sm btn-ghost" data-act="pick-obj" data-mi="${i}">${esc(t(m.objective ? 'common.change' : 'campaign.add_objective'))}</button>
           </div>`)}
         ${ceField(t('squad.situation'), `<div class="flex" style="gap:6px;align-items:center">
-            ${m.situation ? `<span class="chip">${esc(m.situation.name)} <a href="#" data-act="del-sit" data-mi="${i}">✕</a></span>` : ''}
+            ${m.situation ? `<span class="chip" ${cardImageAttr(m.situation)}>${esc(m.situation.name)} <a href="#" data-act="del-sit" data-mi="${i}">✕</a></span>` : ''}
             <button class="btn btn-sm btn-ghost" data-act="pick-sit" data-mi="${i}">${esc(t(m.situation ? 'common.change' : 'campaign.add_situation'))}</button>
           </div>`)}
         ${ceField(t('campaign.squad'), `<select data-ce-squad="${i}">${squadOpts}</select>`)}
@@ -582,8 +582,8 @@ function openCampaignCardPicker(category, onPick) {
       if (my !== req) return;
       items = data.items;
       results.innerHTML = items.length ? items.map((c, i) => `
-        <div class="cp-row" data-i="${i}" ${cardImageAttr(c)}>
-          <strong>${esc(c.name)}</strong>${customMissionChip(c)}
+        <div class="cp-row" data-i="${i}">
+          <strong ${cardImageAttr(c)}>${esc(c.name)}</strong>${customMissionChip(c)}
           <span class="text-muted">${esc(tv('module', c.module))}${c.resources != null ? ` · ${c.resources} ${esc(t('stat.rp'))}` : ''}${c.objective_mechanic ? ` · ${esc(tv('card_subtype', c.objective_mechanic))}` : ''}</span>
         </div>`).join('') : `<div class="text-muted" style="padding:12px">${esc(t('campaign.pick_none'))}</div>`;
       results.querySelectorAll('.cp-row').forEach(row => row.addEventListener('click', async () => {

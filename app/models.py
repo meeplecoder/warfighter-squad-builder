@@ -80,13 +80,15 @@ class Card(db.Model):
         """Card name in the request language (falls back to English)."""
         return i18n.card_text(self.number, 'name', self.name)
 
+    def image_url(self):
+        """Image in the request language (→ en → any), or None."""
+        if not self.has_image:
+            return None
+        img_lang = card_images.resolve_lang(current_app.config['CARD_IMAGES_DIR'],
+                                            self.number, i18n.get_lang())
+        return f'/api/cards/images/{card_images.rel_path(img_lang, self.number)}' if img_lang else None
+
     def to_card_object(self):
-        image_url = None
-        if self.has_image:
-            img_lang = card_images.resolve_lang(current_app.config['CARD_IMAGES_DIR'],
-                                                self.number, i18n.get_lang())
-            if img_lang:
-                image_url = f'/api/cards/images/{card_images.rel_path(img_lang, self.number)}'
         d = {
             'id': self.id,
             'number': self.number,
@@ -110,7 +112,7 @@ class Card(db.Model):
             'entrance_cost': self.entrance_cost,
             'action_cost_hth': self.action_cost_hth,
             'objective_family': self.objective_family,
-            'image_url': image_url,
+            'image_url': self.image_url(),
             'cx': self.cx or 0,
             'xp': self.xp or 0,
             'is_custom': self.module == CUSTOM_MODULE,
@@ -250,6 +252,7 @@ class Squad(db.Model):
                 'id': self.mission_card.id,
                 'name': self.mission_card.display_name(),
                 'resources': self.mission_card.resources,
+                'image_url': self.mission_card.image_url(),
                 'is_custom': self.mission_card.module == CUSTOM_MODULE,
             },
             'objectives': [
