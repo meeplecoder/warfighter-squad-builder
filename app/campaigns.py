@@ -66,8 +66,8 @@ def _detail(c):
     for m in c.missions:
         mission = _card(m.mission_card_id)
         situation = _card(m.situation_card_id)
-        objectives = [o for o in (_card(i) for i in m.objective_ids()) if o]
-        for card in [mission, situation, *objectives]:
+        objective = _card(m.objective_card_id)
+        for card in [mission, situation, objective]:
             if card and card['module'] != CUSTOM_MODULE:
                 modules.add(card['module'])
         squad = m.squad if _squad_viewable(m.squad) else None
@@ -75,7 +75,7 @@ def _detail(c):
         missions.append({
             'id': m.id, 'key': str(m.id), 'code': m.code, 'title': m.title,
             'briefing': m.briefing, 'debrief': m.debrief,
-            'mission': mission, 'situation': situation, 'objectives': objectives,
+            'mission': mission, 'situation': situation, 'objective': objective,
             'squad': {'id': squad.id, 'name': squad.name, 'nation': squad.nation, 'rp_total': squad.rp_total}
                      if squad else None,
             'rp_override': m.rp_override, 'time_override': m.time_override,
@@ -147,12 +147,9 @@ def _parse(data):
         sc_id = m.get('situation_card_id')
         sc = db.session.get(Card, int(sc_id)) if sc_id else None
         row['situation_card_id'] = sc.id if sc and sc.card_type == 'Situation' else None
-        obj_ids = []
-        for oid in (m.get('objective_card_ids') or [])[:10]:
-            oc = db.session.get(Card, int(oid))
-            if oc and oc.card_type == 'Objective' and oc.id not in obj_ids:
-                obj_ids.append(oc.id)
-        row['objective_card_ids'] = json.dumps(obj_ids)
+        oc_id = m.get('objective_card_id')
+        oc = db.session.get(Card, int(oc_id)) if oc_id else None
+        row['objective_card_id'] = oc.id if oc and oc.card_type == 'Objective' else None
         sq_id = m.get('squad_id')
         sq = db.session.get(Squad, int(sq_id)) if sq_id else None
         row['squad_id'] = sq.id if _squad_viewable(sq) else None

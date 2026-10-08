@@ -167,8 +167,8 @@ async function showCampaignDetail(id) {
         ${card ? `<div class="campaign-mission-card"><span ${cardImageAttr(card)}><a href="#/cards/${card.id}">${esc(card.name)}</a></span>${customMissionChip(card)}
           ${card.mission_type && card.mission_type !== 'Standard' ? `<span class="obj-type-badge" style="margin-left:6px">${esc(tv('card_subtype', card.mission_type))}</span>` : ''}
           <span class="text-muted" style="font-size:12px;margin-left:6px">${stats}</span></div>` : ''}
-        ${m.objectives.length ? `<div class="campaign-mission-meta"><span class="text-muted">${esc(t('campaign.objectives'))}:</span>
-          ${m.objectives.map(o => `<span ${cardImageAttr(o)}><a href="#/cards/${o.id}">${esc(o.name)}</a></span>`).join(', ')}</div>` : ''}
+        ${m.objective ? `<div class="campaign-mission-meta"><span class="text-muted">${esc(t('campaign.objective'))}:</span>
+          <span ${cardImageAttr(m.objective)}><a href="#/cards/${m.objective.id}">${esc(m.objective.name)}</a></span></div>` : ''}
         ${m.situation ? `<div class="campaign-mission-meta"><span class="text-muted">${esc(t('squad.situation'))}:</span>
           <span ${cardImageAttr(m.situation)}><a href="#/cards/${m.situation.id}">${esc(m.situation.name)}</a></span></div>` : ''}
         ${m.squad ? `<div class="campaign-mission-meta"><span class="text-muted">${esc(t('campaign.squad'))}:</span>
@@ -236,7 +236,7 @@ let _campaignKeySeq = 0;
 const newMissionKey = () => 'n' + (++_campaignKeySeq) + '-' + Date.now().toString(36);
 
 function emptyCampaignMission() {
-  return { key: newMissionKey(), code: '', title: '', mission: null, situation: null, objectives: [], squad: null,
+  return { key: newMissionKey(), code: '', title: '', mission: null, situation: null, objective: null, squad: null,
            rp_override: null, time_override: null, loadout_override: null, is_entry: false,
            briefing: '', requirements: '', setup: '', victory: '', rewards: '', debrief: '', _open: true };
 }
@@ -317,10 +317,10 @@ function renderCampaignMissionEditor(m, i) {
             <button class="btn btn-sm btn-ghost" data-act="pick-mission" data-mi="${i}">${esc(t(card ? 'common.change' : 'builder.select_mission'))}</button>
             <button class="btn btn-sm btn-ghost" data-act="custom-mission" data-mi="${i}">${esc(t('builder.custom_mission'))}</button>
           </div>`, true)}
-        ${ceField(t('campaign.objectives'), `<div class="flex" style="gap:6px;flex-wrap:wrap;align-items:center">
-            ${m.objectives.map((o, oi) => `<span class="chip">${esc(o.name)} <a href="#" data-act="del-obj" data-mi="${i}" data-oi="${oi}">✕</a></span>`).join('')}
-            <button class="btn btn-sm btn-ghost" data-act="pick-obj" data-mi="${i}">+ ${esc(t('campaign.add_objective'))}</button>
-          </div>`, true)}
+        ${ceField(t('campaign.objective'), `<div class="flex" style="gap:6px;align-items:center">
+            ${m.objective ? `<span class="chip" ${cardImageAttr(m.objective)}>${esc(m.objective.name)} <a href="#" data-act="del-obj" data-mi="${i}">✕</a></span>` : ''}
+            <button class="btn btn-sm btn-ghost" data-act="pick-obj" data-mi="${i}">${esc(t(m.objective ? 'common.change' : 'campaign.add_objective'))}</button>
+          </div>`)}
         ${ceField(t('squad.situation'), `<div class="flex" style="gap:6px;align-items:center">
             ${m.situation ? `<span class="chip">${esc(m.situation.name)} <a href="#" data-act="del-sit" data-mi="${i}">✕</a></span>` : ''}
             <button class="btn btn-sm btn-ghost" data-act="pick-sit" data-mi="${i}">${esc(t(m.situation ? 'common.change' : 'campaign.add_situation'))}</button>
@@ -487,7 +487,7 @@ function campaignEditorAction(act, d) {
       break;
     }
     case 'dup': {
-      const copy = { ...m, key: newMissionKey(), objectives: [...m.objectives], is_entry: false, _open: true,
+      const copy = { ...m, key: newMissionKey(), is_entry: false, _open: true,
                      title: m.title ? `${m.title} (${t('campaign.copy')})` : '' };
       st.missions.splice(i + 1, 0, copy);
       break;
@@ -504,10 +504,10 @@ function campaignEditorAction(act, d) {
       openCustomMissionDialog({ current: m.mission, onSaved: card => { m.mission = card; renderCampaignEditor(); } }); return;
     case 'pick-obj':
       openCampaignCardPicker('Objective', card => {
-        if (!m.objectives.some(o => o.id === card.id)) m.objectives.push(card);
+        m.objective = card;
         renderCampaignEditor();
       }); return;
-    case 'del-obj': m.objectives.splice(+d.oi, 1); break;
+    case 'del-obj': m.objective = null; break;
     case 'pick-sit': openCampaignCardPicker('Situation', card => { m.situation = card; renderCampaignEditor(); }); return;
     case 'del-sit': m.situation = null; break;
     case 'add-link': {
@@ -536,7 +536,7 @@ async function saveCampaign(status) {
                 rules: st.rules.map(({ title, body }) => ({ title, body })), outcomes: st.outcomes },
     missions: st.missions.map(m => ({
       key: m.key, code: m.code, title: m.title, mission_card_id: m.mission?.id || null,
-      situation_card_id: m.situation?.id || null, objective_card_ids: m.objectives.map(o => o.id),
+      situation_card_id: m.situation?.id || null, objective_card_id: m.objective?.id || null,
       squad_id: m.squad?.id || null, rp_override: m.rp_override, time_override: m.time_override,
       loadout_override: m.loadout_override, is_entry: !!m.is_entry,
       briefing: m.briefing, requirements: m.requirements, setup: m.setup, victory: m.victory,

@@ -167,6 +167,16 @@ def create_app():
             except Exception:
                 pass  # Column already exists
 
+            # Campaign missions: one objective (was a JSON list objective_card_ids)
+            try:
+                conn.execute(db.text("ALTER TABLE campaign_missions ADD COLUMN objective_card_id INTEGER REFERENCES cards(id)"))
+                conn.execute(db.text(
+                    "UPDATE campaign_missions SET objective_card_id = CAST(json_extract(objective_card_ids, '$[0]') AS INTEGER) "
+                    "WHERE objective_card_ids IS NOT NULL AND json_array_length(objective_card_ids) > 0"))
+                conn.commit()
+            except Exception:
+                pass  # Column already exists (or fresh table created with it)
+
             # "Based on" link between squads (copy / fork)
             try:
                 conn.execute(db.text(

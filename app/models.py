@@ -423,7 +423,7 @@ class CampaignMission(db.Model):
     debrief = db.Column(db.Text)             # post-read
     mission_card_id = db.Column(db.Integer, db.ForeignKey('cards.id'), index=True)
     situation_card_id = db.Column(db.Integer, db.ForeignKey('cards.id'))
-    objective_card_ids = db.Column(db.Text)  # JSON list of card ids
+    objective_card_id = db.Column(db.Integer, db.ForeignKey('cards.id'))  # one objective per mission
     squad_id = db.Column(db.Integer, db.ForeignKey('squads.id', ondelete='SET NULL'))
     rp_override = db.Column(db.Integer)
     time_override = db.Column(db.Integer)
@@ -438,11 +438,6 @@ class CampaignMission(db.Model):
     situation_card = db.relationship('Card', foreign_keys=[situation_card_id])
     squad = db.relationship('Squad')
 
-    def objective_ids(self):
-        try:
-            return [int(i) for i in json.loads(self.objective_card_ids or '[]')]
-        except (ValueError, TypeError):
-            return []
 
 
 class CampaignLink(db.Model):
