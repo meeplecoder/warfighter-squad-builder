@@ -58,6 +58,7 @@ class Card(db.Model):
     xp = db.Column('soldier_xp', db.Integer, nullable=False, default=0)  # XP = Experience Points (pre-printed)
     # Custom (user-made) cards — module CUSTOM_MODULE, number 'CM-<id>'. Excluded from the catalog.
     owner_user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), index=True)
+    created_at = db.Column(db.Text)  # custom cards only — grace period for orphan cleanup
 
     @classmethod
     def catalog(cls):

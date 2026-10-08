@@ -7,7 +7,8 @@ from sqlalchemy import or_, and_, case, func
 from sqlalchemy.orm import aliased
 from app import db, limiter, i18n
 from app.i18n import _
-from app.models import Card, CardTranslation, CUSTOM_MODULE
+from app.models import Card, CardTranslation, CUSTOM_MODULE, now_utc
+from app import custom_missions
 from app import smart_filter
 from app.utils import nation_filter_clause
 
@@ -184,16 +185,22 @@ def _parse_custom_mission(data):
 @login_required
 @limiter.limit('30 per hour')
 def create_custom_mission():
-    fields, err = _parse_custom_mission(request.get_json(silent=True) or {})
+    data = request.get_json(silent=True) or {}
+    fields, err = _parse_custom_mission(data)
     if err:
         return jsonify(error=err), 400
     card = Card(
         number=f'CM-new-{current_user.id}-{os.urandom(4).hex()}',  # real number needs the id
-        card_type='Mission', module=CUSTOM_MODULE, owner_user_id=current_user.id, **fields,
+        card_type='Mission', module=CUSTOM_MODULE, owner_user_id=current_user.id,
+        created_at=now_utc(), **fields,
     )
     db.session.add(card)
     db.session.flush()
     card.number = f'CM-{card.id}'
+    # The builder's previous custom mission (renamed → new card): drop it if no squad uses it
+    if data.get('replaces'):
+        custom_missions.purge([int(data['replaces'])], owner_id=current_user.id)
+    custom_missions.purge()
     db.session.commit()
     return jsonify(card=card.to_card_detail()), 201
 

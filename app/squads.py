@@ -12,6 +12,7 @@ from app import rules as rules_module
 from app import squad_io
 from app import mentions
 from app import required_modules
+from app import custom_missions
 from app.utils import classify_objective_type, theater_from_raw_type
 from app import i18n
 from app.i18n import _
@@ -417,6 +418,7 @@ def update_squad(squad_id):
         return jsonify(error=_('Squad has validation errors.'), validation=validation), 422
 
     objective_ids = [int(i) for i in (data.get('objective_card_ids') or []) if i]
+    old_mission_id = squad.mission_card_id
     squad.name = (data.get('name') or '').strip() or squad.name
     squad.mission_card_id = data['mission_card_id']
     squad.situation_card_id = data.get('situation_card_id')
@@ -429,6 +431,9 @@ def update_squad(squad_id):
 
     _save_objectives(squad, objective_ids)
     _save_squad(squad, data, data.get('soldiers', []))
+    db.session.flush()
+    if old_mission_id != squad.mission_card_id:
+        custom_missions.purge([old_mission_id])
     db.session.commit()
     return jsonify(squad=_squad_detail(squad))
 
@@ -481,7 +486,10 @@ def delete_squad(squad_id):
         return jsonify(error=_('Not authorized.')), 403
     # SQLite FK enforcement is off: unlink copies by hand
     Squad.query.filter_by(parent_squad_id=squad.id).update({Squad.parent_squad_id: None})
+    mission_id = squad.mission_card_id
     db.session.delete(squad)
+    db.session.flush()
+    custom_missions.purge([mission_id])
     db.session.commit()
     return jsonify(ok=True)
 

@@ -2278,6 +2278,8 @@ async function openCustomMissionDialog() {
       resources: $('cm-rp').value, time: $('cm-time').value, objective_position: $('cm-obj').value,
       loadout_modifier: $('cm-lm').value, notes: $('cm-notes').value,
     };
+    // Renamed own mission → new card; the server drops the old one if no squad uses it
+    if (editable && !isSave()) body.replaces = base.id;
     try {
       const r = isSave()
         ? await API.put('/cards/custom-missions/' + base.id, body)

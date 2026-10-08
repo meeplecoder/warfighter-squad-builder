@@ -159,6 +159,11 @@ def create_app():
                 conn.commit()
             except Exception:
                 pass  # Column already exists
+            try:
+                conn.execute(db.text("ALTER TABLE cards ADD COLUMN created_at TEXT"))
+                conn.commit()
+            except Exception:
+                pass  # Column already exists
 
             # "Based on" link between squads (copy / fork)
             try:
@@ -238,5 +243,11 @@ def create_app():
             from flask import abort
             abort(404)
         return send_from_directory('../static', 'index.html')
+
+    # Drop custom missions no squad uses (older than the grace period)
+    with app.app_context():
+        from app import custom_missions
+        if custom_missions.purge():
+            db.session.commit()
 
     return app
