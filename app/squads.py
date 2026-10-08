@@ -16,6 +16,8 @@ from app import custom_missions
 from app.utils import classify_objective_type, theater_from_raw_type
 from app import i18n
 from app.i18n import _
+from app.smart_filter import tokenize, _text_cond
+from app.models import User
 
 squads_bp = Blueprint('squads', __name__)
 
@@ -207,6 +209,39 @@ def _save_squad(squad, data, soldiers_payload):
             db.session.add(sg)
 
 
+def _squad_search_conds(q):
+    """Squad list search: every word (or "quoted phrase") must match one of squad name,
+    nation (code or label in any language), owner username, team RP (exact number), or the
+    name (English or request language) of any card in the squad — mission, objectives,
+    situation, soldiers, gear. Accent/case-insensitive."""
+    lang = i18n.get_lang()
+    conds = []
+    for tok in tokenize(q):
+        like = f'%{i18n.fold(tok)}%'
+        cards = db.session.query(Card.id).filter(_text_cond('name', tok, lang))
+        needle = i18n.fold(tok)
+        nations = [n for (n,) in db.session.query(Squad.nation).distinct()
+                   if n and any(needle in i18n.fold(l) for l in i18n.enum_labels_all('nation', n))]
+        alts = [
+            func.fold(Squad.name).like(like),
+            Squad.user_id.in_(db.session.query(User.id).filter(func.fold(User.username).like(like))),
+            Squad.mission_card_id.in_(cards),
+            Squad.objective_card_id.in_(cards),
+            Squad.situation_card_id.in_(cards),
+            Squad.id.in_(db.session.query(SquadObjective.squad_id).filter(SquadObjective.card_id.in_(cards))),
+            Squad.id.in_(db.session.query(SquadSoldier.squad_id).filter(SquadSoldier.card_id.in_(cards))),
+            Squad.id.in_(db.session.query(SquadSoldier.squad_id)
+                         .join(SquadGear, SquadGear.squad_soldier_id == SquadSoldier.id)
+                         .filter(SquadGear.card_id.in_(cards))),
+        ]
+        if nations:
+            alts.append(Squad.nation.in_(nations))
+        if tok.isdigit():
+            alts.append(Squad.rp_total == int(tok))
+        conds.append(or_(*alts))
+    return conds
+
+
 @squads_bp.route('', methods=['GET'])
 @squads_bp.route('/', methods=['GET'])
 def list_squads():
@@ -236,7 +271,7 @@ def list_squads():
         query = query.filter(Squad.status == 'published')
 
     if q:
-        query = query.filter(Squad.name.ilike(f'%{q}%'))
+        query = query.filter(*_squad_search_conds(q))
     if user_id:
         query = query.filter(Squad.user_id == user_id)
     if nation:
