@@ -21,6 +21,7 @@ except ImportError:
 
 from app import create_app, db
 from app.models import Card
+from app import card_images, i18n
 import json
 from app.utils import classify_objective_type, classify_objective_family, build_objective_subtype, classify_mission_type, parse_hostile_spawn_table, strip_hostile_spawn_table, parse_health_actions_table, strip_health_actions_table, parse_hardy_markers, strip_hardy_markers, parse_weapon_tables, strip_weapon_tables
 
@@ -204,16 +205,9 @@ def parse_stats(stats_str):
 # Image detection
 # ---------------------------------------------------------------------------
 
-IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.webp']
-
-
 def check_has_image(images_dir, number):
-    if not os.path.isdir(images_dir):
-        return 0
-    for ext in IMAGE_EXTS:
-        if os.path.isfile(os.path.join(images_dir, number + ext)):
-            return 1
-    return 0
+    """1 if any language has static/card_images/<lang>/<prefix>/<number>.jpg"""
+    return 1 if card_images.resolve_lang(images_dir, number, i18n.DEFAULT_LANG) else 0
 
 
 # ---------------------------------------------------------------------------

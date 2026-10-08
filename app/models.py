@@ -3,7 +3,8 @@ from flask_login import UserMixin
 from app import db
 import json
 from app.utils import classify_objective_type, classify_objective_family, theater_from_raw_type
-from app import i18n
+from app import i18n, card_images
+from flask import current_app
 
 
 def now_utc():
@@ -80,8 +81,13 @@ class Card(db.Model):
         return i18n.card_text(self.number, 'name', self.name)
 
     def to_card_object(self):
-        prefix = self.number.split('-')[0]
-        image_url = f'/api/cards/images/{prefix}/{self.number}.jpg' if self.has_image else None
+        image_url = None
+        if self.has_image:
+            img_lang = card_images.resolve_lang(current_app.config['CARD_IMAGES_DIR'],
+                                                self.number, i18n.get_lang())
+            if img_lang:
+                image_url = (f'/api/cards/images/{img_lang}/'
+                             f'{card_images.prefix_of(self.number)}/{self.number}.jpg')
         d = {
             'id': self.id,
             'number': self.number,

@@ -14,7 +14,7 @@ from flask import current_app
 from flask_login import current_user
 from sqlalchemy import or_
 
-from app import i18n
+from app import i18n, card_images
 from app.i18n import _
 from app.models import Card, CardAssociation, CardTranslation, CUSTOM_MODULE
 from app.utils import normalize_nation
@@ -91,8 +91,9 @@ def _tts_image_url(card):
     base = (current_app.config.get('TTS_IMAGE_BASE_URL') or '').rstrip('/')
     if not base:
         return ''
-    prefix = card.number.split('-')[0]
-    return f'{base}/{prefix}/{card.number}.jpg'
+    lang = card_images.resolve_lang(current_app.config['CARD_IMAGES_DIR'],
+                                    card.number, i18n.get_lang()) or i18n.DEFAULT_LANG
+    return f'{base}/{lang}/{card_images.prefix_of(card.number)}/{card.number}.jpg'
 
 
 def _tts_card(card, deck_id, x, z):

@@ -228,14 +228,15 @@ _PREFIX_RE = re.compile(r'^[A-Za-z0-9]+$')
 _FILENAME_RE = re.compile(r'^[A-Za-z0-9]+-\d+\.jpg$', re.IGNORECASE)
 
 
-@cards_bp.route('/images/<prefix>/<filename>')
+@cards_bp.route('/images/<lang>/<prefix>/<filename>')
 @login_required
 @limiter.limit('120 per minute; 500 per hour', key_func=_image_rate_key)
-def card_image(prefix, filename):
-    if not _PREFIX_RE.match(prefix) or not _FILENAME_RE.match(filename):
+def card_image(lang, prefix, filename):
+    if (lang not in i18n.SUPPORTED_LANGS or not _PREFIX_RE.match(prefix)
+            or not _FILENAME_RE.match(filename)):
         abort(400)
     response = send_from_directory(
-        os.path.join(current_app.config['CARD_IMAGES_DIR'], prefix),
+        os.path.join(current_app.config['CARD_IMAGES_DIR'], lang, prefix),
         filename,
     )
     response.headers['Cache-Control'] = 'private, max-age=604800'
