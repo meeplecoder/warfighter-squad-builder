@@ -525,14 +525,14 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
 /* ---- Compact objective row ----------------------------------------- */
 .obj-compact-row { padding: 3px 0; }
 
-/* ---- Required modules strip ---------------------------------------- */
+/* ---- Required modules strip (same row as the like button) --------- */
+.squad-like-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 8px; }
 .required-modules {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  margin: 16px 0 20px;
-  padding: 10px 14px;
+  padding: 4px 12px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;

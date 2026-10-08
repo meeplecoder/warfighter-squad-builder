@@ -1215,6 +1215,13 @@ async function showSquadDetail(squadId) {
       ♥ <span id="likes-count">${squad.likes_count}</span>
     </button>`;
 
+  // Minimal module set for soldiers + gear, any equivalent printing (app/required_modules.py)
+  const requiredModules = (squad.required_modules || []).length ? `
+    <div class="required-modules">
+      <span class="required-modules-label">${esc(t('squad.required_modules'))}</span>
+      ${squad.required_modules.map(m => `<span class="chip">${esc(tv('module', m))}</span>`).join('')}
+    </div>` : '';
+
   const soldiersHtml = squad.soldiers.map(ss => {
     const c = ss.card;
     const isPS = c.card_subtype === 'Player';
@@ -1338,7 +1345,7 @@ async function showSquadDetail(squadId) {
         ${esc(t('squad.by', { user: squad.owner.username }))} · ${fmtDate(squad.created_at)} · ${esc(nationLabel(squad.nation))}${copiesInfo}
       </div>
       ${basedOn}
-      <div style="margin-top:8px">${likeBtn}</div>
+      <div class="squad-like-row">${likeBtn}${requiredModules}</div>
     </div>
 
     <div class="squad-info-row">
@@ -1447,16 +1454,6 @@ async function showSquadDetail(squadId) {
         })()}
       </div>
     </div>
-
-    ${(() => {
-      // Minimal module set for soldiers + gear, any equivalent printing (app/required_modules.py)
-      const sorted = squad.required_modules || [];
-      if (!sorted.length) return '';
-      return `<div class="required-modules">
-        <span class="required-modules-label">${esc(t('squad.required_modules'))}</span>
-        ${sorted.map(m => `<span class="chip">${esc(tv('module', m))}</span>`).join('')}
-      </div>`;
-    })()}
 
     <h2 style="margin-bottom:12px">${esc(t('squad.soldiers'))}</h2>
     <div class="soldiers-grid">${soldiersHtml || `<p class="text-muted">${esc(t('squad.no_soldiers'))}</p>`}</div>
