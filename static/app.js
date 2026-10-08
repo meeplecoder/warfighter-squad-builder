@@ -1449,21 +1449,9 @@ async function showSquadDetail(squadId) {
     </div>
 
     ${(() => {
-      // Collect modules from soldiers + all gear (not mission/objectives)
-      const modSet = new Set();
-      for (const ss of squad.soldiers) {
-        if (ss.card?.module) modSet.add(ss.card.module);
-        // Only explicitly added gear — default_gear is intrinsic to the soldier card
-        for (const g of (ss.gear || [])) {
-          if (g.card?.module) modSet.add(g.card.module);
-        }
-      }
-      if (!modSet.size) return '';
-      // Core Europe first, rest alphabetical
-      const sorted = [
-        ...[...modSet].filter(m => m === 'Core Europe'),
-        ...[...modSet].filter(m => m !== 'Core Europe').sort(),
-      ];
+      // Minimal module set for soldiers + gear, any equivalent printing (app/required_modules.py)
+      const sorted = squad.required_modules || [];
+      if (!sorted.length) return '';
       return `<div class="required-modules">
         <span class="required-modules-label">${esc(t('squad.required_modules'))}</span>
         ${sorted.map(m => `<span class="chip">${esc(tv('module', m))}</span>`).join('')}

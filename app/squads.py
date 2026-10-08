@@ -11,6 +11,7 @@ from app.models import now_utc
 from app import rules as rules_module
 from app import squad_io
 from app import mentions
+from app import required_modules
 from app.utils import classify_objective_type, theater_from_raw_type
 from app import i18n
 from app.i18n import _
@@ -75,6 +76,7 @@ def _squad_detail(squad, liked_by_me=False):
     base['objectives'] = [_objective_detail(so.card) for so in squad.objectives]
     base['notes'] = squad.notes
     base['mentions'] = mentions.resolve(squad.notes)
+    base['required_modules'] = required_modules.required_modules(squad)
     base['copies_count'] = Squad.query.filter_by(parent_squad_id=squad.id, status='published').count()
     # Enrich mission with full card attributes for the detail view
     mc = squad.mission_card
@@ -247,41 +249,9 @@ def list_squads():
     if my_modules and current_user.is_authenticated:
         excluded = [um.module for um in current_user.modules if not um.owned]
         if excluded:
-            query = query.filter(
-                ~Squad.mission_card_id.in_(
-                    db.session.query(Card.id).filter(Card.module.in_(excluded))
-                )
-            )
-            query = query.filter(
-                ~Squad.id.in_(
-                    db.session.query(SquadSoldier.squad_id)
-                    .join(Card, SquadSoldier.card_id == Card.id)
-                    .filter(Card.module.in_(excluded))
-                )
-            )
-            query = query.filter(
-                ~Squad.id.in_(
-                    db.session.query(SquadSoldier.squad_id)
-                    .join(SquadGear, SquadGear.squad_soldier_id == SquadSoldier.id)
-                    .join(Card, SquadGear.card_id == Card.id)
-                    .filter(Card.module.in_(excluded))
-                )
-            )
-            query = query.filter(
-                ~Squad.id.in_(
-                    db.session.query(SquadObjective.squad_id)
-                    .join(Card, SquadObjective.card_id == Card.id)
-                    .filter(Card.module.in_(excluded))
-                )
-            )
-            query = query.filter(
-                or_(
-                    Squad.situation_card_id.is_(None),
-                    ~Squad.situation_card_id.in_(
-                        db.session.query(Card.id).filter(Card.module.in_(excluded))
-                    )
-                )
-            )
+            # Any equivalent printing counts — see app/required_modules.py
+            ids = [sid for (sid,) in query.with_entities(Squad.id)]
+            query = query.filter(Squad.id.in_(required_modules.buildable_ids(ids, excluded)))
 
     if sort == 'mission_name':
         query = query.join(Card, Squad.mission_card_id == Card.id)
