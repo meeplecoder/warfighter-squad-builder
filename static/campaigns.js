@@ -72,7 +72,7 @@ async function loadCampaignList() {
   const hadFocus = document.activeElement?.id === 'campaign-q';
   box.innerHTML = `
     <div class="filter-bar" style="margin-bottom:8px">
-      <input type="text" id="campaign-q" placeholder="${esc(t('campaigns.search_placeholder'))}" value="${esc(f.q)}" style="flex:1;min-width:160px">
+      <input type="text" class="search-input" id="campaign-q" placeholder="${esc(t('campaigns.search_placeholder'))}" value="${esc(f.q)}" style="flex:1;min-width:160px">
     </div>
     <table class="data-table">
       <thead><tr>
@@ -560,7 +560,7 @@ function openCampaignCardPicker(category, onPick) {
   overlay.innerHTML = `
     <div class="modal">
       <h2>${esc(t('campaign.pick.' + category))}</h2>
-      <input type="text" id="cp-q" placeholder="${esc(t('campaign.pick_search'))}" style="width:100%">
+      <input type="text" class="search-input" id="cp-q" placeholder="${esc(t('campaign.pick_search'))}" style="width:100%">
       <div id="cp-results" class="cp-results"><div class="spinner" style="margin:16px auto"></div></div>
       <div style="display:flex;justify-content:flex-end;margin-top:8px">
         <button class="btn btn-ghost btn-sm" id="cp-cancel">${esc(t('common.cancel'))}</button>

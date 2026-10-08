@@ -430,7 +430,7 @@ function renderCardsShell() {
   setMain(`
     <h1 style="margin-bottom:16px">${esc(t('cards.title'))}</h1>
     <div class="filter-bar" style="flex-wrap:wrap;gap:6px">
-      <input type="text" id="q-input" placeholder="${esc(t('cards.search_placeholder'))}" value="${esc(cardFilters.q)}" style="min-width:200px;flex:1">
+      <input type="text" class="search-input" id="q-input" placeholder="${esc(t('cards.search_placeholder'))}" value="${esc(cardFilters.q)}" style="min-width:200px;flex:1">
       ${smartHelpButton('cards-smart-help')}
       <select id="cat-select">${catOptions}</select>
       <select id="nation-select">${nationOptions}</select>
@@ -962,7 +962,7 @@ async function renderSquadList(containerEl) {
   const savedSel = hadFocus ? [_active.selectionStart, _active.selectionEnd] : null;
   containerEl.innerHTML = `
     <div class="filter-bar" style="margin-bottom:8px">
-      <input type="text" id="squads-q" placeholder="${esc(t('squads.search_placeholder'))}" value="${esc(f.q)}" style="flex:1;min-width:160px">
+      <input type="text" class="search-input" id="squads-q" placeholder="${esc(t('squads.search_placeholder'))}" value="${esc(f.q)}" style="flex:1;min-width:160px">
       ${userBtns}
     </div>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">${esc(tn('squads.count', total))}</div>
@@ -2166,7 +2166,7 @@ function renderPickerSearch() {
   ).join('');
   return `
     <div class="filter-bar mb-2" style="flex-wrap:wrap;gap:6px">
-      <input type="text" id="picker-q" placeholder="${esc(t('cards.search_placeholder'))}" value="${esc(builderState.pickerQ)}" style="flex:1;min-width:120px">
+      <input type="text" class="search-input" id="picker-q" placeholder="${esc(t('cards.search_placeholder'))}" value="${esc(builderState.pickerQ)}" style="flex:1;min-width:120px">
       ${smartHelpButton('picker-smart-help')}
       <select id="picker-module-select">${moduleOptions}</select>
     </div>
@@ -2538,7 +2538,7 @@ function renderTranslationsShell() {
     <div id="tr-stats" style="margin-bottom:12px"></div>
     <div id="tr-import-msg"></div>
     <div class="filter-bar" style="flex-wrap:wrap;gap:6px">
-      <input type="text" id="tr-q" placeholder="${esc(t('tr.search_placeholder'))}" value="${esc(f.q)}" style="flex:1;min-width:180px">
+      <input type="text" class="search-input" id="tr-q" placeholder="${esc(t('tr.search_placeholder'))}" value="${esc(f.q)}" style="flex:1;min-width:180px">
       <select id="tr-status">
         ${opt('', f.status, t('tr.all_statuses'))}
         ${['missing', 'stale', 'draft', 'reviewed'].map(st => opt(st, f.status, t('tr.status.' + st))).join('')}

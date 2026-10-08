@@ -1106,3 +1106,16 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
   .ce-link-row input, .ce-link-row button { grid-column: auto; }
   .ce-outcome { grid-template-columns: 1fr auto; }
 }
+
+/* Search boxes: ✕ to clear (static/search_clear.js) */
+.search-input { padding-right: 28px; }
+.search-input:not(:placeholder-shown) {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238a9099' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M18 6 6 18M6 6l12 12'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 14px;
+}
+.search-input.search-clear-hover {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23dde1e7' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M18 6 6 18M6 6l12 12'/%3E%3C/svg%3E");
+}
