@@ -46,5 +46,11 @@
  "Line {n}: unknown card number {number}.": "Línea {n}: número de carta desconocido {number}.",
  "Line {n}: card not found: {text}": "Línea {n}: carta no encontrada: {text}",
  "CSV must have a header row with at least: section, number.": "El CSV debe tener una fila de cabecera con al menos: section, number.",
- "No mission found — pick one in the builder.": "No se encontró misión — elige una en el creador."
+ "No mission found — pick one in the builder.": "No se encontró misión — elige una en el creador.",
+ "Mission name is required (max 80 characters).": "El nombre de la misión es obligatorio (máx. 80 caracteres).",
+ "Invalid mission type or theater.": "Tipo de misión o teatro no válido.",
+ "{field} is required.": "{field} es obligatorio.",
+ "{field} must be a number.": "{field} debe ser un número.",
+ "{field} must be between {lo} and {hi}.": "{field} debe estar entre {lo} y {hi}.",
+ "Turns must be greater than the objective location.": "Los turnos deben ser más que la posición del objetivo."
 }

@@ -11,10 +11,12 @@ import re
 import uuid
 
 from flask import current_app
+from flask_login import current_user
+from sqlalchemy import or_
 
 from app import i18n
 from app.i18n import _
-from app.models import Card, CardAssociation, CardTranslation
+from app.models import Card, CardAssociation, CardTranslation, CUSTOM_MODULE
 from app.utils import normalize_nation
 
 CSV_COLUMNS = ['section', 'soldier_number', 'number', 'name', 'type', 'quantity', 'rp_each']
@@ -164,7 +166,11 @@ QTY_RE = re.compile(r'^\s*(\d+)\s*[×xX]\s*')
 
 class _Resolver:
     def __init__(self):
-        self.by_number = {c.number: c for c in Card.query.all()}
+        # Printed cards + the importing user's own custom missions
+        query = Card.catalog()
+        if current_user.is_authenticated:
+            query = Card.query.filter(or_(Card.module != CUSTOM_MODULE, Card.owner_user_id == current_user.id))
+        self.by_number = {c.number: c for c in query.all()}
         self.by_name = {}
         for c in self.by_number.values():
             self.by_name.setdefault(i18n.fold(c.name), c)

@@ -2003,7 +2003,10 @@ function renderBuilder() {
                     ${bmColor ? `<span class="obj-type-badge" style="background:${bmColor}">${esc(tv('card_subtype', mc.card_subtype))}</span>` : ''}
                     <span ${cardImageAttr(mc)}><strong>${esc(mc.name)}</strong></span>
                   </span>
-                  <button class="btn btn-sm btn-ghost" id="change-mission-btn">${esc(t('common.change'))}</button>
+                  <span class="flex" style="gap:6px">
+                    <button class="btn btn-sm btn-ghost" id="change-mission-btn">${esc(t('common.change'))}</button>
+                    <button class="btn btn-sm btn-ghost" id="custom-mission-btn">${esc(t('builder.custom_mission'))}</button>
+                  </span>
                 </div>
                 <div class="text-muted" style="font-size:12px;margin-top:4px">${esc([
                   mc.resources != null ? `${mc.resources} ${t('stat.rp')}` : null,
@@ -2012,7 +2015,10 @@ function renderBuilder() {
                   mc.loadout_modifier != null ? `${t('stat.loadout')}: ${mc.loadout_modifier >= 0 ? '+' : ''}${mc.loadout_modifier}` : null,
                 ].filter(Boolean).join(' · '))}</div>`;
               })()
-            : `<button class="btn btn-ghost" id="pick-mission-btn">${esc(t('builder.select_mission'))}</button>`}
+            : `<div class="flex" style="gap:6px;flex-wrap:wrap">
+                <button class="btn btn-ghost" id="pick-mission-btn">${esc(t('builder.select_mission'))}</button>
+                <button class="btn btn-ghost" id="custom-mission-btn">${esc(t('builder.custom_mission'))}</button>
+              </div>`}
         </div>
 
         <div class="builder-section">
@@ -2113,6 +2119,7 @@ function renderBuilder() {
   });
   main.querySelector('#pick-mission-btn')?.addEventListener('click', () => { setPickerMode('mission'); renderBuilder(); });
   main.querySelector('#change-mission-btn')?.addEventListener('click', () => { setPickerMode('mission'); renderBuilder(); });
+  main.querySelector('#custom-mission-btn')?.addEventListener('click', openCustomMissionDialog);
   main.querySelector('#pick-obj-btn')?.addEventListener('click', () => { setPickerMode('objective'); renderBuilder(); });
   main.querySelector('#add-obj-btn')?.addEventListener('click', () => { setPickerMode('objective'); renderBuilder(); });
   main.querySelector('[data-change-obj]')?.addEventListener('click', () => {
@@ -2201,6 +2208,61 @@ function _pickerTitle(mode) {
   return titles[mode] || '';
 }
 
+// Custom mission: generic mission parameters → saved as a 'Custom' Mission card (CM-<id>)
+// owned by the user and set as this squad's mission. No edit view (spec/08_squad_tools.md §6).
+const CUSTOM_MISSION_TYPES = ['Standard', 'Raid', 'Holding Action', 'Hold the Line', 'Airborne', 'Shore Invasion'];
+const CUSTOM_MISSION_THEATERS = ['Europe', 'Russia', 'North Africa', 'Mediterranean', 'Jungle', 'Far East'];
+
+function openCustomMissionDialog() {
+  if (!currentUser) { alert(t('custom.login_required')); return; }
+  const opts = (list, ns) => list.map(v => `<option value="${esc(v)}">${esc(tv(ns, v))}</option>`).join('');
+  const num = (id, label, attrs) => `<div class="form-field"><label for="${id}">${esc(label)}</label><input type="number" id="${id}" ${attrs}></div>`;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h2>${esc(t('custom.title'))}</h2>
+      <p class="text-muted" style="font-size:12px">${esc(t('custom.hint'))}</p>
+      <form id="cm-form" class="custom-mission-form">
+        <div class="form-field cm-wide"><label for="cm-name">${esc(t('custom.name'))}</label><input type="text" id="cm-name" maxlength="80" required></div>
+        <div class="form-field"><label for="cm-type">${esc(t('custom.type'))}</label><select id="cm-type">${opts(CUSTOM_MISSION_TYPES, 'card_subtype')}</select></div>
+        <div class="form-field"><label for="cm-theater">${esc(t('stat.theater'))}</label><select id="cm-theater">${opts(CUSTOM_MISSION_THEATERS, 'theater')}</select></div>
+        ${num('cm-rp', t('stat.rp_budget'), 'min="1" max="300" required')}
+        ${num('cm-time', t('stat.turns'), 'min="1" max="50"')}
+        ${num('cm-obj', t('stat.obj_location'), 'min="1" max="20"')}
+        ${num('cm-lm', t('stat.loadout_mod'), 'min="-10" max="10" value="0"')}
+        <div class="form-field cm-wide"><label for="cm-notes">${esc(t('custom.notes'))}</label><textarea id="cm-notes" rows="3" maxlength="1000" style="width:100%"></textarea></div>
+        <div id="cm-msg" class="cm-wide"></div>
+        <div class="cm-wide" style="display:flex;gap:6px;justify-content:flex-end">
+          <button type="button" class="btn btn-ghost btn-sm" id="cm-cancel">${esc(t('common.cancel'))}</button>
+          <button type="submit" class="btn btn-primary btn-sm">${esc(t('custom.create'))}</button>
+        </div>
+      </form>
+    </div>`;
+  document.body.appendChild(overlay);
+  const close = () => overlay.remove();
+  const val = id => overlay.querySelector('#' + id).value;
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  overlay.querySelector('#cm-cancel').addEventListener('click', close);
+  overlay.querySelector('#cm-name').focus();
+  overlay.querySelector('#cm-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    try {
+      const r = await API.post('/cards/custom-missions', {
+        name: val('cm-name'), mission_type: val('cm-type'), theater: val('cm-theater'),
+        resources: val('cm-rp'), time: val('cm-time'), objective_position: val('cm-obj'),
+        loadout_modifier: val('cm-lm'), notes: val('cm-notes'),
+      });
+      builderState.missionCard = r.card;
+      builderState.pickerMode = null;
+      close();
+      renderBuilder();
+    } catch (err) {
+      overlay.querySelector('#cm-msg').innerHTML = alertHtml(err.error || t('common.failed'));
+    }
+  });
+}
+
 function setPickerMode(mode, target = null, gearCat = null) {
   builderState.pickerMode = mode;
   builderState.pickerTarget = target;
@@ -2233,7 +2295,7 @@ async function loadPickerResults() {
   params.set('order', builderState.pickerOrder);
 
   switch (builderState.pickerMode) {
-    case 'mission':   params.set('category', 'Mission'); break;
+    case 'mission':   params.set('category', 'Mission'); params.set('include_mine', 'true'); break;
     case 'objective': params.set('category', 'Objective'); break;
     case 'situation': params.set('category', 'Situation'); break;
     case 'soldier':   params.set('category', 'Soldier'); break;

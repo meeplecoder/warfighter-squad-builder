@@ -16,16 +16,16 @@ MAX_MENTIONS = 50
 
 def _find(raw):
     key = raw.strip()
-    card = Card.query.filter_by(number=key).first()
+    card = Card.catalog().filter_by(number=key).first()
     if card:
         return card
     folded = i18n.fold(key)
-    card = Card.query.filter(func.fold(Card.name) == folded).order_by(Card.number).first()
+    card = Card.catalog().filter(func.fold(Card.name) == folded).order_by(Card.number).first()
     if card:
         return card
     row = (CardTranslation.query.filter(CardTranslation.field == 'name', func.fold(CardTranslation.value) == folded)
            .order_by(CardTranslation.card_number).first())
-    return Card.query.filter_by(number=row.card_number).first() if row else None
+    return Card.catalog().filter_by(number=row.card_number).first() if row else None
 
 
 def resolve(*texts):

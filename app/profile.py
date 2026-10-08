@@ -11,7 +11,7 @@ profile_bp = Blueprint('profile', __name__)
 def _all_modules_with_owned(user):
     all_modules = [
         r[0] for r in
-        db.session.query(Card.module).distinct().order_by(Card.module).all()
+        Card.catalog().with_entities(Card.module).distinct().order_by(Card.module).all()
         if r[0]
     ]
     owned_set = {um.module for um in user.modules if um.owned}
@@ -78,7 +78,7 @@ def update_modules():
 
     all_modules = [
         r[0] for r in
-        db.session.query(Card.module).distinct().all()
+        Card.catalog().with_entities(Card.module).distinct().all()
         if r[0]
     ]
     owned_set = set(owned_list)

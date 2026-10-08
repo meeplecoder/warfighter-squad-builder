@@ -1018,6 +1018,10 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
 .modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; width: min(640px, 100%); max-height: 90vh; overflow: auto; }
 .modal h2 { margin-bottom: 6px; }
+.custom-mission-form { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; margin-top: 8px; }
+.custom-mission-form .cm-wide { grid-column: 1 / -1; }
+.custom-mission-form .form-field input, .custom-mission-form .form-field select { width: 100%; max-width: none; }
+@media (max-width: 480px) { .custom-mission-form { grid-template-columns: 1fr; } }
 .export-group { display: inline-flex; gap: 4px; align-items: center; margin-left: 6px; }
 .squad-based-on { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
 .squad-based-on a { color: var(--link); }

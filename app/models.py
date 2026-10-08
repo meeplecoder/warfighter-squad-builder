@@ -10,6 +10,9 @@ def now_utc():
     return datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
 
+CUSTOM_MODULE = 'Custom'
+
+
 class Card(db.Model):
     __tablename__ = 'cards'
 
@@ -53,6 +56,13 @@ class Card(db.Model):
     has_image = db.Column(db.Integer, nullable=False, default=0)
     cx = db.Column('combat_xp', db.Integer, nullable=False, default=0)  # CX = Combat Experience (pre-printed)
     xp = db.Column('soldier_xp', db.Integer, nullable=False, default=0)  # XP = Experience Points (pre-printed)
+    # Custom (user-made) cards — module CUSTOM_MODULE, number 'CM-<id>'. Excluded from the catalog.
+    owner_user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), index=True)
+
+    @classmethod
+    def catalog(cls):
+        """Printed cards only — every list/search/resolver uses this instead of Card.query."""
+        return cls.query.filter(cls.module != CUSTOM_MODULE)
 
     def _objective_mechanic(self) -> str:
         """Extract mechanic from combined card_subtype, e.g. 'Shore / Eliminate Hostiles' → 'Eliminate Hostiles'."""

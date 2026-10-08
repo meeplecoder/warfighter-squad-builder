@@ -7,7 +7,7 @@ from sqlalchemy import or_, and_, case, func
 from sqlalchemy.orm import aliased
 from app import db, limiter, i18n
 from app.i18n import _
-from app.models import Card, CardTranslation
+from app.models import Card, CardTranslation, CUSTOM_MODULE
 from app import smart_filter
 from app.utils import nation_filter_clause
 
@@ -46,7 +46,10 @@ def list_cards():
     sort = request.args.get('sort', 'module')
     order = request.args.get('order', 'asc')
 
-    query = Card.query
+    query = Card.catalog()
+    # Mission picker: also offer the user's own custom missions
+    if request.args.get('include_mine', 'false').lower() == 'true' and current_user.is_authenticated:
+        query = Card.query.filter(or_(Card.module != CUSTOM_MODULE, Card.owner_user_id == current_user.id))
     lang = i18n.get_lang()
 
     filter_errors = []
@@ -129,6 +132,65 @@ def get_card(id_or_number):
     else:
         detail['associations'] = []
     return jsonify(card=detail)
+
+
+# ---------------------------------------------------------------------------
+# Custom missions — user-made Mission cards (module 'Custom', number 'CM-<id>').
+# Created from the squad builder; no edit view (spec/08_squad_tools.md §6).
+# ---------------------------------------------------------------------------
+CUSTOM_MISSION_TYPES = ('Standard', 'Raid', 'Holding Action', 'Hold the Line', 'Airborne', 'Shore Invasion')
+CUSTOM_MISSION_THEATERS = ('Europe', 'Russia', 'North Africa', 'Mediterranean', 'Jungle', 'Far East')
+# field → (min, max, required)
+_CUSTOM_MISSION_INTS = {
+    'resources': (1, 300, True),
+    'time': (1, 50, False),
+    'objective_position': (1, 20, False),
+    'loadout_modifier': (-10, 10, False),
+}
+
+
+@cards_bp.route('/custom-missions', methods=['POST'])
+@login_required
+@limiter.limit('30 per hour')
+def create_custom_mission():
+    data = request.get_json(silent=True) or {}
+    name = (data.get('name') or '').strip()
+    if not name or len(name) > 80:
+        return jsonify(error=_('Mission name is required (max 80 characters).')), 400
+    mission_type = data.get('mission_type') or 'Standard'
+    theater = data.get('theater') or 'Europe'
+    if mission_type not in CUSTOM_MISSION_TYPES or theater not in CUSTOM_MISSION_THEATERS:
+        return jsonify(error=_('Invalid mission type or theater.')), 400
+    values = {}
+    for field, (lo, hi, required) in _CUSTOM_MISSION_INTS.items():
+        raw = data.get(field)
+        if raw in (None, ''):
+            if required:
+                return jsonify(error=_('{field} is required.', field=field)), 400
+            values[field] = 0 if field == 'loadout_modifier' else None
+            continue
+        try:
+            v = int(raw)
+        except (TypeError, ValueError):
+            return jsonify(error=_('{field} must be a number.', field=field)), 400
+        if not lo <= v <= hi:
+            return jsonify(error=_('{field} must be between {lo} and {hi}.', field=field, lo=lo, hi=hi)), 400
+        values[field] = v
+    if values['time'] and values['objective_position'] and values['time'] <= values['objective_position']:
+        return jsonify(error=_('Turns must be greater than the objective location.')), 400
+
+    prefix = 'Airborne Mission' if mission_type == 'Airborne' else 'Mission'
+    card = Card(
+        number=f'CM-new-{current_user.id}-{os.urandom(4).hex()}',  # real number needs the id
+        name=name, raw_type=f'{prefix} {theater}', card_type='Mission', card_subtype=mission_type,
+        module=CUSTOM_MODULE, notes=(data.get('notes') or '').strip()[:1000] or None,
+        owner_user_id=current_user.id, **values,
+    )
+    db.session.add(card)
+    db.session.flush()
+    card.number = f'CM-{card.id}'
+    db.session.commit()
+    return jsonify(card=card.to_card_detail()), 201
 
 
 _PREFIX_RE = re.compile(r'^[A-Za-z0-9]+$')

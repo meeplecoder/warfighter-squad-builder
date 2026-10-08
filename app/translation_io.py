@@ -51,7 +51,7 @@ def import_entries(entries, overwrite_reviewed=False, dry_run=False, user_id=Non
     """entries: [{number, lang, field, value, status?}]. Returns a report dict."""
     report = {'inserted': 0, 'updated': 0, 'unchanged': 0, 'deleted': 0,
               'kept_reviewed': [], 'unknown_numbers': [], 'invalid': []}
-    cards = {c.number: c for c in Card.query.all()}
+    cards = {c.number: c for c in Card.catalog().all()}
     for i, e in enumerate(entries):
         number = (e.get('number') or '').strip()
         lang = i18n.normalize_lang(e.get('lang'))
@@ -91,7 +91,7 @@ def rehash():
     """Recompute staleness against the current English text.
     Rows with an empty source_hash (direct DB writes) are adopted as up to date.
     Returns {'stale': n, 'fresh': n, 'adopted': n, 'orphaned': [numbers]}."""
-    cards = {c.number: c for c in Card.query.all()}
+    cards = {c.number: c for c in Card.catalog().all()}
     out = {'stale': 0, 'fresh': 0, 'adopted': 0, 'orphaned': []}
     for row in CardTranslation.query.all():
         card = cards.get(row.card_number)

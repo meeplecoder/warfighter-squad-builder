@@ -90,7 +90,7 @@ def list_translations():
     page = max(1, int(request.args.get('page', 1)))
     per_page = min(100, max(1, int(request.args.get('per_page', 25))))
 
-    query = Card.query
+    query = Card.catalog()
     if request.args.get('number'):
         query = query.filter(Card.number == request.args['number'])
     if card_type:
@@ -127,7 +127,7 @@ def stats():
     rows = _rows_by_card(lang)
     total = {s: 0 for s in STATUS_FILTERS}
     by_type = {}
-    for c in Card.query.all():
+    for c in Card.catalog().all():
         st = _card_status(c, rows.get(c.number, {}))
         total[st] += 1
         by_type.setdefault(c.card_type, {s: 0 for s in STATUS_FILTERS})[st] += 1
@@ -141,7 +141,7 @@ def save_translation(number):
     lang = _target_lang()
     if not lang:
         return jsonify(error=_('Unsupported language.')), 400
-    card = Card.query.filter_by(number=number).first()
+    card = Card.catalog().filter_by(number=number).first()
     if not card:
         return jsonify(error=_('Card not found.')), 404
     status = data.get('status', 'reviewed')

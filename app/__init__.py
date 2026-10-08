@@ -56,7 +56,7 @@ def create_app():
         from app.models import Card
         all_mods = [
             r[0] for r in
-            db.session.query(Card.module).distinct().order_by(Card.module).all()
+            Card.catalog().with_entities(Card.module).distinct().order_by(Card.module).all()
             if r[0]
         ]
         # Core Europe always first
@@ -68,7 +68,7 @@ def create_app():
     def get_nations():
         from app.models import Card
         from app.utils import normalize_nation
-        raw = [r[0] for r in db.session.query(Card.nation).distinct().all() if r[0]]
+        raw = [r[0] for r in Card.catalog().with_entities(Card.nation).distinct().all() if r[0]]
         base_set = sorted({normalize_nation(n) for n in raw})
         return jsonify(nations=base_set)
 
@@ -150,6 +150,15 @@ def create_app():
                 conn.commit()
             except Exception:
                 pass
+
+            # Custom mission cards: owner of a user-made card (module 'Custom')
+            try:
+                conn.execute(db.text(
+                    "ALTER TABLE cards ADD COLUMN owner_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL"
+                ))
+                conn.commit()
+            except Exception:
+                pass  # Column already exists
 
             # "Based on" link between squads (copy / fork)
             try:
