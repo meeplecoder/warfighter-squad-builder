@@ -267,6 +267,8 @@
  "io.tts_no_images": "Guardado, pero este servidor no tiene configuradas las imágenes (TTS_IMAGE_BASE_URL), así que en TTS las cartas solo mostrarán el nombre.",
  "io.tts_saved": "Guardado. Pon el .json en Documentos/My Games/Tabletop Simulator/Saves/Saved Objects/ y cárgalo desde Objetos → Objetos guardados.",
  "io.tts_tip": "Objeto guardado de Tabletop Simulator (.json)",
+ "mention.hint_html": "Escribe <code>[[</code> para mencionar una carta.",
+ "mention.unknown": "Carta no encontrada",
  "nav.builder": "Creador",
  "nav.cards": "Cartas",
  "nav.profile": "Perfil",

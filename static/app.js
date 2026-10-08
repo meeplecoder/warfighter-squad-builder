@@ -205,6 +205,86 @@ function cardImageAttr(card) {
 }
 
 // ---------------------------------------------------------------------------
+// Card mentions: [[W-001]] / [[Card name]] in notes and comments (backend: app/mentions.py)
+// ---------------------------------------------------------------------------
+function renderMentions(text, mentions = {}) {
+  if (!text) return '';
+  return String(text).split(/(\[\[[^\[\]\n]{1,80}\]\])/).map(part => {
+    const m = part.match(/^\[\[(.+)\]\]$/);
+    if (!m) return esc(part);
+    const card = mentions[m[1]];
+    return card
+      ? `<a href="#/cards/${card.id}" class="card-mention" ${cardImageAttr(card)}>${esc(card.name)}</a>`
+      : `<span class="card-mention-missing" title="${esc(t('mention.unknown'))}">${esc(part)}</span>`;
+  }).join('');
+}
+
+// Typing "[[" in a textarea opens a card picker; choosing inserts [[Card name]]
+function attachMentionAutocomplete(ta) {
+  if (!ta || ta._mentions) return;
+  ta._mentions = true;
+  const box = document.createElement('div');
+  box.className = 'mention-box';
+  box.hidden = true;
+  ta.insertAdjacentElement('afterend', box);
+  let items = [], active = 0, timer = null, reqId = 0;
+
+  const context = () => {
+    const before = ta.value.slice(0, ta.selectionStart);
+    const m = before.match(/\[\[([^\[\]\n]{0,40})$/);
+    return m ? { query: m[1], start: before.length - m[1].length - 2 } : null;
+  };
+  const close = () => { box.hidden = true; items = []; };
+  const render = () => {
+    if (!items.length) { close(); return; }
+    box.innerHTML = items.map((c, i) =>
+      `<div class="mention-item ${i === active ? 'active' : ''}" data-i="${i}">
+        <span>${esc(c.name)}</span> <span class="text-muted">${esc(tv('card_type', c.card_type))} · ${esc(c.number)}</span>
+      </div>`).join('');
+    box.hidden = false;
+  };
+  const choose = i => {
+    const ctx = context();
+    const card = items[i];
+    if (!ctx || !card) return;
+    const insert = `[[${card.name}]]`;
+    const after = ta.value.slice(ta.selectionStart).replace(/^[^\[\]\n]*\]\]/, '');
+    ta.value = ta.value.slice(0, ctx.start) + insert + after;
+    const pos = ctx.start + insert.length;
+    ta.setSelectionRange(pos, pos);
+    ta.dispatchEvent(new Event('input'));
+    close();
+    ta.focus();
+  };
+
+  ta.addEventListener('input', () => {
+    const ctx = context();
+    clearTimeout(timer);
+    if (!ctx || ctx.query.trim().length < 2) { close(); return; }
+    timer = setTimeout(async () => {
+      const my = ++reqId;
+      try {
+        const r = await API.get('/cards?' + new URLSearchParams({ q: ctx.query, per_page: 8, sort: 'name' }));
+        if (my !== reqId) return;
+        items = r.items; active = 0; render();
+      } catch (_) { close(); }
+    }, 200);
+  });
+  ta.addEventListener('keydown', e => {
+    if (box.hidden) return;
+    if (e.key === 'ArrowDown') { active = (active + 1) % items.length; render(); e.preventDefault(); }
+    else if (e.key === 'ArrowUp') { active = (active - 1 + items.length) % items.length; render(); e.preventDefault(); }
+    else if (e.key === 'Enter' || e.key === 'Tab') { choose(active); e.preventDefault(); }
+    else if (e.key === 'Escape') { close(); }
+  });
+  box.addEventListener('mousedown', e => {
+    const el = e.target.closest('.mention-item');
+    if (el) { e.preventDefault(); choose(parseInt(el.dataset.i)); }
+  });
+  ta.addEventListener('blur', () => setTimeout(close, 150));
+}
+
+// ---------------------------------------------------------------------------
 // Smart search syntax help (backend: app/smart_filter.py)
 // ---------------------------------------------------------------------------
 const SMART_KEYS = ['t', 's', 'n', 'm', 'x', 'name', '#', 'rp', 'l', 'h', 'mv', 'cv', 'hth', 'a', 'cx', 'xp', 'b', 'tu'];
@@ -1094,12 +1174,13 @@ async function renderCommunitySquads(containerEl) {
 // ---------------------------------------------------------------------------
 async function showSquadDetail(squadId) {
   showSpinner();
-  let squad, comments;
+  let squad, comments, commentMentions = {};
   try {
     const r = await API.get('/squads/' + squadId);
     squad = r.squad;
     const cr = await API.get('/squads/' + squadId + '/comments');
     comments = cr.items;
+    commentMentions = cr.mentions || {};
   } catch (e) {
     showError(e.error || t('squad.not_found'));
     return;
@@ -1214,7 +1295,7 @@ async function showSquadDetail(squadId) {
           <span class="comment-author">${esc(cm.author.username)}</span>
           <span class="comment-date">${fmtDate(cm.created_at)}</span>
         </div>
-        <div class="comment-body">${esc(cm.body)}</div>
+        <div class="comment-body" data-raw="${esc(cm.body)}">${renderMentions(cm.body, commentMentions)}</div>
         ${canEdit ? `
           <div class="comment-actions">
             <button class="btn btn-sm btn-ghost edit-comment-btn" data-cid="${cm.id}">${esc(t('common.edit'))}</button>
@@ -1226,6 +1307,7 @@ async function showSquadDetail(squadId) {
   const commentForm = currentUser ? `
     <div class="comment-form">
       <textarea id="comment-input" placeholder="${esc(t('comments.placeholder'))}" rows="3"></textarea>
+      <div class="text-muted mention-hint">${t('mention.hint_html')}</div>
       <div class="form-row">
         <button class="btn btn-primary" id="post-comment-btn">${esc(t('comments.post'))}</button>
       </div>
@@ -1394,7 +1476,7 @@ async function showSquadDetail(squadId) {
     <div class="squad-author-notes">
       <h2 style="margin-bottom:8px">${esc(t('squad.strategy_notes'))}</h2>
       ${squad.notes
-        ? `<div class="card-notes">${esc(squad.notes)}</div>`
+        ? `<div class="card-notes">${renderMentions(squad.notes, squad.mentions)}</div>`
         : `<p class="text-muted" style="font-size:13px;margin:0">${esc(t('squad.no_notes'))}</p>`}
     </div>
 
@@ -1404,6 +1486,8 @@ async function showSquadDetail(squadId) {
       ${commentForm}
     </div>
   `);
+
+  attachMentionAutocomplete(document.getElementById('comment-input'));
 
   // Like button
   document.getElementById('like-btn')?.addEventListener('click', async () => {
@@ -1491,12 +1575,13 @@ async function showSquadDetail(squadId) {
     if (editBtn) {
       const item = document.querySelector(`.comment-item[data-cid="${cid}"]`);
       const bodyEl = item.querySelector('.comment-body');
-      const oldText = bodyEl.textContent;
+      const oldText = bodyEl.dataset.raw ?? bodyEl.textContent;
       const ta = document.createElement('textarea');
       ta.value = oldText;
       ta.rows = 3;
       ta.style.width = '100%';
       bodyEl.replaceWith(ta);
+      attachMentionAutocomplete(ta);
       editBtn.textContent = t('common.save');
       editBtn.classList.remove('edit-comment-btn');
       editBtn.addEventListener('click', async () => {
@@ -2008,7 +2093,7 @@ function renderBuilder() {
 
         <div class="builder-section">
           <div class="builder-section-title">${esc(t('squad.strategy_notes'))}</div>
-          <div class="text-muted" style="font-size:12px;margin-bottom:6px">${esc(t('builder.notes_hint'))}</div>
+          <div class="text-muted" style="font-size:12px;margin-bottom:6px">${esc(t('builder.notes_hint'))} ${t('mention.hint_html')}</div>
           <textarea id="squad-notes" style="width:100%;min-height:100px;resize:vertical">${esc(builderState.notes)}</textarea>
         </div>
       </div>
@@ -2029,6 +2114,7 @@ function renderBuilder() {
 
   main.querySelector('#squad-name')?.addEventListener('input', e => { builderState.name = e.target.value; });
   main.querySelector('#squad-notes')?.addEventListener('input', e => { builderState.notes = e.target.value; });
+  attachMentionAutocomplete(main.querySelector('#squad-notes'));
   main.querySelector('#nation-select')?.addEventListener('change', e => {
     builderState.nation = e.target.value;
     builderState.soldiers = [];

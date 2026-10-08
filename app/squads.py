@@ -10,6 +10,7 @@ from app.models import Card, Squad, SquadSoldier, SquadGear, SquadLike, SquadCom
 from app.models import now_utc
 from app import rules as rules_module
 from app import squad_io
+from app import mentions
 from app.utils import classify_objective_type, theater_from_raw_type
 from app import i18n
 from app.i18n import _
@@ -73,6 +74,7 @@ def _squad_detail(squad, liked_by_me=False):
     base['situation'] = situation
     base['objectives'] = [_objective_detail(so.card) for so in squad.objectives]
     base['notes'] = squad.notes
+    base['mentions'] = mentions.resolve(squad.notes)
     base['copies_count'] = Squad.query.filter_by(parent_squad_id=squad.id, status='published').count()
     # Enrich mission with full card attributes for the detail view
     mc = squad.mission_card
@@ -559,6 +561,7 @@ def list_comments(squad_id):
     comments = query.offset((page - 1) * per_page).limit(per_page).all()
     return jsonify(
         items=[c.to_dict() for c in comments],
+        mentions=mentions.resolve(*(c.body for c in comments)),
         total=total,
         page=page,
         per_page=per_page,

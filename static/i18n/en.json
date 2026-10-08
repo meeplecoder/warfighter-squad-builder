@@ -131,6 +131,8 @@
  "io.tts_no_images": "Saved, but card images are not configured on this server (TTS_IMAGE_BASE_URL), so cards will show only their names in TTS.",
  "io.tts_saved": "Saved. Put the .json in Documents/My Games/Tabletop Simulator/Saves/Saved Objects/ and load it from Objects → Saved Objects.",
  "io.tts_tip": "Tabletop Simulator saved object (.json)",
+ "mention.hint_html": "Type <code>[[</code> to mention a card.",
+ "mention.unknown": "Card not found",
  "nav.builder": "Builder",
  "nav.cards": "Cards",
  "nav.profile": "Profile",
