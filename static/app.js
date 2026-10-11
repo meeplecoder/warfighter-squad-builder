@@ -1651,18 +1651,12 @@ function openImportDialog() {
   overlay.querySelector('#import-content').focus();
 }
 
-// Mirrors app/rules.py gear_counts_in_budget: gear on NPS/SqS is free, except Panic (-1 RP on any soldier)
-function gearCountsInBudget(gearCard, soldierCard) {
-  if (soldierCard.card_subtype === 'Player') return true;
-  return (gearCard.name_en || gearCard.name || '').toLowerCase() === 'panic';
-}
-
 function builderRpTotal() {
   let total = 0;
   for (const s of builderState.soldiers) {
     total += s.card.resource_cost || 0;
     for (const g of s.gear) {
-      if (gearCountsInBudget(g.card, s.card)) total += (g.card.resource_cost || 0) * g.quantity;
+      total += (g.card.resource_cost || 0) * g.quantity;
     }
   }
   return total;

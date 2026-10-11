@@ -106,9 +106,9 @@ def _squad_detail(squad, liked_by_me=False):
         gear_out = []
         for sg in ss.gear:
             gc = sg.card
-            counts = rules_module.gear_counts_in_budget({'name_en': gc.name}, sc.card_subtype)
+            counts = is_ps
             lw = None
-            if is_ps and gc.card_type in ('Weapon', 'Equipment'):
+            if counts and gc.card_type in ('Weapon', 'Equipment'):
                 w = gc.loadout if gc.loadout is not None else (gc.resource_cost or 0)
                 gear_loadout_used += w * sg.quantity
                 lw = w
