@@ -13,6 +13,9 @@ VEHICLE_SUBTYPE = 'Vehicle'
 
 NON_BUDGET_SUBTYPES = {NPS_SUBTYPE, SQUAD_SUBTYPE, VEHICLE_SUBTYPE}
 
+# Gear on NPS/SqS soldiers is free, except Panic: it refunds its -1 RP on any soldier.
+ANY_SOLDIER_COST_CARDS = {'panic'}
+
 # Message templates by code (English). Params are also returned so callers can localise
 # (squads.py → i18n.localize_validation). `nation` params are raw enum values.
 MESSAGES = {
@@ -37,6 +40,14 @@ def gear_loadout_weight(gear_card):
     if gear_card.get('loadout') is not None:
         return gear_card['loadout']
     return gear_card.get('resource_cost') or 0
+
+
+def gear_counts_in_budget(gear_card, soldier_subtype):
+    """Whether a gear card's RP cost counts towards the squad total."""
+    if soldier_subtype == PS_SUBTYPE:
+        return True
+    name = (gear_card.get('name_en') or gear_card.get('name') or '').lower()
+    return name in ANY_SOLDIER_COST_CARDS
 
 
 def validate_squad(payload, mission_card, soldiers_data):
@@ -70,14 +81,14 @@ def validate_squad(payload, mission_card, soldiers_data):
             if gc_nation and gc_nation != nation:
                 errors.append(_issue('NATION_MISMATCH', name=gc['name'], nation=gc_nation))
 
-    # 3. RP budget (PS soldiers + PS gear only)
+    # 3. RP budget (all soldiers + PS gear + Panic on any soldier)
     rp_total = 0
     for s in soldiers_data:
         rc = s['card'].get('resource_cost') or 0
         rp_total += rc
         subtype = s['card'].get('card_subtype')
-        if subtype == PS_SUBTYPE:
-            for g in s['gear']:
+        for g in s['gear']:
+            if gear_counts_in_budget(g['card'], subtype):
                 rp_total += (g['card'].get('resource_cost') or 0) * g['quantity']
 
     if budget and rp_total > budget:
