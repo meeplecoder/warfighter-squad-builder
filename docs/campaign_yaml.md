@@ -16,7 +16,7 @@ Example: `campaigns/normandia_pablosolano.yaml`.
 |---|---|---|
 | `format` | text | `warfighter-campaign/1` (optional; other values give a warning) |
 | `author` | text | Username of the owner (CLI only; the web import uses the logged-in user) |
-| `language` | text | `en`, `es`… informational |
+| `language` | `en` \| `es` | Campaign language. The campaign list shows the UI language plus campaigns without one ("All languages" shows every one) |
 | `name` | text | Required to publish (≥ 3 chars) |
 | `summary` | text | One or two lines; required to publish |
 | `intro` | text | Stage-setting text read before the campaign; required to publish |
