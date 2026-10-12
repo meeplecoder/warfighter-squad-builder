@@ -1,0 +1,159 @@
+# Source: campaigns_scenarios/Warfighter_ww2_Europe_Campaign_Carentan_Eng.pdf (Mariano Rico Castillo).
+# One of four regiment campaigns of Carentan 44 (502, 506, 327, 175). Spanish files are a translation.
+# Format: docs/campaign_yaml.md
+format: warfighter-campaign/1
+author: MarianoRicoCastillo
+language: es
+
+name: "Carentan 44 — 175.º Regimiento de Infantería (29.ª División de Infantería)"
+summary: |-
+  Carentan 44 (campaña semicooperativa para 4 jugadores), línea del 175.º Regimiento de Infantería (29.ª División de Infantería): tres misiones de su propio Plan de Combate y después el Asalto a Carentan común. Juego base Europa; se recomienda US Airborne.
+nation: US
+theater: "Europa - Normandía (Carentan)"
+enemy: "Alemania (Fallschirmjäger, 17.ª Div. SS Pz Gren)"
+period: "8-12 de junio de 1944"
+flow: branching
+
+intro: |-
+  Carentan 44 es una campaña semicooperativa para cuatro jugadores de Warfighter (2GM Europa) de DVG. Cada jugador dirige uno de los cuatro Regimientos que combatieron históricamente por Carentan: el 502.º y el 506.º de Infantería Paracaidista y el 327.º de Infantería de Planeadores de la 101.ª Aerotransportada y, llegando en apoyo desde Omaha, el 175.º de Infantería de la 29.ª División de Infantería. Esta campaña es la línea del 175.º RI; los otros tres jugadores juegan a la vez las campañas de los demás Regimientos.
+
+  La campaña dura cuatro días (cuatro misiones por jugador). La cuarta misión, el Asalto a Carentan, es la misma para los cuatro jugadores, pero puede haber sido modificada para todos según los resultados de las misiones 1 a 3, mediante las Ventajas para el Asalto a Carentan elegidas como recompensa por la victoria en esas misiones. El resultado de la Campaña depende de cuántos Regimientos superen con éxito el Asalto a Carentan.
+
+  Autor: Mariano Rico Castillo.
+
+force:
+  restrictions: |-
+    Todos los soldados del juego base Europa (y, si se usa, los de la expansión US Airborne) forman una reserva de la que los cuatro jugadores eligen sus escuadras para cada Día de Misión. Los SJ pueden equiparse con el equipo disponible en ambos productos. Un mismo personaje no puede ser elegido por dos jugadores el mismo día (cada soldado es único), así que los jugadores deben coordinar sus escuadras cada día. Si ningún jugador tiene la expansión US Airborne, esta restricción de soldado único no se aplica.
+  replacements: |-
+    Se aplican las reglas de Soldado Retirado del manual de Warfighter (página 49): los soldados retirados ya no pueden ser elegidos por ningún jugador durante la campaña. Suma +3 a esas tiradas si había al menos un soldado con la habilidad Sanitario (Corpsman) en la escuadra. Todas las heridas se curan entre misiones.
+
+persistence:
+  xp: true
+  skills: true
+  wounds: false
+  soldiers: false
+  casualties: true
+  gear: false
+
+rules:
+  - title: "Plan de Combate y orden de las misiones"
+    body: |-
+      Las tres primeras misiones deben completarse en orden, de la 1 a la 3, y cada Regimiento tiene misiones distintas en su Plan de Combate. Para jugar la siguiente misión del Plan hay que ganar la anterior. Una derrota obliga a repetir la misma misión, pero se mantiene el límite total de cuatro misiones por jugador: el cuarto día es siempre el Asalto a Carentan, aunque no se hayan ganado todas las misiones 1-3. Las victorias que falten complican la misión final a todos, porque no se obtienen sus Ventajas (sobre todo las de la misión 3).
+  - title: "Experiencia por misión superada"
+    body: |-
+      Tras cada misión SUPERADA, el jugador recibe puntos para comprar habilidades (solo habilidades) para sus SJ, iguales a la mitad (redondeando hacia arriba) del número de Localizaciones de la carta de Misión. Estos puntos son un extra que se suma a los puntos de recurso de las misiones siguientes.
+  - title: "Cómo leer la preparación de la misión"
+    body: |-
+      - Localizaciones: empiezan en juego en el espacio # indicado, inactivas (boca abajo) como los objetivos. "A" significa que empiezan activadas y no roban más Hostiles, salvo Refuerzos. Se activan con las mismas reglas que los objetivos.
+      - RA: la carta de Objetivo gana "Refuerzo Siempre" (Reinforce Always).
+      - Hostiles: algunas misiones empiezan con los Hostiles indicados ya colocados en la carta señalada y ACTIVOS (A). "Inm" significa que el Hostil gana INMÓVIL.
+      - FL / E: las misiones 1-3 se juegan con el mazo de Hostiles de Primera Línea (FL); el Asalto a Carentan con el mazo de Élite (E).
+  - title: "Ventajas para el Asalto a Carentan"
+    body: |-
+      Al ganar una misión, elige UNA de las Ventajas de su recompensa (la misión 3 de cada Plan ofrece una sola, muy importante). Las Ventajas se aplican a TODOS los jugadores, pero solo en la misión 4 (Asalto a Carentan). Llevad un registro común de las Ventajas ganadas por los cuatro Regimientos (la hoja de campaña tiene una fila por misión).
+
+scoring: |-
+  Cuando los cuatro jugadores hayan jugado el Asalto a Carentan, cuenta cuántos Regimientos lo ganaron (0-4) y consulta la tabla de Resultado de la Campaña.
+
+outcomes:
+  - label: "Derrota"
+    condition: "0 Regimientos ganan el Asalto a Carentan"
+    epilogue: |-
+      Los Fallschirmjäger rechazan el asalto y consolidan la defensa de Carentan. Las fuerzas de la 101.ª son aniquiladas. Los alemanes usan la ciudad como punto de partida de sus contraataques, expulsan de Francia a las fuerzas aliadas del desembarco y ganan la guerra.
+  - label: "Victoria pírrica"
+    condition: "1 Regimiento gana el Asalto a Carentan"
+    epilogue: |-
+      Pese a tomar la ciudad, la 101.ª no logra consolidar su defensa. Fuertes contraataques de unidades blindadas alemanas acaban expulsándola y reconquistan la ciudad al día siguiente. La 101.ª se retira con numerosas bajas y pierde su capacidad operativa para el resto de la guerra. La 2.ª División Acorazada estadounidense recupera Carentan, pero también sufre grandes pérdidas, y la liberación de Francia se estanca.
+  - label: "Victoria marginal"
+    condition: "2 Regimientos ganan el Asalto a Carentan"
+    epilogue: |-
+      Carentan es liberada, pero las unidades alemanas logran retirarse ordenadamente, con tiempo para organizar mejor sus defensas y complicar a los Aliados la liberación del resto del territorio francés. La 101.ª sufre un 50 % de bajas y debe reforzarse con reclutas menos experimentados, perdiendo capacidad de combate, aunque participa de forma marginal en operaciones posteriores de la guerra.
+  - label: "Victoria decisiva"
+    condition: "3 Regimientos ganan el Asalto a Carentan"
+    epilogue: |-
+      Carentan es liberada en un primer asalto. Aunque la 101.ª sufre muchas bajas, organiza sus Regimientos para defenderse del contraataque de la 17.ª División Panzer SS, que llega al día siguiente pero es rechazado con la ayuda de la 2.ª División Acorazada del general Rose, llegada desde las playas de Omaha. La guerra continúa (resultado histórico).
+  - label: "Victoria total"
+    condition: "4 Regimientos ganan el Asalto a Carentan"
+    epilogue: |-
+      El asalto a Carentan es un éxito rotundo: los asaltantes aniquilan las defensas alemanas con pocas bajas. Antes de que la 17.ª División Panzer SS tenga tiempo de reorganizarse, la 2.ª División Acorazada, con el apoyo de la 101.ª, ataca, dispersa al enemigo, toma la localidad de Terre-et-Marais varias millas al sur de Carentan y amenaza seriamente con aislar la península de Cotentin del resto de Francia. Aunque los alemanes logran reorganizarse en los días siguientes, sus defensas ceden poco después; el puerto de Cherburgo y la ciudad de Caen caen mucho antes de lo previsto y Francia se libera en pocas semanas al derrumbarse en cascada las defensas del ejército alemán.
+
+missions:
+  - id: "175-1"
+    code: "175-1"
+    title: "Casa por casa - Refugios"
+    mission: W-019      # House to House
+    objective: W-032    # Dugouts
+    entry: true
+    briefing: |-
+      Dada la enorme importancia de tomar Carentan para consolidar las cabezas de playa tras el desembarco y evitar contraataques alemanes que las pongan en peligro, el alto mando estadounidense, a las órdenes del teniente general Omar Bradley, ha ordenado al 175.º Rgto. de la 29.ª División de Infantería salir de las playas de Omaha para apoyar a la 101.ª Aerotransportada en el asalto y la toma de la ciudad. Su primera tarea para enlazar con las fuerzas aerotransportadas será asaltar y asegurar la localidad de Isigny, donde no se espera una fuerte resistencia.
+    setup: "- Localizaciones: Casas (#3)."
+    rewards: |-
+      Ventaja para el Asalto a Carentan (elige 1; se aplica a todos los jugadores en la misión 4):
+      - Eliminar el Evento Sacos terreros
+      O
+      - Cambiar 2 Hostiles de Élite por 2 de Primera Línea
+    next:
+      - to: "175-2"
+        when: success
+        label: "Victoria: siguiente misión"
+      - to: "175-1"
+        when: failure
+        label: "Derrota: repetir (el día 4 es siempre el Asalto)"
+  - id: "175-2"
+    code: "175-2"
+    title: "Batida por el páramo - Puesto de observación"
+    mission: W-021      # Country Stroll
+    objective: W-027    # Observation Post
+    briefing: |-
+      Tras la toma de Isigny, el 175.º debe asegurar ahora la carretera Isigny-Carentan, enlazando con elementos de la 101.ª en la localidad de Auville-sur-le-Vey, y abrir así una ruta de suministro estable para el apoyo de artillería del asalto y, más tarde, para los blindados de la 2.ª División Acorazada que asegurarán su defensa.
+    setup: "- Localizaciones: Carretera (#2)."
+    rewards: |-
+      Ventaja para el Asalto a Carentan (elige 1; se aplica a todos los jugadores en la misión 4):
+      - +4 PR
+      O
+      - Reconocer 1 carta al principio del Turno 1
+    next:
+      - to: "175-3"
+        when: success
+        label: "Victoria: siguiente misión"
+      - to: "175-2"
+        when: failure
+        label: "Derrota: repetir (el día 4 es siempre el Asalto)"
+  - id: "175-3"
+    code: "175-3"
+    title: "Incursión - Almacén de suministros"
+    mission: W-022      # Raid
+    objective: W-028    # Supply Dump
+    briefing: |-
+      Elementos de la 275.ª División de Infantería alemana están concentrando suministros y refuerzos para consolidar el flanco sureste de Carentan. Estas operaciones ponen en peligro la ruta abierta en la carretera Isigny-Carentan, así que el 175.º Regimiento debe interceptarlas y neutralizarlas con incursiones rápidas.
+    setup: "- Hostiles: Camión grande (FL) ACTIVO en la carta de Objetivo, INMÓVIL."
+    rewards: |-
+      Ventaja para el Asalto a Carentan (se aplica a todos los jugadores en la misión 4):
+      - Eliminar el Camión grande (E) (pon unos Fusileros FL en el mazo de Hostiles)
+    next:
+      - to: "assault"
+        when: success
+        label: "Victoria: Asalto a Carentan"
+      - to: "175-3"
+        when: failure
+        label: "Derrota: repetir (el día 4 es siempre el Asalto)"
+  - id: assault
+    code: "4"
+    title: "Asalto a Carentan"
+    mission: W-019      # House to House
+    objective: W-032    # Dugouts
+    briefing: |-
+      El objetivo de la Campaña es completar el asalto a la ciudad de Carentan. Los cuatro Regimientos juegan esta misma misión el cuarto día, pase lo que pase en las misiones 1-3, modificada por las Ventajas ganadas por TODOS los jugadores en esas misiones.
+
+      La misión se describe en su grado máximo de defensa. Las Ventajas la facilitan: sustituir algunos Hostiles de Élite al azar por sus versiones de Primera Línea (roba otra si la carta no tiene versión FL), empezar con cartas de Acción extra que no cuentan para el límite de mano inicial (Apoyo de Morteros, Apoyo de Francotiradores) o el Evento Muro Bajo, retirar cartas de Hostil (sustituidas por Fusileros FL) o los Eventos negativos iniciales (Campo de minas, Alambre de espino), sumar puntos de recurso o reducir el valor de Hostiles de la carta de Objetivo.
+    requirements: "Día 4: lo juegan todos los Regimientos, sea cual sea el resultado de las misiones 1-3."
+    setup: |-
+      Grado máximo de defensa (aplica las Ventajas ganadas por todos los jugadores):
+      - Usa el mazo de Hostiles de Élite.
+      - Evento Campo de minas en juego en la Localización #2; Evento Alambre de espino en juego en la Localización #3.
+      - SdKfz 251/1 (E) ACTIVO en la Localización #2.
+      - Camión grande (E) ACTIVO en la Localización #3.
+      - Equipo de morteros (E) ACTIVO en la carta de Objetivo, INMÓVIL.
+      - Tanque PzKpfw IV (E) ACTIVO en la carta de Objetivo.
+      - Aplica el Evento Sacos terreros al activar la Localización del espacio #2.
+    victory: "Cada Regimiento que gane esta misión cuenta para el Resultado de la Campaña."

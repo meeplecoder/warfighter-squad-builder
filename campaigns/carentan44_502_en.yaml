@@ -1,0 +1,161 @@
+# Source: campaigns_scenarios/Warfighter_ww2_Europe_Campaign_Carentan_Eng.pdf (Mariano Rico Castillo).
+# One of four regiment campaigns of Carentan 44 (502, 506, 327, 175). Spanish files are a translation.
+# Format: docs/campaign_yaml.md
+format: warfighter-campaign/1
+author: MarianoRicoCastillo
+language: en
+
+name: "Carentan 44 — 502nd Parachute Infantry Regiment"
+summary: |-
+  Carentan 44 (4-player semi-cooperative campaign), 502nd Parachute Infantry Regiment lane: three missions of its own Combat Plan, then the shared Assault on Carentan. Europe base game; US Airborne recommended.
+nation: US
+theater: "Europe - Normandy (Carentan)"
+enemy: "Germany (Fallschirmjäger, 17th SS Pz Gren Div)"
+period: "8-12 June 1944"
+flow: branching
+
+intro: |-
+  Carentan 44 is a semi-cooperative campaign for four players for DVG's Warfighter (WW2 Europe). Each player commands one of the four Regiments that historically fought for Carentan: the 502nd and 506th Parachute Infantry and the 327th Glider Infantry of the 101st Airborne and, coming in support from Omaha, the 175th Infantry of the 29th Infantry Division. This campaign is the 502nd PIR lane; the other three players play the other Regiments' campaigns at the same time.
+
+  The campaign lasts four days (four missions per player). The fourth mission, the Assault on Carentan, is the same for all four players, but may have been modified for all based on the results obtained in missions 1 to 3, through the Assault on Carentan Advantages selected as a reward for victory in those missions. The result of the Campaign depends on how many Regiments overcome the Assault on Carentan successfully.
+
+  Author: Mariano Rico Castillo.
+
+force:
+  restrictions: |-
+    All the soldiers from the European base game (and if used, those from the US Airborne expansion) make up a pool of soldiers from which the four players select their squads for each Mission Day. PS can be equipped with equipment available in both products. The same character cannot be selected by different players on the same day (each soldier is unique), so players must coordinate their squads each day. If no player has the US Airborne expansion, this unique soldier restriction does not apply.
+  replacements: |-
+    The Removed Soldier Outcome rules of the Warfighter manual (page 49) apply: removed soldiers can no longer be chosen during the campaign by any player. Add +3 to those rolls if at least one soldier with the Corpsman skill was available in the squad. All wounds are healed between missions.
+
+persistence:
+  xp: true
+  skills: true
+  wounds: false
+  soldiers: false
+  casualties: true
+  gear: false
+
+rules:
+  - title: "Combat Plan and mission order"
+    body: |-
+      The first three missions must be completed in ascending order, from 1 to 3, and each Regiment has different missions in its Combat Plan. To play the next mission of the Plan you must win the previous one. A defeat forces you to repeat the same mission, but the total limit of four missions per player is kept: the fourth day is always the Assault on Carentan, even if missions 1-3 were not all won. Missing victories make the final mission harder for everyone, because their Advantages (especially those of mission 3) are not obtained.
+  - title: "Experience per successful mission"
+    body: |-
+      After each SUCCESSFUL mission, the player receives points to acquire skills (only) for his PS, equal to half (round up) of the number of Locations shown on the Mission card. These points are an added bonus to the resource points of later missions.
+  - title: "Reading the mission setup"
+    body: |-
+      - Locations: start in play in the space # indicated, inactive (face down) like the objectives. "A" means they start activated and do not draw more Hostiles, except Reinforcements. They are activated following the same rules as the objectives.
+      - RA: the Objective card gains "Reinforce Always".
+      - Hostiles: some missions start with the listed Hostiles already on the card indicated, ACTIVE (A). "Imm" means the Hostile gains IMMOBILE.
+      - FL / E: missions 1-3 are played with the First Line Hostile deck (FL); the Assault on Carentan with the Elite deck (E).
+  - title: "Advantages for the Assault on Carentan"
+    body: |-
+      When you win a mission, select ONE of the Advantages listed in its rewards (mission 3 of each Plan offers a single, very relevant one). Advantages apply to ALL players, but only in mission 4 (Assault on Carentan). Keep a shared record of the Advantages won by the four Regiments (the campaign sheet has a row for each mission).
+
+scoring: |-
+  When the four players have played the Assault on Carentan, count how many Regiments won it (0-4) and check the Campaign Outcome table.
+
+outcomes:
+  - label: "Defeat"
+    condition: "0 Regiments win the Assault on Carentan"
+    epilogue: |-
+      The Fallschirmjäger repel the assault and consolidate the defense of Carentan. The forces of the 101st are annihilated. The Germans use the city as a starting point for their counterattacks, drive the Allied landing forces out of France and win the war.
+  - label: "Pyrrhic victory"
+    condition: "1 Regiment wins the Assault on Carentan"
+    epilogue: |-
+      Despite taking the city, the 101st is unable to consolidate its defense. Strong counterattacks by German armored units eventually drive them out and recapture the city the next day. The 101st retreats with heavy casualties, losing its operational capability for the rest of the war. The 2nd US Armored Division recaptures Carentan, but also suffers heavy casualties, and the liberation of France stalls.
+  - label: "Marginal victory"
+    condition: "2 Regiments win the Assault on Carentan"
+    epilogue: |-
+      Carentan is liberated but the German units manage to withdraw in an orderly way, with time to organize their defenses better and complicate the liberation of the rest of French territory for the Allies. The 101st suffers 50% casualties and has to be reinforced with less experienced recruits, losing combat strength, although it takes part in later operations of the war in a marginal way.
+  - label: "Decisive victory"
+    condition: "3 Regiments win the Assault on Carentan"
+    epilogue: |-
+      Carentan is liberated in a first assault. Although the 101st takes heavy casualties, it organizes its Regiments to defend against the counterattack of the 17th SS Panzer Division, which comes the next day but is repulsed with the help of General Rose's 2nd Armored Division arriving from the beaches of Omaha. The war continues (historical result).
+  - label: "Total victory"
+    condition: "4 Regiments win the Assault on Carentan"
+    epilogue: |-
+      The assault on Carentan is a resounding success: the assailants annihilate the German defenses with few casualties. Before the 17th SS Panzer Division has time to reorganize, the 2nd Armored Division with the support of the 101st attacks, disperses the enemy, takes the town of Terre-et-Marais several miles south of Carentan and seriously threatens to isolate the Cotentin peninsula from the rest of France. Although the Germans manage to reorganize in the following days, their defenses give way shortly after; the port of Cherbourg and the city of Caen fall much earlier than expected, and France is liberated in a few weeks as the German army's defenses collapse in cascade.
+
+missions:
+  - id: "502-1"
+    code: "502-1"
+    title: "Just Another Day - Observation Post"
+    mission: W-018      # Just Another Day
+    objective: W-027    # Observation Post
+    entry: true
+    briefing: |-
+      With the assigned mission of protecting the Division's right flank, the 502nd Rgt. of the 101st Airborne begins launching reconnaissance patrols and consolidates positions west of Carentan. The seizure of several German observation posts is critical to determine the extent of the town's defenses prior to the assault. At least two Fallschirmjäger battalions have been identified, with support from two other Eastern Battalions, defending Carentan.
+    setup: "- Hostiles: Machine Gun ACTIVE on the Objective card, IMMOBILE."
+    rewards: |-
+      Advantage for the Assault on Carentan (pick 1, applies to all players in mission 4):
+      - Remove the Minefield Event
+      OR
+      - Swap 2 Elite Hostiles for 2 First Line Hostiles
+    next:
+      - to: "502-2"
+        when: success
+        label: "Victory: next mission"
+      - to: "502-1"
+        when: failure
+        label: "Defeat: repeat (day 4 is always the Assault)"
+  - id: "502-2"
+    code: "502-2"
+    title: "Hard Slog - Bridge Capture"
+    mission: W-020      # Hard Slog
+    objective: W-031    # Bridge Capture
+    briefing: |-
+      Control of the Carentan highway bridges across the Douve River is the step prior to initiating the southwest pocketing of the city, so their capture and control is critical to the campaign outcome. The Regiment has to advance through poor cover terrain and under heavy fire, so casualties are expected.
+    setup: "- Locations: Road (#2)."
+    rewards: |-
+      Advantage for the Assault on Carentan (pick 1, applies to all players in mission 4):
+      - +4 RP
+      OR
+      - -3 Hostile value on the Objective card
+    next:
+      - to: "502-3"
+        when: success
+        label: "Victory: next mission"
+      - to: "502-2"
+        when: failure
+        label: "Defeat: repeat (day 4 is always the Assault)"
+  - id: "502-3"
+    code: "502-3"
+    title: "Limited Support - Bunker Clearing"
+    mission: W-023      # Limited Support
+    objective: W-026    # Bunker Clearing
+    briefing: |-
+      Leaving behind several companies of Engineers repairing the captured bridges, the 502nd Rgt. finally has the mission to seize strategic high positions southwest of Carentan, heavily defended by mortar and machine gun positions entrenched in a farm complex. Their elimination is the decisive step before the final assault on the city.
+    setup: |-
+      - Locations: Farm (#7).
+      - Hostiles: Mortar Team (E) ACTIVE on the Objective card.
+    rewards: |-
+      Advantage for the Assault on Carentan (applies to all players in mission 4):
+      - Remove the Mortar Team (E) (put a FL Riflemen in the Hostile deck)
+    next:
+      - to: "assault"
+        when: success
+        label: "Victory: Assault on Carentan"
+      - to: "502-3"
+        when: failure
+        label: "Defeat: repeat (day 4 is always the Assault)"
+  - id: assault
+    code: "4"
+    title: "Assault on Carentan"
+    mission: W-019      # House to House
+    objective: W-032    # Dugouts
+    briefing: |-
+      The objective of the Campaign is to complete the assault on the city of Carentan. All four Regiments play this same mission on the fourth day, whatever happened in missions 1-3, modified by the Advantages won by ALL players in those missions.
+
+      The mission is described at its maximum defense grade. The Advantages make it easier: replacing some random Elite Hostiles with their First Line versions (redraw if the card has no FL version), starting with extra Action cards that do not count toward the initial hand limit (Mortar Support, Sniper Support) or the Low Wall Event, removing Hostile cards (replaced by FL Riflemen) or the negative starting Events (Minefield, Barbed Wire), adding resource points, or reducing the Hostile value of the Objective card.
+    requirements: "Day 4: played by every Regiment, whatever the result of missions 1-3."
+    setup: |-
+      Maximum defense grade (apply the Advantages won by all players):
+      - Use the Elite Hostile deck.
+      - Minefield Event in play at Location #2; Barbed Wire Event in play at Location #3.
+      - SdKfz 251/1 (E) ACTIVE at Location #2.
+      - Large Truck (E) ACTIVE at Location #3.
+      - Mortar Team (E) ACTIVE on the Objective card, IMMOBILE.
+      - PzKpfw IV Tank (E) ACTIVE on the Objective card.
+      - Apply the Sandbags Event when the Location in space #2 is activated.
+    victory: "Each Regiment that wins this mission counts toward the Campaign Outcome."
