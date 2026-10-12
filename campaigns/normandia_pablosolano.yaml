@@ -1,0 +1,155 @@
+# Source: campaigns_scenarios/Campana_Warfighter-1.pdf (Pablo Solano).
+# Format: docs/campaign_yaml.md
+format: warfighter-campaign/1
+author: PabloSolano
+language: es
+
+name: Campaña Warfighter 2GM Europa - Desembarco de Normandía
+summary: >-
+  Paracaidistas de la 101ª dispersos tras el lanzamiento del Día D: de Maisy a Carentan en ocho parejas
+  MISIÓN-OBJETIVO del Core Europa, del 6 al 9 de junio de 1944.
+nation: US
+theater: Europa - Normandía
+enemy: Alemania
+period: 6-9 de junio de 1944
+flow: linear
+
+intro: >-
+  Esta campaña usa las reglas de campaña descritas en el manual de instrucciones original. Tan solo se trata
+  de una serie de parejas MISIÓN-OBJETIVO y un poco de lore histórico para darle cierta profundidad a la campaña.
+
+persistence:
+  xp: true
+  wounds: true
+  skills: true
+  soldiers: true
+  casualties: true
+  gear: false
+
+rules:
+  - title: Reglas de campaña
+    body: Se usan las reglas de campaña descritas en el manual de instrucciones original.
+
+  - title: "Regla opcional: Medallas"
+    body: |-
+      Curar 2 heridas cuenta como una baja a términos de cálculo de medallas.
+
+      - El soldado que acabe con 5 enemigos en una misión ganará la medalla "Estrella de Bronce".
+      - El soldado que acabe con 10 enemigos en una misión ganará la medalla "Estrella de Plata".
+      - El soldado que consiga combatir en al menos 5 misiones ganará la medalla "Cruz al Servicio Distinguido".
+      - El soldado que consiga combatir en todas las misiones de la campaña ganará la medalla "Medalla de Honor".
+      - Los soldados que mueran en combate recibirán a título póstumo la medalla "Corazón púrpura".
+
+  - title: "Regla opcional: Rangos y ascensos"
+    body: |-
+      Dependiendo del número de soldados jugadores, los rangos de la misión 1 serán los siguientes, realizándose por sorteo en caso de más de 1 jugador. Además de a términos de roleo, los rangos deberán usarse para desempatar una planificación en la que no haya unanimidad. ¡Así funciona el ejército, hijo!
+
+      1 jugador: Soldado Jugador — 1 Sargento · Soldado no Jugador — 1 Cabo · Escuadra — Soldados
+      2 jugadores: Soldados Jugadores — 1 Sargento, 1 Cabo · Soldado no Jugador — 1 Soldado de 1ª · Escuadra — Soldados
+      3 o más jugadores: Soldados Jugadores — 1 Sargento, 2 Cabos · Soldados no Jugadores — Soldados · Escuadra — Soldados
+
+      Aunque se gasten los puntos de PE, lleva la cuenta de los que has ido ganando (y de los soldados curados, 2 heridas = 1 PE) y mira la tabla los necesarios para ascender. Si un personaje comienza en un cierto rango, ya tiene los puntos necesarios para haber llegado hasta ahí:
+
+      Soldado: 0 · Soldado de 1ª: 3 · Cabo: 8 · Sargento: 15
+      Sargento Mayor: 22 · Teniente 2ª: 35 · Teniente: 50 · Capitán: 75
+
+# Not in the PDF: the app needs at least one outcome to publish.
+outcomes:
+  - label: Victoria
+    condition: Completar las 8 misiones
+    epilogue: El puente sobre el Vire es nuestro y el camino a Carentan está despejado.
+
+missions:
+  - code: "1"
+    title: Un día más - Rescate
+    mission: W-018      # Just Another Day
+    objective: W-030    # Rescue
+    briefing: |-
+      6 de junio de 1944, 01:37 h.
+
+      El lanzamiento ha sido una catástrofe. Nos hemos desviado de la ZA tanto que no sabemos dónde estamos. Las primeras horas han sido solamente esconderse y tratar de buscar a otros soldados. He encontrado solamente a unos pocos, pero hemos visto que los Krauts se llevaban a unos pocos detenidos a una granja. Está muy cerca y conocemos perfectamente el terreno, ya que llevamos horas vigilándolo. Si los liberamos seremos suficientes para hacer algo de daño.
+    debrief: |-
+      El rescate ha ido bien, y tenemos algunos refuerzos. Lo mejor es que hemos pillado una radio alemana y un mapa, pero hemos hecho demasiado ruido. Tendremos que movernos.
+
+  - code: "2"
+    title: Casa por casa - Refugios
+    mission: W-019      # House to House
+    objective: W-032    # Dugouts
+    briefing: |-
+      6 de junio de 1944, 03:45 h.
+
+      Por fin hemos conseguido tomar un respiro y encontrarnos. Estamos a tomar por saco de donde debíamos caer, pero por lo que hemos escuchado por la radio cerca de la aldea de Maisy. Les tenemos muchas ganas a los Krauts, por lo que hemos decidido que como no tenemos órdenes directas, vamos a liberar ese pueblo.
+    debrief: |-
+      Acabamos con el último comesalchichas, y cuando el silencio se hace, algunos de los vecinos salen a darnos las gracias. Por el poco francés que recuerdo de la Srta Honey, nos dan las gracias y nos dan comida. Esta gente ha sufrido mucho, pero el final todavía está lejos. No hay nadie de la resistencia por aquí con una radio y se nos ha roto la que requisamos, por lo que tendremos que pensar nuestro siguiente paso.
+
+  - code: "3"
+    title: Batida por el páramo - Puesto de observación
+    mission: W-021      # Country Stroll
+    objective: W-027    # Observation Post
+    briefing: |-
+      6 de junio de 1944, 08:30 h.
+
+      Hemos liberado el pequeño pueblo, pero no tenemos ni un minuto de respiro. Tras aguantar el contraataque alemán, se han empezado a escuchar bombardeos en la costa. Parece que comienza el desembarco. Los aldeanos nos han dicho que aquí cerca hay una batería que ha quedado intacta tras los bombardeos y está haciendo estragos en la playa. Esto no estaba en los planes, pero habrá que echarle una mano a los compañeros de la playa.
+    debrief: |-
+      La batería ha quedado destrozada, aunque no ha sido fácil. Los barcos de la marina no dejaban de bombardearla intentando hacer lo mismo, pero apuntan como un escocés borracho yendo a mear. Seguro que además se apuntan el tanto. No hemos podido acabar con todos los Krauts, pero al menos el desembarco podrá seguir con una complicación menos.
+
+      NOTA HISTÓRICA: Varios barcos se disputan el "honor" de haber sido los responsables de destruir la batería de Maisy con sus bombardeos, entre ellos, el HMS Hawkins, pero sin pruebas de haber sido ellos. Como la batería fue tomada el día 9 por los rangers de Point du Hoc (ver misión 7), se ha aprovechado este vacío para meter esta misión.
+
+  - code: "4"
+    title: Trabajo duro - Cazar al tanque
+    mission: W-020      # Hard Slog
+    objective: W-029    # Tank Hunting
+    briefing: |-
+      6 de junio de 1944, 11:50 h.
+
+      Íbamos a volver a Maisy tras destrozar la batería, y va a haber que darse prisa. Desde el puesto de observación hemos visto que un tanque (un jodido Tiger) se aproxima al pueblo. Podría ser una masacre. Hay que parar a ese tanque cueste lo que cueste. Al menos en el puesto de observación había suministros.
+    debrief: |-
+      No sé cómo lo hemos hecho pero lo hemos conseguido. Nos hemos cargado un puto Tiger sin ayuda de blindados. Los lugareños nos han abierto una botella de champán del de verdad y joder, vamos a tomarnos un trago. Aunque sigamos en combate, nos lo hemos ganado. Johnny no se lo va a creer cuando se lo cuente.
+    rewards: |-
+      MOTE: El soldado que acabe con el tanque recibirá el apodo de "Cazatanques". Si lo hace un soldado individualmente, recibirá una Cruz al Servicio Distinguido automáticamente.
+
+  - code: "5"
+    title: Incursión - Almacén de suministros
+    mission: W-022      # Raid
+    objective: W-028    # Supply Dump
+    briefing: |-
+      7 de junio de 1944, 16:50 h.
+
+      Pasamos el resto del día 6 con escaramuzas, y hemos establecido nuestro pequeño HQ en Maisy, en el rumbo de los rangers. No sabemos cuánto van a tardar, por lo que necesitamos suministros. Esta gente nos ayuda en lo que puede pero no es necesario. Un chaval que aún no ha debido empezar a afeitarse, pero que es miembro de la resistencia nos ha contado que unos kilómetros al sur está Cardonville, una ciudad algo más grande, donde hay un almacén de suministros que podríamos asaltar. Eso sí, tendrá que ser entrar y salir, porque no hay forma de que nos enfrentemos a una guarnición alemana tan grande. Salimos ahora para asaltarla esta noche.
+    debrief: |-
+      Creo que en Berlín hemos dejado a un par de alemanes sin despertar. Hemos asaltado el almacén pero ahora nos persigue medio Cardonville. Hemos conseguido salir de la ciudad, pero creemos que no ha terminado.
+
+  - code: "6"
+    title: Apoyo limitado - Hay que largarse
+    mission: W-023      # Limited Support
+    objective: W-033    # Break Out
+    briefing: |-
+      8 de junio de 1944, 05:50 h.
+
+      Los alemanes de Cardonville nos siguen los talones. No podemos ir directos a Maisy, para no llevarlos hasta allí, por lo que esperamos poder despistarlos entre los setos en dirección noreste. Espero no arrepentirme de haber venido hasta aquí.
+    debrief: |-
+      Hemos conseguido despistarlos, y tras reagruparnos, volvemos a Maisy con comida, munición y hasta algo de chocolate. Mañana tocará intentar llegar hasta la costa a ver si nos unimos a los rangers. El desembarco está yendo bastante más lento de lo que debía, hay que ponerse las pilas.
+
+  - code: "7"
+    title: Con lo mínimo - Despejar el búnker
+    mission: W-024      # Travel Light
+    objective: W-026    # Bunker Clearing
+    briefing: |-
+      9 de junio de 1944, 05:30 h.
+
+      Por fin algo de suerte. Nos hemos encontrado a los rangers de Pointe du Hoc, que planean acabar con lo que queda de la batería de Maisy. Nos han encargado a nosotros la destrucción del búnker mientras ellos se encargan de la enfermería desde la que están atrincherados la mayoría de los Krauts. No vamos a decepcionarlos.
+    debrief: |-
+      El último rubiales ha caído, el búnker está despejado. A lo lejos escuchamos que el tableteo de las MG42 se silencia, por lo que los rangers han debido tener éxito. La batería de Maisy es historia, probablemente Omaha esté más tranquila ahora.
+
+  - code: "8"
+    title: Camino largo - Capturar el puente
+    mission: W-025      # Long Way
+    objective: W-031    # Bridge Capture
+    briefing: |-
+      9 de junio de 1944, 16:45 h.
+
+      Parece que por fin empezamos a unificar las playas. Los rangers se han dirigido al este para ayudar con la captura de Avranches, pero nosotros hemos recibido órdenes nuevas (benditas radios). Ponemos rumbo a Carentan, la próxima gran ciudad a tomar. Tenemos que esperar allí al resto de la 101ª y a la 2ª de blindados, que están atrapados en Insigny, combatiendo contra francotiradores rezagados. Nuestro trabajo es tomar el puente que cruza el río Vire y dejarles vía libre hasta Carentan. Luego nos uniremos a ellos.
+    debrief: |-
+      Aún no sé cómo conseguimos seguir luchando sin desfallecer tras días apenas durmiendo, pero el puente es nuestro. Hemos aguantado como jabatos y el camino a Carentan está despejado. Con esto, la invasión va a empezar a tomar forma. Hitler debería empezar a pensar en cambiarse los pañales.
+
+      NOTA HISTÓRICA: El 9 de junio de 1944, cuando la 29ª de infantería llegó al puente, los alemanes lo habían destruido para evitar precisamente esto. El cuerpo de ingenieros tuvo que inventarse una plataforma usando balsas para construir un puente artificial temporal para cruzarlo.
