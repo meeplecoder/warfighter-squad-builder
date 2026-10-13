@@ -10,9 +10,31 @@ login_manager = LoginManager()
 limiter = Limiter(key_func=get_remote_address, default_limits=[])
 
 
+def _check_auth_config(app):
+    """Refuse to run in production with settings that would make auth unsafe."""
+    from app.config import DEV_SECRET_KEY
+    if not app.config['APP_BASE_URL']:
+        if not app.config['DEBUG']:
+            raise RuntimeError('APP_BASE_URL must be set (public origin used in emailed links).')
+        app.config['APP_BASE_URL'] = 'http://localhost:5000'
+    if app.config['MAIL_BACKEND'] == 'resend' and not app.config['RESEND_API_KEY']:
+        raise RuntimeError('MAIL_BACKEND=resend needs RESEND_API_KEY.')
+    if app.config['DEBUG']:
+        return
+    if app.config['SECRET_KEY'] in (DEV_SECRET_KEY, 'change-me-in-production') or len(app.config['SECRET_KEY']) < 32:
+        raise RuntimeError('SECRET_KEY must be a random value of 32+ characters when DEBUG is off.')
+    if app.config['MAIL_BACKEND'] not in ('resend', 'smtp'):
+        app.logger.warning('MAIL_BACKEND=%s: verification/reset emails are not delivered.', app.config['MAIL_BACKEND'])
+
+
 def create_app():
     app = Flask(__name__, static_folder='../static', static_url_path='/static')
     app.config.from_object('app.config.Config')
+    _check_auth_config(app)
+    if app.config['PROXY_FIX_HOPS']:
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        hops = app.config['PROXY_FIX_HOPS']
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=hops, x_proto=hops, x_host=hops)
 
     _base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     os.makedirs(os.path.join(_base, 'data'), exist_ok=True)
@@ -21,8 +43,11 @@ def create_app():
     login_manager.init_app(app)
     limiter.init_app(app)
     login_manager.login_view = None  # API-only; return 401 instead of redirect
+    # 'basic' (not 'strong'): strong drops remember-me whenever the client IP changes (mobile networks);
+    # stolen-cookie risk is bounded by HttpOnly/Secure cookies and session_version revocation instead
+    login_manager.session_protection = 'basic'
 
-    from app.models import User, CardAssociation, SquadObjective, CardTranslation, Campaign, CampaignMission, CampaignLink  # noqa: F401 — ensure tables are registered
+    from app.models import User, AuthToken, CardAssociation, SquadObjective, CardTranslation, Campaign, CampaignMission, CampaignLink  # noqa: F401 — ensure tables are registered
     from app.i18n import register_sqlite_functions
     from sqlalchemy import event
 
@@ -32,7 +57,28 @@ def create_app():
 
     @login_manager.user_loader
     def load_user(user_id):
-        return db.session.get(User, int(user_id))
+        # Cookie id is "<id>:<session_version>" (User.get_id); a bumped version revokes it
+        uid, _sep, version = str(user_id).partition(':')
+        if not uid.isdigit() or not version.isdigit():
+            return None
+        user = db.session.get(User, int(uid))
+        if not user or (user.session_version or 1) != int(version) or not user.email_verified_at:
+            return None
+        return user
+
+    @app.before_request
+    def require_json_writes():
+        # CSRF defence for the cookie-authenticated JSON API: a cross-site form/fetch cannot send
+        # application/json without a CORS preflight, which this app never grants. Paired with SameSite=Lax.
+        from flask import request
+        if (request.method in ('POST', 'PUT', 'PATCH', 'DELETE') and request.path.startswith('/api/')
+                and request.mimetype != 'application/json'):
+            return jsonify(error='Content-Type must be application/json.'), 415
+
+    @app.errorhandler(429)
+    def too_many_requests(e):
+        from app.i18n import _
+        return jsonify(error=_('Too many attempts. Please try again later.')), 429
 
     @login_manager.unauthorized_handler
     def unauthorized():
@@ -177,6 +223,13 @@ def create_app():
             except Exception:
                 pass  # Column already exists (or fresh table created with it)
 
+            # Campaign language (list filter by UI language)
+            try:
+                conn.execute(db.text("ALTER TABLE campaigns ADD COLUMN language TEXT"))
+                conn.commit()
+            except Exception:
+                pass  # Column already exists
+
             # "Based on" link between squads (copy / fork)
             try:
                 conn.execute(db.text(
@@ -196,6 +249,27 @@ def create_app():
                     conn.commit()
                 except Exception:
                     pass  # Column already exists
+
+            # Local auth hardening (spec/01_system.md §Authentication). Accounts that existed before
+            # email verification are treated as verified.
+            try:
+                conn.execute(db.text("ALTER TABLE users ADD COLUMN email_verified_at TEXT"))
+                conn.execute(db.text("UPDATE users SET email_verified_at = created_at"))
+                conn.commit()
+            except Exception:
+                pass  # Column already exists
+            for ddl in (
+                "ALTER TABLE users ADD COLUMN username_lower TEXT",
+                "UPDATE users SET username_lower = lower(username) WHERE username_lower IS NULL",
+                "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_username_lower ON users (username_lower)",
+                "ALTER TABLE users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 1",
+                "ALTER TABLE users ADD COLUMN password_changed_at TEXT",
+            ):
+                try:
+                    conn.execute(db.text(ddl))
+                    conn.commit()
+                except Exception:
+                    pass  # Column / index already exists
 
             # Add soldier_xp column and populate from notes (XP lines)
             try:
@@ -260,6 +334,9 @@ def create_app():
     with app.app_context():
         from app import custom_missions
         if custom_missions.purge():
+            db.session.commit()
+        from app.auth import purge_unverified
+        if purge_unverified():
             db.session.commit()
 
     return app

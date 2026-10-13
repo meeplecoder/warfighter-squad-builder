@@ -5,6 +5,7 @@ import json
 from app.utils import classify_objective_type, classify_objective_family, theater_from_raw_type
 from app import i18n, card_images
 from flask import current_app
+from sqlalchemy.orm import validates
 
 
 def now_utc():
@@ -175,11 +176,25 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.Text, nullable=False, default=now_utc)
     language = db.Column(db.Text)                                  # preferred UI language; NULL = browser default
     is_admin = db.Column(db.Integer, nullable=False, default=0)    # set manually; grants translation editor
+    username_lower = db.Column(db.Text, unique=True)               # case-insensitive uniqueness + login lookup
+    email_verified_at = db.Column(db.Text)                         # NULL = not confirmed; login refused
+    session_version = db.Column(db.Integer, nullable=False, default=1)  # bump to revoke every session/remember cookie
+    password_changed_at = db.Column(db.Text)
 
     modules = db.relationship('UserModule', backref='user', cascade='all, delete-orphan')
     squads = db.relationship('Squad', foreign_keys='Squad.user_id', backref='owner', cascade='all, delete-orphan')
     likes = db.relationship('SquadLike', backref='user', cascade='all, delete-orphan')
     comments = db.relationship('SquadComment', backref='author', cascade='all, delete-orphan')
+    auth_tokens = db.relationship('AuthToken', backref='user', cascade='all, delete-orphan')
+
+    @validates('username')
+    def _set_username_lower(self, key, value):
+        self.username_lower = value.lower() if value else None
+        return value
+
+    def get_id(self):
+        # Session / remember cookies carry the version; load_user rejects stale ones
+        return f'{self.id}:{self.session_version or 1}'
 
     def to_dict(self):
         return {
@@ -191,7 +206,23 @@ class User(UserMixin, db.Model):
             'created_at': self.created_at,
             'language': self.language,
             'is_admin': bool(self.is_admin),
+            'email_verified': bool(self.email_verified_at),
         }
+
+
+class AuthToken(db.Model):
+    """Single-use emailed token (verify email / reset password / change email). Only its SHA-256 is stored."""
+    __tablename__ = 'auth_tokens'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    purpose = db.Column(db.Text, nullable=False)        # 'verify_email' | 'reset_password' | 'change_email'
+    token_hash = db.Column(db.Text, nullable=False, unique=True)
+    new_email = db.Column(db.Text)                      # change_email only
+    created_at = db.Column(db.Text, nullable=False, default=now_utc)
+    expires_at = db.Column(db.Text, nullable=False)
+    used_at = db.Column(db.Text)
+    request_ip = db.Column(db.Text)
 
 
 class UserModule(db.Model):
@@ -400,6 +431,7 @@ class Campaign(db.Model):
     enemy = db.Column(db.Text)
     period = db.Column(db.Text)
     flow_type = db.Column(db.Text, nullable=False, default='linear')
+    language = db.Column(db.Text)           # 'en' | 'es' — list filter; NULL = shown in every language
     settings = db.Column(db.Text)           # JSON: force, persistence, rules, scoring, outcomes
     status = db.Column(db.Text, nullable=False, default='draft')
     created_at = db.Column(db.Text, nullable=False, default=now_utc)
