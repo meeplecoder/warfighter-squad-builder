@@ -12,6 +12,7 @@ from app import rules as rules_module
 from app import squad_io
 from app import mentions
 from app import required_modules
+from app import metrics
 from app import custom_missions
 from app.utils import classify_objective_type, theater_from_raw_type
 from app import i18n
@@ -83,6 +84,11 @@ def _squad_detail(squad, liked_by_me=False):
     base['mentions'] = mentions.resolve(squad.notes)
     base['required_modules'] = required_modules.required_modules(squad)
     base['copies_count'] = Squad.query.filter_by(parent_squad_id=squad.id, status='published').count()
+    try:
+        base['metrics'] = metrics.squad_metrics(squad)
+    except Exception:                                    # an estimate must never break the squad page
+        current_app.logger.exception('squad metrics failed for squad %s', squad.id)
+        base['metrics'] = None
     # Enrich mission with full card attributes for the detail view
     mc = squad.mission_card
     base['mission'].update({
