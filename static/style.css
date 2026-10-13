@@ -194,12 +194,24 @@ h3 { font-size: 1rem; font-weight: 600; }
 }
 
 /* Main content area */
+#app-column {
+  flex: 1; min-width: 0; margin-left: var(--sidebar-w);
+  display: flex; flex-direction: column; min-height: calc(100vh - var(--header-h));
+}
 #app-main {
   flex: 1;
-  margin-left: var(--sidebar-w);
   padding: 24px 16px;
   max-width: 1200px;
+  width: 100%;
 }
+#app-footer {
+  margin-top: 24px; padding: 14px 16px; border-top: 1px solid var(--border);
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 20px;
+  font-size: 12px; color: var(--text-muted); background: rgba(0, 0, 0, .18);
+}
+#app-footer p { margin: 0; max-width: 90ch; line-height: 1.5; }
+#app-footer .footer-gh { display: inline-flex; align-items: center; gap: 6px; color: var(--link); white-space: nowrap; }
+#app-footer .footer-gh .icon { width: 15px; height: 15px; }
 
 /* ---- Tables -------------------------------------------------------- */
 .data-table {
@@ -769,10 +781,9 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
   #sidebar .nav-link.nav-sub::before { display: none; }
   #nav-campaign-builder { display: none !important; }   /* bottom bar: reach it from Campaigns → New */
   .nav-beta { display: none; }
-  #app-main {
-    margin-left: 0;
-    padding-bottom: 70px;
-  }
+  #app-column { margin-left: 0; }
+  #app-main { padding-bottom: 16px; }
+  #app-footer { padding-bottom: 72px; }      /* clear the fixed bottom tab bar */
   .card-detail-layout { grid-template-columns: 1fr; }
   .builder-layout { grid-template-columns: 1fr; height: auto; }
   .builder-right { order: -1; }

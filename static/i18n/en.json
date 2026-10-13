@@ -591,5 +591,8 @@
  "gen.footer": "Generated — {quality}, seed {seed}, engine v{v}.",
  "gen.err.NO_PLAYER_SOLDIER_OWNED": "Your modules have no Player Soldier for this nation. Check your collection in the Profile.",
  "gen.err.MISSION_NOT_PLAYABLE": "That mission or objective cannot be played with your collection and nation.",
- "gen.err.BUDGET_TOO_LOW": "The mission budget does not cover the cheapest Player Soldier you own."
+ "gen.err.BUDGET_TOO_LOW": "The mission budget does not cover the cheapest Player Soldier you own.",
+ "footer.fan_made": "Fan-made web app — not affiliated with or endorsed by DVG.",
+ "footer.rights": "Warfighter and all related games, names, cards and artwork belong to DVG (Dan Verssen Games); all rights belong to them.",
+ "footer.github": "Source code on GitHub"
 }
