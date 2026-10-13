@@ -6,3 +6,11 @@ __pycache__/
 .env
 static/card_images/*
 !static/card_images/README.md
+.venv/
+venv/
+.pytest_cache/
+.coverage
+*.bundle
+.DS_Store
+.idea/
+.vscode/
