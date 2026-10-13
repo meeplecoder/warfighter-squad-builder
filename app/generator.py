@@ -21,7 +21,7 @@ from flask_login import login_required, current_user
 from sqlalchemy import or_
 
 from app import db, limiter
-from app import metrics, rules as rules_module
+from app import metrics, skill_effects, rules as rules_module
 from app.i18n import _
 from app.models import Card, UserModule, CUSTOM_MODULE
 from app.utils import normalize_nation, nation_filter_clause, theater_from_raw_type
@@ -350,6 +350,32 @@ def _weapon_value(card, hostile, alpha, w):
     return v, wp
 
 
+# ── skills and armor: marginal gain on the metrics ────────────────────────────
+
+def _scales():
+    """Community median per metric — the scale that turns a raw value into a comparable 0..1 score."""
+    vals = (metrics.reference().get('community', {}).get('all') or {}).get('values') or {}
+    out = {}
+    for k in metrics.METRIC_KEYS:
+        v = sorted(vals.get(k) or [])
+        out[k] = max(v[len(v) // 2], 1e-6) if v else 1.0
+    return out
+
+
+def _squad_score(raw, weights, scales):
+    """Weighted, saturating score: x/(1+x) of raw/median, so every metric lives on the same 0..1 scale."""
+    total = 0.0
+    for k, w in weights.items():
+        x = max(raw[k]['raw'], 0.0) / scales[k]
+        total += w * x / (1.0 + x)
+    return total
+
+
+# Skills and equipment the engine may buy (names → effects in app/skill_effects.py)
+BUYABLE_SKILLS = tuple(skill_effects.SKILL_EFFECTS)
+BUYABLE_EQUIPMENT = ('Body Armor', 'Lucky Helmet')
+
+
 # ── the builder ───────────────────────────────────────────────────────────────
 
 _FANTASY_MODULES = ('Dagon', "R'lyeh")
@@ -494,9 +520,10 @@ def build(req, ctx, rng):
 
     def pick_for(s, cap):
         """Best next weapon for one Player Soldier within the cap, or None."""
-        have = {g[0].id: g for g in s['gear']}
-        sustained = [g for g in s['gear'] if not wvals[g[0].id][1].expended]
-        oneshot = [g for g in s['gear'] if wvals[g[0].id][1].expended]
+        wgear = [g for g in s['gear'] if g[0].id in wvals]        # weapons only (gear also holds skills / armor)
+        have = {g[0].id: g for g in wgear}
+        sustained = [g for g in wgear if not wvals[g[0].id][1].expended]
+        oneshot = [g for g in wgear if wvals[g[0].id][1].expended]
         best = None
         for c in weapons:
             wt = _gear_weight(c)
@@ -556,6 +583,76 @@ def build(req, ctx, rng):
 
     equip(spent + (budget - spent) * 0.55)
 
+    # skills + armor: marginal gain per RP on the objective's weighted metrics (same numbers the page shows)
+    scales = _scales()
+    skill_cards = {c.name: c for c in _dedupe_by_name(
+        [c for c in cat.filter(Card.card_type == 'Skill', Card.name.in_(BUYABLE_SKILLS)).order_by(Card.id).all()
+         if _nation_ok(c, nation) and allowed(c) and c.resource_cost is not None])}
+    equip_cards = {}
+    for c in cat.filter(Card.card_type == 'Equipment').order_by(Card.id).all():
+        if not allowed(c) or not _nation_ok(c, nation) or c.resource_cost is None:
+            continue
+        for key in BUYABLE_EQUIPMENT:
+            if c.name == key or c.name.endswith('-' + key):
+                equip_cards.setdefault(key, c)
+    extras = {}      # name → card row (skills first, then equipment)
+    extras.update(skill_cards)
+    extras.update({c.name: c for c in equip_cards.values()})
+    detail_cache = {}
+
+    def add_extras(cap):
+        """Greedily buy the extra with the best score gain per RP, for any Player Soldier, while spend <= cap."""
+        nonlocal spent
+        if not extras:
+            return
+        pss = [x for x in chosen if x['card'].card_subtype == 'Player']
+        mdict = {'time': mission.time, 'objective_position': mission.objective_position,
+                 'mission_type': mission.card_subtype}
+        inputs = [metrics.soldier_input(x['card'], [(g, q) for g, q in x['gear']]) for x in chosen]
+        base = metrics.analyse({'soldiers': inputs}, mdict, objs, hostile=hostile)
+        base_score = _squad_score(base, weights, scales)
+        once = {'Leadership', 'Squad Leader', 'Spotter'}     # limit 1 per mission / one Spotter is enough
+        for _ in range(8):
+            best = None
+            for x in pss:
+                idx = chosen.index(x)
+                owned = {g[0].name for g in x['gear']}
+                for name, c in extras.items():
+                    if name in owned or spent + (c.resource_cost or 0) > cap:
+                        continue
+                    if name in once and any(g[0].name == name for y in chosen for g in y['gear']):
+                        continue
+                    if name == 'Veteran' and (x['card'].resource_cost or 0) < 20:
+                        continue
+                    if c.card_type == 'Equipment' and _gear_weight(c) > x['left']:
+                        continue
+                    if c.card_type == 'Equipment' and any(g[0].card_type == 'Equipment' and g[0].name.endswith(name.split('-')[-1])
+                                                          for g in x['gear']):
+                        continue
+                    d = detail_cache.get(c.id)
+                    if d is None:
+                        d = detail_cache[c.id] = c.to_card_detail()
+                    trial = [dict(i, gear=list(i['gear'])) for i in inputs]
+                    trial[idx]['gear'].append(dict(d, _qty=1))
+                    gain = _squad_score(metrics.analyse({'soldiers': trial}, mdict, objs, hostile=hostile),
+                                        weights, scales) - base_score
+                    value = gain * noise() / max(c.resource_cost or 1, 1)
+                    if gain > 0.004 and (best is None or value > best[0]):
+                        best = (value, x, c, idx)
+            if best is None:
+                break
+            _, x, c, idx = best
+            x['gear'].append([c, 1])
+            if c.card_type == 'Equipment':
+                x['left'] -= _gear_weight(c)
+            spent += c.resource_cost or 0
+            d = detail_cache.get(c.id) or c.to_card_detail()
+            inputs[idx]['gear'].append(dict(d, _qty=1))
+            base = metrics.analyse({'soldiers': inputs}, mdict, objs, hostile=hostile)
+            base_score = _squad_score(base, weights, scales)
+
+    add_extras(spent + (budget - spent) * 0.5)
+
     # support soldiers
     def support_value(c):
         inp = metrics.soldier_input(c, [])
@@ -581,6 +678,7 @@ def build(req, ctx, rng):
         names_in.add(best.name)
 
     equip(budget)
+    add_extras(budget)
     return chosen, budget, weights, spent
 
 

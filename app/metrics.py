@@ -16,6 +16,8 @@ import os
 import re
 from functools import lru_cache
 
+from app import skill_effects
+
 METRIC_KEYS = ['ranged_fire', 'close_assault', 'anti_armour', 'demolition', 'supplies',
                'mobility', 'survivability', 'resilience', 'experience']
 
@@ -216,7 +218,8 @@ def attack_value(hit, dice, pen, spray_or_explosion, cover_dist, alpha, per_card
     return k, s, k + alpha * s
 
 
-def best_fire(weapon, rng, cover_dist, alpha, per_card, pen_bonus=0, hit_bonus=0, rng_min=None):
+def best_fire(weapon, rng, cover_dist, alpha, per_card, pen_bonus=0, hit_bonus=0, rng_min=None,
+              auto_dice=0, explosion_dice=0):
     """Best F over fire modes of a ranged/thrown weapon at range `rng` (or the best range >= rng_min)."""
     if rng_min is not None:
         hits = [h for r, h in weapon.ranges.items() if r >= rng_min]
@@ -230,6 +233,11 @@ def best_fire(weapon, rng, cover_dist, alpha, per_card, pen_bonus=0, hit_bonus=0
     best = 0.0
     modes = weapon.modes or [('Semi', 1)]
     for mode, dice in modes:
+        ml = mode.lower()
+        if ml in ('auto', 'burst'):
+            dice += auto_dice
+        elif ml == 'explosion':
+            dice += explosion_dice
         multi = weapon.spray or mode.lower() == 'explosion'
         # Spray only applies to the multi-die modes (Auto/Burst); Semi/Bolt are one die
         if weapon.spray and mode.lower() in ('semi', 'bolt', 'standard'):
@@ -239,9 +247,38 @@ def best_fire(weapon, rng, cover_dist, alpha, per_card, pen_bonus=0, hit_bonus=0
     return best
 
 
-def hth_value(soldier, weapons, cover_dist, alpha, per_card):
+def fire_with(w, mods, cover_dist, alpha, per_card, rng=None, rng_min=None, spot=0):
+    """best_fire with the soldier's skill / equipment bonuses (and a Spotter's +1 for ranged attacks)."""
+    tags = skill_effects.weapon_tags(w)
+    hb, cb = skill_effects.bonuses(mods, tags, rng if rng is not None else rng_min)
+    if spot and 'ranged' in tags:
+        hb += spot
+    return best_fire(w, rng, cover_dist, alpha, per_card, pen_bonus=cb, hit_bonus=hb, rng_min=rng_min,
+                     auto_dice=mods['auto_dice'], explosion_dice=mods['satchel_dice'] if 'satchel' in tags else 0)
+
+
+def anti_with(w, mods, high_cover, per_card, spot=0):
+    """Best kill chance of a weapon against high-Cover Hostiles (incl. +N vs Vehicles, skill bonuses)."""
+    tags = skill_effects.weapon_tags(w)
+    bonus = w.bonus_vs.get('Vehicles', 0)
+    best = 0.0
+    for r, hit in w.ranges.items():
+        hb, cb = skill_effects.bonuses(mods, tags, r)
+        if spot and 'ranged' in tags:
+            hb += spot
+        for mode, dice in (w.modes or [('Semi', 1)]):
+            ml = mode.lower()
+            d = dice + (mods['auto_dice'] if ml in ('auto', 'burst') else 0) \
+                + (mods['satchel_dice'] if ml == 'explosion' and 'satchel' in tags else 0)
+            k = attack_value(hit, d, w.pen + bonus + cb, w.spray or ml == 'explosion', high_cover, 0, per_card,
+                             hit_bonus=bonus + hb)[0]
+            best = max(best, k)
+    return best
+
+
+def hth_value(soldier, weapons, cover_dist, alpha, per_card, extra=0):
     """F of the best hand-to-hand attack (unarmed or melee weapon)."""
-    hth = soldier.get('hth') or 0
+    hth = (soldier.get('hth') or 0) + extra
     # unarmed: d10 + HtH >= 10 and d6 >= Hostile Cover
     best = attack_value(10, 1, 0, False, cover_dist, alpha, per_card, hit_bonus=hth)[2]
     for w in weapons:
@@ -312,41 +349,54 @@ def analyse(squad, mission, objectives, hostile=None, locations=None):
     alpha = alpha_for(objectives, mission.get('mission_type'))
     time = mission.get('time') or DEFAULT_TIME
 
-    soldiers = []
+    prep = []
     for s in squad['soldiers']:
+        allgear = s['gear'] + s['default_gear']
+        named = lambda kind: {(c.get('name_en') or c.get('name')) for c in allgear if c.get('card_type') == kind}
+        prep.append({'s': s, 'skills': named('Skill'), 'mods': skill_effects.soldier_mods(named('Skill'), named('Equipment'))})
+    lead = max([p['mods']['squad_move'] for p in prep] or [0])            # limit 1 per mission: the best copy counts
+    sleader = max([p['mods']['support_move'] for p in prep] or [0])
+    spotters = sum(1 for p in prep if p['mods']['spotter'])
+
+    soldiers = []
+    for p in prep:
+        s, mods, skills = p['s'], p['mods'], p['skills']
         card = s['card']
         subtype = card.get('card_subtype')
         health, actions = _health_actions(card)
+        if subtype in ('Player', 'Team'):
+            actions += mods['actions']
+            if mods['spotter']:
+                actions -= 1                                         # spotting costs the Spotter 1 Action
+        move = (card.get('movement') or 0) + mods['move'] + lead + (sleader if subtype in ('NPS', 'Squad') else 0)
+        spot = 1 if spotters - (1 if mods['spotter'] else 0) > 0 else 0     # another soldier's Spotter helps you
         ws = [weapon_of(c) for c in s['gear'] + s['default_gear'] if c.get('card_type') == 'Weapon']
-        skills = {(c.get('name_en') or c.get('name')) for c in s['gear'] + s['default_gear'] if c.get('card_type') == 'Skill'}
         qty = {}
         for c in s['gear']:
             qty[c.get('id')] = c.get('_qty', 1)
         info = {'card': card, 'subtype': subtype, 'health': health, 'actions': actions, 'weapons': ws,
-                'skills': skills, 'gear': s['gear'], 'qty': qty}
+                'skills': skills, 'gear': s['gear'], 'qty': qty, 'mods': mods, 'move': move, 'spot': spot}
         # fire value at each range
         fr = {0: 0.0, 1: 0.0, 2: 0.0}
         ar = 0.0
         if subtype == 'Squad':                 # Squad Soldier: own attack chart + pen of printed weapons
             pen = max([w.pen for w in ws] or [0])
+            hb = spot
             for r, hit in _ss_hits(card).items():
                 if r in fr:
-                    fr[r] = attack_value(hit, 1, pen, False, cover_dist, alpha, per_card)[2]
-            ar = max([attack_value(h, 1, pen, False, high_cover, alpha, per_card)[0] for h in _ss_hits(card).values()] or [0])
+                    fr[r] = attack_value(hit, 1, pen, False, cover_dist, alpha, per_card, hit_bonus=hb)[2]
+            ar = max([attack_value(h, 1, pen, False, high_cover, alpha, per_card, hit_bonus=hb)[0]
+                      for h in _ss_hits(card).values()] or [0])
         elif subtype != 'Vehicle':
             for w in ws:
                 if w.melee:
                     continue
-                fr[0] = max(fr[0], best_fire(w, 0, cover_dist, alpha, per_card))
-                fr[1] = max(fr[1], best_fire(w, 1, cover_dist, alpha, per_card))
-                fr[2] = max(fr[2], best_fire(w, None, cover_dist, alpha, per_card, rng_min=2))
-                bonus = w.bonus_vs.get('Vehicles', 0)
-                for r, hit in w.ranges.items():
-                    k = max([attack_value(hit, d, w.pen + bonus, w.spray or m.lower() == 'explosion',
-                                          high_cover, 0, per_card, hit_bonus=bonus)[0]
-                             for m, d in (w.modes or [('Semi', 1)])])
-                    ar = max(ar, k)
-        hth = hth_value(card, ws, cover_dist, alpha, per_card) if subtype in ('Player', 'Team', 'NPS') else 0.0
+                fr[0] = max(fr[0], fire_with(w, mods, cover_dist, alpha, per_card, rng=0, spot=spot))
+                fr[1] = max(fr[1], fire_with(w, mods, cover_dist, alpha, per_card, rng=1, spot=spot))
+                fr[2] = max(fr[2], fire_with(w, mods, cover_dist, alpha, per_card, rng_min=2, spot=spot))
+                ar = max(ar, anti_with(w, mods, high_cover, per_card, spot=spot))
+        hth = hth_value(card, ws, cover_dist, alpha, per_card, extra=mods['hth']) \
+            if subtype in ('Player', 'Team', 'NPS') else 0.0
         info['fire'] = fr
         info['hth'] = hth
         info['close'] = max(fr[0], hth)
@@ -381,10 +431,13 @@ def analyse(squad, mission, objectives, hostile=None, locations=None):
                 continue
             uses = max(1, g.get('_qty', 1)) * (w.ammo if (w.ammo and not w.expended) else 1)
             bonus = w.bonus_vs.get('Structures', 0)
+            tags = skill_effects.weapon_tags(w)
             for r, hit in w.ranges.items():
-                dice = max([d for md, d in w.modes if md.lower() == 'explosion'] or [1])
-                pd = p_die(hit - bonus)
-                pc = p_d6(struct_cover - (w.pen + bonus))
+                hb, cb = skill_effects.bonuses(s['mods'], tags, r)
+                dice = max([d for md, d in w.modes if md.lower() == 'explosion'] or [1]) \
+                    + (s['mods']['satchel_dice'] if 'satchel' in tags else 0)
+                pd = p_die(hit - bonus - hb)
+                pc = p_d6(struct_cover - (w.pen + bonus + cb))
                 hits += uses * dice * pd * pc / max(1, len(w.ranges))
             uses_total += uses
     m['demolition'] = {'raw': hits, 'detail': f'{uses_total} explosive uses · {struct_note}'}
@@ -398,7 +451,7 @@ def analyse(squad, mission, objectives, hostile=None, locations=None):
         for w in s['weapons']:
             if w.melee:
                 continue
-            f = max([best_fire(w, r, cover_dist, alpha, per_card) for r in (0, 1, 2)])
+            f = max([fire_with(w, s['mods'], cover_dist, alpha, per_card, rng=r, spot=s['spot']) for r in (0, 1, 2)])
             if f > best_f:
                 best_f, best_w = f, w
         if s['subtype'] == 'Squad' or best_w is None:
@@ -424,7 +477,7 @@ def analyse(squad, mission, objectives, hostile=None, locations=None):
     objective_pos = mission.get('objective_position') or 4
     moves = max(1, objective_pos - 1) * (2 if mission.get('mission_type') == 'Raid' or
                                          any('Escape' in objective_kinds(o) for o in objectives) else 1)
-    d_cards = sum(p * sum(max(0, e - (s['card'].get('movement') or 0)) for s in soldiers)
+    d_cards = sum(p * sum(max(0, e - s['move']) for s in soldiers)
                   for e, p in locations.items())
     need = moves * d_cards * (1 + MOVE_RESERVE)
     ps = [s for s in soldiers if s['subtype'] == 'Player']      # only Player Soldiers hold Action cards
@@ -444,8 +497,9 @@ def analyse(squad, mission, objectives, hostile=None, locations=None):
             eff += s['health'] * 1.5
             continue
         cov = s['card'].get('cover') or 2
-        pw = sum(p * p_d6(cov - pen) for pen, p in pen_ref.items())   # P(a Hostile attack beats Terrain Cover)
-        eff += s['health'] / max(pw, 0.1)
+        hc = s['mods']['hostile_cover']
+        pw = sum(p * p_d6(cov - (pen + hc)) for pen, p in pen_ref.items())   # P(a Hostile attack beats Terrain Cover)
+        eff += (s['health'] + s['mods']['hp_add']) / max(pw, 0.1) * s['mods']['hp_mult']
     bodies = len(soldiers)
     m['survivability'] = {'raw': eff * (1 + 0.05 * max(0, bodies - 1)), 'detail': f'{bodies} bodies'}
 
@@ -461,7 +515,7 @@ def analyse(squad, mission, objectives, hostile=None, locations=None):
                        'detail': f'fire kept without top soldier {keep:.0%} · {n_ps} Player Soldier(s)'}
 
     # 9 experience
-    xp = sum(s['card'].get('xp') or 0 for s in soldiers)
+    xp = sum((s['card'].get('xp') or 0) + s['mods']['xp'] for s in soldiers)
     cx = sum(s['card'].get('cx') or 0 for s in soldiers)
     m['experience'] = {'raw': xp + CX_XP_WEIGHT * cx, 'detail': f'{xp} XP · {cx} CX'}
 
