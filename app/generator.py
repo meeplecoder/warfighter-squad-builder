@@ -29,6 +29,10 @@ from app.utils import normalize_nation, nation_filter_clause, theater_from_raw_t
 generator_bp = Blueprint('generator', __name__)
 
 ENGINE_VERSION = 0
+MAX_ALTERNATIVES = 2
+ALT_CANDIDATES = 4            # builds tried (each pushes one weak metric) to find the alternatives
+ALT_MIN_FITNESS = 0.85        # of the main squad's fitness
+ALT_MAX_SIMILARITY = 0.8      # Jaccard similarity of the card sets vs the main squad / each other
 DEFAULT_MAX_SOLDIERS = 8      # table space / card burden; the form can raise or lower it
 MAX_SUSTAINED_PER_PS = 1      # one real gun per Player Soldier; the rest is one-shot / thrown
 MAX_ONESHOT_TYPES = 3
@@ -205,6 +209,8 @@ def parse_request(data):
     types = data.get('soldier_types')
     r['soldier_types'] = [t for t in (types if isinstance(types, list) else SOLDIER_TYPES) if t in SOLDIER_TYPES]
     r['max_soldiers'] = _int(data.get('max_soldiers'), 1, 20)
+    alts = _int(data.get('alternatives'), 0, MAX_ALTERNATIVES)
+    r['alternatives'] = MAX_ALTERNATIVES if alts is None else alts
     seed = str(data.get('seed') or '').strip()[:32]
     r['seed'] = seed or secrets.token_hex(2).upper()
     return r
@@ -408,7 +414,7 @@ def _ps_score(c, lm):
     return base / (cost ** 0.5)
 
 
-def build(req, ctx, rng):
+def build(req, ctx, rng, weights_override=None):
     nation, mission, objective, excluded = ctx['nation'], ctx['mission'], ctx['objective'], ctx['excluded']
     lm = mission.loadout_modifier or 0
     budget = mission.resources
@@ -418,7 +424,7 @@ def build(req, ctx, rng):
         budget = int(budget * 0.7)
     elif req['twist'] == 'challenge':
         budget = int(budget * 0.8)
-    weights = _profile(objective, mission, req['emphasis'])
+    weights = dict(weights_override) if weights_override else _profile(objective, mission, req['emphasis'])
     objs = [{'objective_family': objective.objective_family, 'mechanic': objective._objective_mechanic(),
              'notes_en': objective.notes}] if objective else []
     alpha = metrics.alpha_for(objs, mission.card_subtype)
@@ -426,7 +432,7 @@ def build(req, ctx, rng):
     variety = req['variety']
     if req['quality'] == 'good_enough':
         spread = 0.08 + 0.4 * variety
-        if req['twist'] == 'interesting':
+        if req['twist'] == 'interesting' and not weights_override:
             weights = {k: v * rng.uniform(0.4, 1.6) for k, v in weights.items()}
         noise = lambda: rng.uniform(1 - spread, 1 + spread)
     else:
@@ -771,6 +777,89 @@ def _why(chosen, wvals_by_name=None):
 
 # ── generate ──────────────────────────────────────────────────────────────────
 
+def _evaluate(req, ctx, chosen, weights):
+    """Metrics, checks and fitness of a built squad — light cards only, cheap enough to run per candidate."""
+    mission, objective = ctx['mission'], ctx['objective']
+    inputs = [metrics.soldier_input(s['card'], [(g, q) for g, q in s['gear']]) for s in chosen]
+    objs = [{'objective_family': objective.objective_family, 'mechanic': objective._objective_mechanic(),
+             'notes_en': objective.notes}] if objective else []
+    mdict = {'time': mission.time, 'objective_position': mission.objective_position,
+             'mission_type': mission.card_subtype, 'budget': mission.resources}
+    raw = metrics.analyse({'soldiers': inputs}, mdict, objs, hostile=ctx['hostile'])
+    scored = metrics.score_metrics(raw, mission.resources)
+    checks = _checks(req, ctx, chosen, raw, mission)
+    return {'raw': raw, 'scored': scored, 'checks': checks, 'fitness': _fitness(scored['metrics'], weights, checks)}
+
+
+def _card_ids(chosen):
+    return {s['card'].id for s in chosen} | {g.id for s in chosen for g, _q in s['gear']}
+
+
+def _similarity(a, b):
+    return len(a & b) / max(len(a | b), 1)
+
+
+def _assemble(req, ctx, chosen, budget, spent, ev):
+    """Everything the client shows for one squad: payload, validation, soldier cards, metrics, checks, reasons."""
+    mission, objective = ctx['mission'], ctx['objective']
+    soldiers = [{'card_id': s['card'].id, 'sort_order': i,
+                 'gear': [{'card_id': g.id, 'quantity': q} for g, q in s['gear']]} for i, s in enumerate(chosen)]
+    payload = {'name': '', 'mission_card_id': mission.id, 'objective_card_ids': [objective.id] if objective else [],
+               'situation_card_id': None, 'nation': ctx['nation'], 'soldiers': soldiers}
+    # validation by the same rules as the builder
+    from app.squads import _build_soldiers_data
+    sd, err = _build_soldiers_data(soldiers)
+    validation = rules_module.validate_squad(payload, mission.to_card_detail(), sd) if sd else None
+    warnings = [w['message'] for w in (validation or {}).get('warnings', [])]
+    if validation and not validation['valid']:
+        warnings += [e['message'] for e in validation['errors']]
+    rp_total = (validation or {}).get('computed', {}).get('rp_total', spent)
+    req_mods = sorted({s['card'].module for s in chosen} | {g.module for s in chosen for g, _q in s['gear']}
+                      | {mission.module} | ({objective.module} if objective else set()))
+    return {
+        'squad': payload,
+        'soldiers': [{'card': s['card'].to_card_object(),
+                      'gear': [{'card': g.to_card_object(), 'quantity': q} for g, q in s['gear']],
+                      'default_gear': []} for s in chosen],
+        'fitness': ev['fitness'], 'metrics': ev['scored'], 'checks': ev['checks'], 'why': _why(chosen),
+        'spend': {'rp_used': rp_total, 'budget': mission.resources, 'target': budget, 'band': _band(objective, rp_total)},
+        'required_modules': req_mods, 'warnings': warnings,
+    }
+
+
+def _alternatives(req, ctx, main_chosen, main_eval, weights, n):
+    """Up to n runner-up squads of a different shape: each candidate build pushes one of the metrics the main
+    squad is weakest in (weighted by what the objective rewards); candidates that are too similar to the main
+    squad / each other, or clearly worse, are dropped. Returns [(chosen, budget, spent, evaluation, focus)]."""
+    if n <= 0:
+        return []
+    scored = main_eval['scored']['metrics']
+    gaps = sorted(((weights[k] * (1 - (scored[k]['score'] if scored[k]['score'] is not None else 0.5)), k)
+                   for k in metrics.METRIC_KEYS), reverse=True)
+    pool = []
+    for _gap, k in gaps[:ALT_CANDIDATES]:
+        w = dict(weights)
+        w[k] += 2.5
+        try:
+            chosen, budget, _w, spent = build(req, ctx, random.Random(f"{req['seed']}|alt|{k}"), weights_override=w)
+        except GenError:
+            continue
+        pool.append((chosen, budget, spent, _evaluate(req, ctx, chosen, weights), k))
+    pool.sort(key=lambda c: -c[3]['fitness']['score'])
+    keep, seen = [], [_card_ids(main_chosen)]
+    for cand in pool:
+        ids = _card_ids(cand[0])
+        if cand[3]['fitness']['score'] < ALT_MIN_FITNESS * main_eval['fitness']['score']:
+            continue
+        if any(_similarity(ids, other) >= ALT_MAX_SIMILARITY for other in seen):
+            continue
+        keep.append(cand)
+        seen.append(ids)
+        if len(keep) >= n:
+            break
+    return keep
+
+
 @generator_bp.route('/generate', methods=['POST'])
 @login_required
 @limiter.limit('20 per minute', key_func=lambda: f'gen:{current_user.id}')
@@ -784,55 +873,23 @@ def generate():
         return jsonify(error=e.message, code=e.code, params=e.params), 422
 
     mission, objective = ctx['mission'], ctx['objective']
-    soldiers = []
-    for i, s in enumerate(chosen):
-        soldiers.append({'card_id': s['card'].id, 'sort_order': i,
-                         'gear': [{'card_id': g.id, 'quantity': q} for g, q in s['gear']]})
-    payload = {'name': '', 'mission_card_id': mission.id, 'objective_card_ids': [objective.id] if objective else [],
-               'situation_card_id': None, 'nation': ctx['nation'], 'soldiers': soldiers}
-
-    # validation by the same rules as the builder
-    from app.squads import _build_soldiers_data
-    sd, err = _build_soldiers_data(soldiers)
-    validation = rules_module.validate_squad(payload, mission.to_card_detail(), sd) if sd else None
-    warnings = [w['message'] for w in (validation or {}).get('warnings', [])]
-    if validation and not validation['valid']:
-        warnings += [e['message'] for e in validation['errors']]
-
-    # metrics of the generated squad
-    inputs = [metrics.soldier_input(s['card'], [(g, q) for g, q in s['gear']]) for s in chosen]
-    objs = [{'objective_family': objective.objective_family, 'mechanic': objective._objective_mechanic(),
-             'notes_en': objective.notes}] if objective else []
-    mdict = {'time': mission.time, 'objective_position': mission.objective_position,
-             'mission_type': mission.card_subtype, 'budget': mission.resources}
-    raw = metrics.analyse({'soldiers': inputs}, mdict, objs, hostile=ctx['hostile'])
-    scored = metrics.score_metrics(raw, mission.resources)
-    checks = _checks(req, ctx, chosen, raw, mission)
-    fitness = _fitness(scored['metrics'], weights, checks)
-    rp_total = (validation or {}).get('computed', {}).get('rp_total', spent)
+    ev = _evaluate(req, ctx, chosen, weights)
+    out = _assemble(req, ctx, chosen, budget, spent, ev)
+    out['alternatives'] = []
+    for a_chosen, a_budget, a_spent, a_ev, focus in _alternatives(req, ctx, chosen, ev, weights, req['alternatives']):
+        alt = _assemble(req, ctx, a_chosen, a_budget, a_spent, a_ev)
+        alt['alt'] = {'focus': focus}
+        out['alternatives'].append(alt)
 
     excluded = ctx['excluded']
     mods = _all_modules()
-    req_mods = sorted({s['card'].module for s in chosen} | {g.module for s in chosen for g, _q in s['gear']}
-                      | {mission.module} | ({objective.module} if objective else set()))
-    result_soldiers = [{
-        'card': s['card'].to_card_object(),
-        'gear': [{'card': g.to_card_object(), 'quantity': q} for g, q in s['gear']],
-        'default_gear': [],
-    } for s in chosen]
-
-    return jsonify(
+    out.update(
         resolved={'nation': ctx['nation'], 'mission_card_id': mission.id,
                   'objective_card_id': objective.id if objective else None,
                   'enemy_nation': ctx['enemy'], 'theater': ctx['theater'], 'players': req['players'],
                   'hostile_level': req['hostile_level'], 'quality': req['quality'], 'twist': req['twist'],
                   'seed': req['seed'], 'engine_version': ENGINE_VERSION},
         mission=mission.to_card_object(), objective=objective.to_card_object() if objective else None,
-        squad=payload, soldiers=result_soldiers,
-        fitness=fitness, metrics=scored, checks=checks, why=_why(chosen),
-        spend={'rp_used': rp_total, 'budget': mission.resources, 'target': budget,
-               'band': _band(objective, rp_total)},
         collection={'owned_modules': len(mods) - len(excluded & set(mods)), 'total_modules': len(mods)},
-        required_modules=req_mods,
-        warnings=warnings,
     )
+    return jsonify(out)
