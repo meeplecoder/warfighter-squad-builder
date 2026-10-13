@@ -43,7 +43,7 @@ function route() {
   // Campaign editor (new or edit) lights up the nested campaign "Builder" link
   updateActiveNav(key === 'campaigns' && (rest[0] === 'new' || rest[1] === 'edit') ? 'campaigns/new' : key);
   // Tab title: section by default; detail / editor views refine it with setPageTitle
-  const section = { cards: 'nav.cards', squads: 'nav.squads', builder: 'nav.builder', campaigns: 'nav.campaigns',
+  const section = { cards: 'nav.cards', squads: 'nav.squads', builder: 'nav.builder', generator: 'nav.generator', campaigns: 'nav.campaigns',
                     profile: 'nav.profile', translations: 'nav.translations' }[key];
   setPageTitle(section ? t(section) : null);
   const handler = routes[key] || routes['404'];
@@ -114,6 +114,8 @@ function updateProfileLink() {
   if (trLink) trLink.style.display = currentUser?.is_admin ? '' : 'none';
   const cbLink = document.getElementById('nav-campaign-builder');   // campaign editor needs a login
   if (cbLink) cbLink.style.display = currentUser ? '' : 'none';
+  const genLink = document.getElementById('nav-generator');          // generator needs a login
+  if (genLink) genLink.style.display = currentUser ? '' : 'none';
 }
 
 // Switch UI + card language, persist it, and re-render the current view in place
