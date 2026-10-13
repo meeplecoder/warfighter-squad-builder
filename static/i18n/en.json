@@ -457,7 +457,7 @@
  "metrics.estimate": "estimate",
  "metrics.col_score": "Rank",
  "metrics.col_raw": "Value",
- "metrics.note": "Rank 0–100 compares this squad with {n} published squads of a similar budget. Estimated from card tables; a curated set of skills and armor is counted, vehicle weapons and other skills are not yet.",
+ "metrics.note": "Rank 0–100 compares this squad with {n} reference squads of a similar budget. Estimated from card tables; a curated set of skills and armor is counted, vehicle weapons and other skills are not yet.",
  "metrics.ranged_fire": "Ranged Fire",
  "metrics.close_assault": "Close Assault",
  "metrics.anti_armour": "Anti-Armour",
@@ -594,5 +594,7 @@
  "gen.err.BUDGET_TOO_LOW": "The mission budget does not cover the cheapest Player Soldier you own.",
  "footer.fan_made": "Fan-made web app — not affiliated with or endorsed by DVG.",
  "footer.rights": "Warfighter and all related games, names, cards and artwork belong to DVG (Dan Verssen Games); all rights belong to them.",
- "footer.github": "Source code on GitHub"
+ "footer.github": "Source code on GitHub",
+ "footer.short": "Fan-made web app, not affiliated with DVG. Warfighter and all its games and assets belong to DVG.",
+ "footer.github_short": "Source on GitHub"
 }

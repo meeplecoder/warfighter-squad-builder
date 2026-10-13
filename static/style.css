@@ -204,9 +204,19 @@ h3 { font-size: 1rem; font-weight: 600; }
   max-width: 1200px;
   width: 100%;
 }
+/* Notice: always visible at the bottom of the (fixed) sidebar on desktop; at the end of the page on phones,
+   where the sidebar becomes a bottom tab bar */
+#sidebar-footer {
+  margin-top: auto; padding: 12px 14px 6px; border-top: 1px solid var(--border);
+  font-size: 10.5px; line-height: 1.45; color: var(--text-muted);
+}
+#sidebar-footer p { margin: 0 0 8px; }
+#sidebar-footer .footer-gh { display: inline-flex; align-items: center; gap: 6px; color: var(--link); }
+#sidebar-footer .footer-gh .icon { width: 14px; height: 14px; flex: none; }
 #app-footer {
+  display: none;
   margin-top: 24px; padding: 14px 16px; border-top: 1px solid var(--border);
-  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 20px;
+  flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 20px;
   font-size: 12px; color: var(--text-muted); background: rgba(0, 0, 0, .18);
 }
 #app-footer p { margin: 0; max-width: 90ch; line-height: 1.5; }
@@ -783,7 +793,8 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
   .nav-beta { display: none; }
   #app-column { margin-left: 0; }
   #app-main { padding-bottom: 16px; }
-  #app-footer { padding-bottom: 72px; }      /* clear the fixed bottom tab bar */
+  #app-footer { display: flex; padding-bottom: 72px; }      /* clear the fixed bottom tab bar */
+  #sidebar-footer { display: none; }
   .card-detail-layout { grid-template-columns: 1fr; }
   .builder-layout { grid-template-columns: 1fr; height: auto; }
   .builder-right { order: -1; }
