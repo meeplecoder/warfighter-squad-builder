@@ -86,6 +86,9 @@ def load(text):
         raise CampaignYamlError(_('A campaign file must be a YAML mapping (name:, missions:, …).'))
 
     warnings = []
+    language = _str(data.get('language')).lower()
+    if language and not i18n.normalize_lang(language):
+        warnings.append(_('Unsupported language "{lang}"; left empty.', lang=language))
     fmt = _str(data.get('format'))
     if fmt and fmt != FORMAT:
         warnings.append(_('Unknown format "{fmt}" (expected {expected}); importing anyway.', fmt=fmt, expected=FORMAT))
@@ -180,7 +183,7 @@ def load(text):
     payload = {
         'name': _str(data.get('name')), 'summary': _str(data.get('summary')), 'intro': _str(data.get('intro')),
         'nation': _str(data.get('nation')), 'theater': _str(data.get('theater')), 'enemy': _str(data.get('enemy')),
-        'period': _str(data.get('period')), 'flow_type': flow,
+        'period': _str(data.get('period')), 'flow_type': flow, 'language': i18n.normalize_lang(language),
         'settings': {
             'force': {'squad_size': squad_size, 'restrictions': _str(force.get('restrictions')),
                       'replacements': _str(force.get('replacements'))},
@@ -207,4 +210,4 @@ def to_editor(payload):
             **{f: m[f] for f in ('rp_override', 'time_override', 'loadout_override', *MISSION_TEXTS)},
         })
     return {k: payload[k] for k in ('name', 'summary', 'intro', 'nation', 'theater', 'enemy', 'period',
-                                     'flow_type', 'settings', 'links', 'author')} | {'missions': missions}
+                                     'flow_type', 'language', 'settings', 'links', 'author')} | {'missions': missions}

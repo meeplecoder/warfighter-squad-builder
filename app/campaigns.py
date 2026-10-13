@@ -9,7 +9,7 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy import or_, func
 
-from app import db, i18n, mentions
+from app import db, i18n, mentions, campaign_yaml
 from app.i18n import _
 from app.models import (Card, Squad, Campaign, CampaignMission, CampaignLink, now_utc,
                         CUSTOM_MODULE, CAMPAIGN_FLOW_TYPES, CAMPAIGN_LINK_CONDITIONS)
@@ -44,7 +44,7 @@ def _squad_viewable(s):
 def _summary(c):
     return {
         'id': c.id, 'name': c.name, 'summary': c.summary, 'nation': c.nation, 'theater': c.theater,
-        'flow_type': c.flow_type, 'status': c.status, 'mission_count': len(c.missions),
+        'flow_type': c.flow_type, 'language': c.language, 'status': c.status, 'mission_count': len(c.missions),
         'owner': {'id': c.owner.id, 'username': c.owner.username},
         'created_at': c.created_at, 'updated_at': c.updated_at,
     }
@@ -105,6 +105,7 @@ def _parse(data):
         'enemy': _text(data.get('enemy'), 120),
         'period': _text(data.get('period'), 120),
         'flow_type': data.get('flow_type') if data.get('flow_type') in CAMPAIGN_FLOW_TYPES else 'linear',
+        'language': i18n.normalize_lang(str(data.get('language') or '')),
     }
     s = data.get('settings') or {}
     force = s.get('force') or {}
@@ -177,20 +178,41 @@ def _parse(data):
     return fields, settings, missions, links, errors
 
 
-def _publish_errors(fields, missions):
+MIN_COMPLETE_MISSIONS = 2
+# A mission is complete when it has these (field → label for the error message)
+MISSION_REQUIRED = (('title', 'title'), ('mission_card_id', 'mission card'), ('objective_card_id', 'objective'),
+                    ('briefing', 'briefing'))
+
+
+def _publish_errors(fields, settings, missions):
+    """Basic campaign validation (Validate button + required to publish). To be extended."""
     errs = []
-    if not fields['name']:
+    name = fields['name'].strip()
+    if not name or name in ('Unnamed campaign', _('Unnamed campaign')):
         errs.append(_('Campaign name is required.'))
-    if not missions:
-        errs.append(_('Add at least one mission.'))
+    elif len(name) < 3:
+        errs.append(_('Campaign name must be at least 3 characters.'))
+    if not fields['summary']:
+        errs.append(_('Add a summary.'))
+    if not fields['intro']:
+        errs.append(_('Add an introduction.'))
+
+    incomplete = []
     for i, m in enumerate(missions):
-        label = m['title'] or f'#{i + 1}'
-        if not m['title']:
-            errs.append(_('Mission #{n} needs a title.', n=i + 1))
-        if not m['mission_card_id']:
-            errs.append(_('{mission}: choose a mission card.', mission=label))
+        missing = [_(label) for f, label in MISSION_REQUIRED if not m[f]]
+        if missing:
+            incomplete.append(_('{mission}: missing {fields}.', mission=m['title'] or f'#{i + 1}',
+                                fields=', '.join(missing)))
+    complete = len(missions) - len(incomplete)
+    if complete < MIN_COMPLETE_MISSIONS:
+        errs.append(_('At least {n} complete missions are needed ({done} so far).',
+                      n=MIN_COMPLETE_MISSIONS, done=complete))
+        errs.extend(incomplete)
+
     if fields['flow_type'] == 'branching' and missions and not any(m['is_entry'] for m in missions):
         errs.append(_('Branching campaigns need at least one starting mission.'))
+    if not any(o['label'] and o['epilogue'] for o in settings['outcomes']):
+        errs.append(_('Resolution: add at least one outcome with a label and an epilogue.'))
     return errs
 
 
@@ -228,11 +250,20 @@ def list_campaigns():
     q = request.args.get('q', '').strip()
     page = max(1, request.args.get('page', 1, type=int))
     per_page = min(100, max(1, request.args.get('per_page', 25, type=int)))
+    # One list (like squads): everyone's published campaigns plus the user's own drafts.
+    # user_id narrows it to one author; drafts only show to their owner.
     query = Campaign.query
     if user_id:
         query = query.filter(Campaign.user_id == user_id)
-    if not (user_id and current_user.is_authenticated and current_user.id == user_id):
+    if user_id and current_user.is_authenticated and current_user.id == user_id:
+        pass
+    elif current_user.is_authenticated:
+        query = query.filter(or_(Campaign.status == 'published', Campaign.user_id == current_user.id))
+    else:
         query = query.filter(Campaign.status == 'published')
+    lang = i18n.normalize_lang(request.args.get('lang'))
+    if lang:    # campaigns in that language plus those without one
+        query = query.filter(or_(Campaign.language == lang, Campaign.language.is_(None)))
     if q:
         like = f'%{i18n.fold(q)}%'
         query = query.filter(or_(func.fold(Campaign.name).like(like), func.fold(Campaign.summary).like(like),
@@ -261,7 +292,7 @@ def _write(c, data, is_new):
     if errors:
         return jsonify(error=' '.join(errors), errors=errors), 400
     if target == 'published':
-        perrs = _publish_errors(fields, missions)
+        perrs = _publish_errors(fields, settings, missions)
         if perrs:
             return jsonify(error=_('Campaign cannot be published yet.'), errors=perrs), 422
     if is_new:
@@ -272,6 +303,29 @@ def _write(c, data, is_new):
     _save(c, fields, settings, missions, links)
     db.session.commit()
     return jsonify(campaign=_detail(c)), 201 if is_new else 200
+
+
+@campaigns_bp.route('/import', methods=['POST'])
+@login_required
+def import_campaign():
+    """Campaign YAML file → unsaved campaign for the editor + warnings (spec 09 §6). Nothing is saved."""
+    content = (request.get_json(silent=True) or {}).get('content') or ''
+    if not content.strip():
+        return jsonify(error=_('Nothing to import.')), 400
+    try:
+        payload, warnings = campaign_yaml.load(content)
+    except campaign_yaml.CampaignYamlError as e:
+        return jsonify(error=str(e)), 400
+    return jsonify(campaign=campaign_yaml.to_editor(payload), warnings=warnings)
+
+
+@campaigns_bp.route('/validate', methods=['POST'])
+@login_required
+def validate_campaign():
+    """Check the editor payload without saving: {valid, errors}."""
+    fields, settings, missions, links, errors = _parse(request.get_json(silent=True) or {})
+    errors = errors + _publish_errors(fields, settings, missions)
+    return jsonify(valid=not errors, errors=errors)
 
 
 @campaigns_bp.route('', methods=['POST'])
