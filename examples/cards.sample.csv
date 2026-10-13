@@ -1,0 +1,150 @@
+,Number,Name,Type,Nation,Stats,Notes,Module,Vassal Module
+1,S-001,Alder,Player Soldier,US,"RC:12
+M:2
+C:2
+H:6
+L:12
+HtH:+0",2 XP.,Sample Set,Sample Set
+2,S-002,Birch,Player Soldier,US,"RC:09
+M:3
+C:1
+H:5
+L:10
+HtH:+0",1 CX.,Sample Set,Sample Set
+3,S-003,Cedar,Player Soldier,US,"RC:22
+M:2
+C:3
+H:7
+L:14
+HtH:+1","2 CX.
+1 XP.",Sample Set,Sample Set
+4,S-004,Dogwood,Player Soldier,US,"RC:08
+M:2
+C:1
+H:5
+L:9
+HtH:+0",,Sample Set,Sample Set
+5,S-010,Elm,Non Player Soldier,US,"RC:09
+M:2
+C:3
+H:3
+A:2
+HtH:+0","Health    Actions
+3               2
+2               2
+1               1
+Sample Rifle.
+2 Sample Grenades.",Sample Set,Sample Set
+6,S-011,Fir,Non Player Soldier,US,"RC:06
+M:2
+C:2
+H:3
+A:2
+HtH:+0","Health    Actions
+3               2
+2               2
+1               1
+Sample Rifle.",Sample Set,Sample Set
+7,S-020,Gale,Squad Soldier,US,"RC:03
+M:1
+C:1
+H:3
+A:2","Health    Actions   Range2   Range1   Range0
+3               2              11            9              7
+2               2              12            10            8
+1               1              13            11            9
+Ranged Attacks.",Sample Set,Sample Set
+8,S-021,Hazel,Squad Soldier,US,"RC:02
+M:2
+C:1
+H:2
+A:2","Health    Actions   Range1   Range0
+2               2              9              7
+1               1              10            8
+Ranged Attacks.",Sample Set,Sample Set
+9,S-100,Sample Rifle,Weapon Ranged,US,"RC:02
+1942+","Range    Reload    Hit
+0               1              6
+1               1              8
+2               1              9
+Mode       Rolls
+Semi           1
+
+Sample Ammo (6).",Sample Set,Sample Set
+10,S-101,Sample Machine Gun,Weapon Ranged,US,"RC:09
+L:07
+1942+","Range    Reload    Hit
+0               2              7
+1               2              8
+2               2              9
+Mode       Rolls
+Semi           1
+Auto           3
+
+Penetration 1.
+Sample Ammo (4).",Sample Set,Sample Set
+11,S-102,Sample Grenade,Weapon Thrown,US,"RC:01
+1939+","Range    Hit
+0              7
+Mode          Rolls
+Explosion    4
+
+Expended.
+Penetration 1.
+Limit 5 per Soldier.
+Sample Grenades.",Sample Set,Sample Set
+12,S-103,Sample Bazooka,Weapon Ranged,US,"RC:03
+L:05
+1942+","Range    Hit
+0              5
+1              8
+Mode       Rolls
+Explosion    2
+
+Single Shot.
+Expended.
+Penetration 4.",Sample Set,Sample Set
+13,S-150,Sample Steady Aim,Skill,,RC:03,A sample skill used only by the demo data: a soldier with this skill is steadier.,Sample Set,Sample Set
+14,S-160,Sample Helmet,Equipment,,RC:01,A sample piece of gear used only by the demo data.,Sample Set,Sample Set
+15,S-200,Sample Patrol,Mission Europe,,"EN:0
+ACHtH:2
+R:060
+T:08
+OB:#04
+LM:-0",Sample mission: a plain patrol with a generous budget.,Sample Set,Sample Set
+16,S-201,Sample Raid,Mission Europe,,"EN:0
+ACHtH:2
+R:035
+T:06
+OB:#03
+LM:-1","Sample mission: a short, cheap operation. Each Player Soldier loses 1 Loadout.",Sample Set,Sample Set
+17,S-202,Sample Assault,Mission Europe,,"EN:0
+ACHtH:2
+R:090
+T:10
+OB:#05
+LM:-0",Sample mission: a big operation with a large budget.,Sample Set,Sample Set
+18,S-300,Sample Clear Out,Objective Europe,,"EN:4
+REIN:0
+ACHtH:2","Eliminate Hostiles.
+On Site.
+
+Hostiles
+29-             3
+30-49         4
+50-74         5
+75-99         7
+100-124    10
+125+          13",Sample Set,Sample Set
+19,S-301,Sample Hold,Objective Europe,,"EN:3
+REIN:0
+ACHtH:2","Keep Clear 3.
+Always draw for Rein.
+
+Hostiles
+29-             1
+30-49         2
+50-74         3
+75-99         5
+100-124    8
+125+          11",Sample Set,Sample Set
