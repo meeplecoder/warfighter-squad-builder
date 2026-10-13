@@ -4,24 +4,32 @@
    ===================================================================== */
 
 :root {
-  --bg: #1a1c1e;
-  --surface: #25282c;
-  --surface2: #2f3337;
-  --border: #3d4147;
-  --text: #dde1e7;
-  --text-muted: #8a9099;
-  --accent: #7a8c5e;       /* olive green */
-  --accent-hover: #8fa06e;
-  --accent-light: #c6d6a0;
-  --danger: #c0392b;
-  --danger-hover: #e74c3c;
-  --warning: #d4a017;
-  --warning-bg: #2e2800;
-  --success: #27ae60;
-  --link: #7eb8d4;
-  --radius: 6px;
-  --header-h: 52px;
-  --sidebar-w: 160px;
+  /* Warfighter palette — olive drab frames, kraft-paper borders, parchment labels, rust ink */
+  --bg: #17160f;
+  --surface: #23221a;
+  --surface2: #2e2c21;
+  --border: #4a4532;
+  --text: #ece4cc;          /* parchment */
+  --text-muted: #a89f82;    /* faded khaki */
+  --accent: #5f6f2f;        /* olive drab */
+  --accent-hover: #73853a;
+  --accent-light: #cfd8a0;
+  --danger: #a8432a;        /* rust */
+  --danger-hover: #c9593b;
+  --warning: #d6a54a;
+  --warning-bg: #2e2510;
+  --success: #7a9a45;
+  --link: #d8b46a;          /* brass */
+  --kraft: #a07a4a;
+  --kraft-dark: #6b5233;
+  --paper: #ece2c6;
+  --paper-edge: #d8caa2;
+  --ink: #2a2216;
+  --font-type: 'Special Elite', 'Courier New', monospace;
+  --font-body: 'Roboto Condensed', 'Arial Narrow', system-ui, sans-serif;
+  --radius: 3px;
+  --header-h: 54px;
+  --sidebar-w: 170px;
 }
 
 /* ---- Reset --------------------------------------------------------- */
@@ -29,8 +37,8 @@
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  font-size: 14px;
+  font-family: var(--font-body);
+  font-size: 14.5px;
   line-height: 1.5;
   min-height: 100vh;
 }
@@ -75,24 +83,56 @@ h3 { font-size: 1rem; font-weight: 600; }
 .justify-between { justify-content: space-between; }
 
 /* ---- Buttons ------------------------------------------------------- */
+/* Variants: primary (one per view — the main action) · ghost (secondary) · danger-ghost (destructive,
+   outlined so it never competes with primary) · danger (filled, for confirmations) · icon (inline row tools).
+   Every variant has a 1px border so filled and outlined buttons line up at the same height. */
 .btn {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 6px 14px;
-  border: none; border-radius: var(--radius);
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 6px 14px; line-height: 1.2; white-space: nowrap;
+  border: 1px solid transparent; border-radius: var(--radius);
   font-size: 13px; font-weight: 500;
   background: var(--surface2); color: var(--text);
-  transition: background 0.15s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
-.btn:hover { background: var(--border); }
+.btn:hover { background: var(--border); text-decoration: none; }
+.btn:focus-visible { outline: 2px solid var(--accent-light); outline-offset: 1px; }
+.btn:disabled, .btn[aria-disabled="true"] { opacity: .35; cursor: default; pointer-events: none; }
 .btn-primary { background: var(--accent); color: #fff; }
 .btn-primary:hover { background: var(--accent-hover); }
 .btn-danger { background: var(--danger); color: #fff; }
 .btn-danger:hover { background: var(--danger-hover); }
 .btn-sm { padding: 4px 10px; font-size: 12px; }
-.btn-ghost { background: transparent; border: 1px solid var(--border); }
+.btn-ghost { background: transparent; border-color: var(--border); }
 .btn-ghost:hover { background: var(--surface2); }
+.btn-danger-ghost { background: transparent; border-color: var(--border); color: var(--danger-hover); }
+.btn-danger-ghost:hover { background: #3a1a1a; border-color: var(--danger); }
+.btn-square { padding: 6px; }
 .btn-icon { padding: 6px; background: transparent; border: none; color: var(--text-muted); font-size: 16px; }
-.btn-icon:hover { color: var(--text); }
+.btn-icon:hover { color: var(--text); background: var(--surface2); }
+.btn-icon-danger:hover { color: var(--danger-hover); }
+.icon { width: 16px; height: 16px; flex-shrink: 0; }
+.btn-sm .icon { width: 14px; height: 14px; }
+.btn-caret { display: inline-flex; margin-left: -2px; opacity: .7; }
+.btn-caret .icon { width: 12px; height: 12px; }
+
+/* ---- Page action bar (squad + campaign detail and builders) ---------
+   start: navigation (back / cancel, prev-next) · end: secondary | destructive · primary (rightmost) */
+.page-toolbar {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border);
+}
+.tb-start, .tb-end { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.tb-end { margin-left: auto; justify-content: flex-end; }
+.tb-sep { width: 1px; height: 22px; margin: 0 4px; background: var(--border); }
+.tb-pager { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; }
+/* Editor heading (squad + campaign builders), below the action bar */
+.page-title { margin-bottom: 12px; }
+.tb-pager-pos { min-width: 4em; text-align: center; font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+@media (max-width: 640px) {
+  /* Secondary actions collapse to icons (title/aria-label keep the name); the primary keeps its label */
+  .tb-end .btn:not(.btn-primary) .btn-label { display: none; }
+  .tb-end .btn:not(.btn-primary) { padding: 6px 8px; }
+}
 
 /* ---- Header -------------------------------------------------------- */
 #app-header {
@@ -130,7 +170,7 @@ h3 { font-size: 1rem; font-weight: 600; }
   z-index: 90;
 }
 #sidebar .nav-link {
-  display: block; padding: 10px 20px;
+  display: block; padding: 10px 20px; white-space: nowrap;
   color: var(--text-muted); font-size: 13px; font-weight: 500;
   border-left: 3px solid transparent;
   transition: color 0.15s, background 0.15s;
@@ -139,6 +179,18 @@ h3 { font-size: 1rem; font-weight: 600; }
 #sidebar .nav-link.active {
   color: var(--accent-light); background: var(--surface);
   border-left-color: var(--accent);
+}
+/* Nested entry (Builder under Squads / Campaigns) */
+#sidebar .nav-link.nav-sub { padding: 6px 20px 6px 36px; font-size: 12px; position: relative; }
+#sidebar .nav-link.nav-sub::before {
+  content: ''; position: absolute; left: 24px; top: 0; bottom: 50%;
+  width: 7px; border-left: 1px solid var(--border); border-bottom: 1px solid var(--border);
+}
+.nav-beta {
+  display: inline-block; margin-left: 4px; padding: 0 5px; border-radius: 99px;
+  border: 1px solid var(--accent); color: var(--accent-light);
+  font-size: 9px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+  vertical-align: 1px; line-height: 14px;
 }
 
 /* Main content area */
@@ -311,9 +363,6 @@ h3 { font-size: 1rem; font-weight: 600; }
   margin-bottom: 6px; padding-bottom: 4px;
   border-bottom: 1px solid var(--border);
 }
-.builder-actions {
-  display: flex; gap: 8px; margin-bottom: 12px;
-}
 .soldier-slot {
   background: var(--surface2);
   border: 1px solid var(--border);
@@ -471,16 +520,12 @@ h3 { font-size: 1rem; font-weight: 600; }
 }
 
 /* ---- Like button --------------------------------------------------- */
-.like-btn {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 5px 12px; border-radius: 99px;
-  background: var(--surface2); border: 1px solid var(--border);
-  color: var(--text-muted); font-size: 13px; cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-.like-btn:hover { background: var(--border); color: var(--text); }
-.like-btn.liked { background: #3a1a1a; border-color: var(--danger); color: var(--danger); }
-.like-btn:disabled { opacity: 0.5; cursor: default; }
+/* Like: a toolbar button (btn btn-ghost); outlined heart + count, filled red when liked */
+.like-btn.liked { border-color: var(--danger); color: var(--danger-hover); }
+.like-btn.liked .icon { fill: currentColor; }
+.like-btn.liked:hover { background: #3a1a1a; }
+.like-btn:disabled { opacity: 0.5; }
+#likes-count { font-variant-numeric: tabular-nums; }
 
 /* ---- Hostile spawn table ------------------------------------------- */
 .spawn-table-wrap {
@@ -539,16 +584,26 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
 /* ---- Compact objective row ----------------------------------------- */
 .obj-compact-row { padding: 3px 0; }
 
-/* ---- Required modules strip (same row as the like button) --------- */
-.squad-like-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 8px; }
-.required-modules {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
+/* ---- Required modules (inline in the squad subtitle, after the nation) */
+.required-modules { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-left: 6px; vertical-align: middle; }
+
+/* ---- Export menu ----------------------------------------------------- */
+.export-menu { position: relative; display: inline-block; }
+.export-menu-list {
+  position: absolute; top: calc(100% + 4px); right: 0;
+  z-index: 60; min-width: 240px; padding: 4px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: 0 6px 18px rgba(0,0,0,.4);
 }
+.export-menu-list[hidden] { display: none; }
+.export-item {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px; width: 100%;
+  padding: 7px 10px; border: none; border-radius: 4px; background: transparent;
+  color: var(--text); text-align: left; cursor: pointer;
+}
+.export-item:hover, .export-item:focus-visible { background: var(--surface2); }
+.export-item-label { font-size: 13px; font-weight: 500; }
+.export-item-tip { font-size: 11px; color: var(--text-muted); }
 
 /* ---- Author notes -------------------------------------------------- */
 .squad-author-notes { margin-top: 28px; }
@@ -608,6 +663,7 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
   padding: 10px 14px; border-radius: var(--radius);
   margin-bottom: 12px; font-size: 13px;
 }
+.alert ul { margin: 4px 0 0; padding-left: 20px; }
 .alert-error { background: #2e1010; border: 1px solid var(--danger); color: #f08080; }
 .alert-success { background: #102e18; border: 1px solid var(--success); color: #80f0a0; }
 .alert-warning { background: var(--warning-bg); border: 1px solid var(--warning); color: var(--warning); }
@@ -709,6 +765,10 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
     font-size: 11px;
   }
   #sidebar .nav-link.active { border-top-color: var(--accent); border-left: none; }
+  #sidebar .nav-link.nav-sub { padding: 8px 4px; font-size: 11px; }
+  #sidebar .nav-link.nav-sub::before { display: none; }
+  #nav-campaign-builder { display: none !important; }   /* bottom bar: reach it from Campaigns → New */
+  .nav-beta { display: none; }
   #app-main {
     margin-left: 0;
     padding-bottom: 70px;
@@ -747,9 +807,6 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
 /* ---- Picker table (compact) ---------------------------------------- */
 .picker-table th, .picker-table td { font-size: 12px; padding: 5px 8px; }
 .picker-table tr.clickable:hover { background: var(--surface2); }
-
-/* ---- Builder action bar -------------------------------------------- */
-.builder-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
 
 /* ---- Custom tooltip (1.5s delay) ----------------------------------- */
 [data-tooltip] { position: relative; cursor: help; }
@@ -1039,7 +1096,6 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
 .custom-mission-form .cm-wide { grid-column: 1 / -1; }
 .custom-mission-form .form-field input, .custom-mission-form .form-field select { width: 100%; max-width: none; }
 @media (max-width: 480px) { .custom-mission-form { grid-template-columns: 1fr; } }
-.export-group { display: inline-flex; gap: 4px; align-items: center; margin-left: 6px; }
 .squad-based-on { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
 .squad-based-on a { color: var(--link); }
 
@@ -1119,3 +1175,192 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
   cursor: pointer;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23dde1e7' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M18 6 6 18M6 6l12 12'/%3E%3C/svg%3E");
 }
+.badge-lang { font-size: 10px; padding: 1px 5px; border-radius: 3px; border: 1px solid var(--border); color: var(--text-muted); vertical-align: middle; }
+
+
+/* =====================================================================
+   Warfighter theme — game look (olive drab, kraft paper, parchment labels,
+   typewriter text, rubber stamps). Overrides the base rules above.
+   ===================================================================== */
+body {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse at 20% 0%, rgba(95, 111, 47, .16), transparent 55%),
+    radial-gradient(ellipse at 100% 100%, rgba(160, 122, 74, .12), transparent 50%),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, .012) 0 2px, transparent 2px 5px);
+  background-attachment: fixed;
+}
+::selection { background: var(--kraft); color: var(--ink); }
+* { scrollbar-color: var(--kraft-dark) var(--bg); }
+
+/* Typewriter headings */
+h2, h3, .card-name, .cd-name, .header-brand, .modal h2,
+.builder-section-title, .picker-title, .spawn-table-title, .squad-box-label {
+  font-family: var(--font-type);
+  font-weight: 400;
+  letter-spacing: .02em;
+}
+h1 { font-size: 1.55rem; }
+
+/* Page titles: plain condensed caps with a kraft rule */
+h1.page-title, .squad-title, #app-main > h1, #app-main > .flex > h1, .auth-form-wrapper h1 {
+  font-family: var(--font-body);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--paper);
+  padding-bottom: 4px;
+  border-bottom: 3px solid var(--kraft);
+  display: inline-block;
+}
+
+/* Header: olive-drab frame with a kraft stripe */
+#app-header {
+  background: linear-gradient(180deg, #4b5528 0%, #3a4220 100%);
+  border-bottom: 3px solid var(--kraft);
+  box-shadow: 0 2px 0 var(--kraft-dark), 0 4px 12px rgba(0, 0, 0, .5);
+}
+.header-brand { color: var(--paper); font-size: 1.15rem; text-shadow: 1px 1px 0 rgba(0, 0, 0, .55); }
+#header-auth .username { color: var(--paper-edge); }
+#app-header .btn-ghost, #app-header select { border-color: rgba(236, 226, 198, .35); background: rgba(0, 0, 0, .18); color: var(--paper); }
+
+/* Sidebar: dark leather with stencil nav */
+#sidebar {
+  background: linear-gradient(180deg, #221d14, #1a1610);
+  border-right: 2px solid var(--kraft-dark);
+}
+#sidebar .nav-link {
+  font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted);
+}
+#sidebar .nav-link.nav-sub { font-size: 11.5px; letter-spacing: .06em; }
+#sidebar .nav-link:hover { color: var(--paper); background: rgba(160, 122, 74, .12); }
+#sidebar .nav-link.active {
+  color: var(--paper); background: #2c3119;
+  border-left-color: var(--kraft);
+}
+
+/* Rubber stamps: beta / draft / language */
+.nav-beta, .badge-draft {
+  border: 1.5px solid var(--danger); color: #e07a5c; background: transparent;
+  border-radius: 2px; font-family: var(--font-type); font-weight: 400; letter-spacing: .08em;
+  transform: rotate(-4deg);
+}
+.badge-draft { padding: 0 5px; }
+.badge-lang { font-family: var(--font-type); border-color: var(--kraft); color: var(--kraft); border-radius: 2px; }
+
+/* Buttons */
+.btn { border-radius: var(--radius); font-weight: 700; letter-spacing: .05em; text-transform: uppercase; font-size: 12.5px; }
+.btn-sm { font-size: 11.5px; }
+.btn-primary {
+  background: linear-gradient(180deg, #6b7c35, #55632a); color: var(--paper);
+  border: 1px solid #3b441d; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), 0 1px 0 rgba(0, 0, 0, .4);
+}
+.btn-primary:hover { background: linear-gradient(180deg, #7b8e3d, #627230); }
+.btn-ghost { border-color: var(--kraft-dark); color: var(--text); }
+.btn-ghost:hover { background: rgba(160, 122, 74, .14); border-color: var(--kraft); }
+.btn-danger { background: var(--danger); color: var(--paper); }
+.btn-icon { text-transform: none; }
+.page-toolbar { border-bottom-color: var(--kraft-dark); }
+
+/* Inputs */
+input, select, textarea { background: #13120c; border-color: var(--border); color: var(--text); }
+input::placeholder, textarea::placeholder { color: #6f6852; }
+input:focus, select:focus, textarea:focus { outline-color: var(--kraft); }
+
+/* Panels: kraft-bordered field cases */
+.ce-section, .modal, .squad-mission-box, .soldier-card, .soldier-slot, .profile-section, .auth-form-wrapper,
+.card-stats-panel, .cd-wrap, .builder-left, .builder-right, .comment-item, .spawn-table-wrap, .export-menu-list {
+  border-color: var(--kraft-dark);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .35), 0 2px 6px rgba(0, 0, 0, .35);
+}
+.ce-section h2, .profile-section h2 {
+  color: var(--paper); border-bottom: 1px dashed var(--kraft-dark); padding-bottom: 6px;
+}
+.modal { background: linear-gradient(180deg, #2a281e, var(--surface)); border-width: 2px; }
+.modal h2 { color: var(--paper); }
+.stat-item, .mission-attr { border-color: var(--kraft-dark); }
+
+/* Tables: dark olive header strip */
+.data-table th {
+  background: #2c3119;
+  color: var(--accent-light); text-transform: uppercase; font-size: 11.5px; font-weight: 700; letter-spacing: .07em;
+  border-bottom: 2px solid var(--kraft-dark);
+}
+.data-table th.sortable:hover, .data-table .sort-header.sortable:hover { color: var(--paper); }
+.data-table .sort-header.sort-active { color: var(--link); }
+.data-table td { border-bottom-color: rgba(107, 82, 51, .45); }
+.data-table tbody tr:nth-child(even) { background: rgba(255, 255, 255, .015); }
+.data-table tbody tr:hover { background: rgba(95, 111, 47, .18); }
+
+/* Quick filters and tabs */
+.quick-filter { border-radius: 2px; text-transform: uppercase; letter-spacing: .05em; font-weight: 700; font-size: 11.5px; }
+.tab-btn { text-transform: uppercase; letter-spacing: .06em; font-weight: 700; }
+.tab-btn.active { color: var(--paper); border-bottom-color: var(--kraft); }
+
+/* Card detail header: typewriter name */
+.cd-name { font-size: 1.6rem; }
+.cd-section-label { font-family: var(--font-type); letter-spacing: .06em; }
+
+/* Alerts as field telegrams */
+.alert { border-radius: 2px; border-left-width: 4px; }
+
+/* Spinner in kraft */
+.spinner { border-color: var(--border); border-top-color: var(--kraft); }
+
+@media (max-width: 768px) {
+  h1.page-title, .squad-title, #app-main > h1, #app-main > .flex > h1 { font-size: 1.2rem; }
+}
+
+/* Card-type colours in the game palette (detail header + chips) */
+.cd-t-soldier    { --cd-accent: #a9b964; --cd-accent-bg: #232a15; }
+.cd-t-weapon     { --cd-accent: #d0a466; --cd-accent-bg: #2e2313; }
+.cd-t-equipment  { --cd-accent: #bfb48a; --cd-accent-bg: #27251a; }
+.cd-t-skill      { --cd-accent: #d98b52; --cd-accent-bg: #2e1c10; }
+.cd-t-sr         { --cd-accent: #a89f82; --cd-accent-bg: #222019; }
+.cd-t-mission    { --cd-accent: #dbb768; --cd-accent-bg: #2e2510; }
+.cd-t-objective  { --cd-accent: #cf9469; --cd-accent-bg: #2e1f13; }
+.cd-t-situation  { --cd-accent: #9fb0a6; --cd-accent-bg: #1e2421; }
+.cd-t-hostile    { --cd-accent: #d8664f; --cd-accent-bg: #2e1510; }
+.chip-soldier   { background: #232a15; color: #a9b964; border-color: #46542a; }
+.chip-weapon    { background: #2e2313; color: #d0a466; border-color: #5c4526; }
+.chip-equipment { background: #27251a; color: #bfb48a; border-color: #4f4a33; }
+.chip-skill     { background: #2e1c10; color: #d98b52; border-color: #5c3820; }
+.chip-mission   { background: #2e2510; color: #dbb768; border-color: #5c4a20; }
+.chip-hostile   { background: #2e1510; color: #d8664f; border-color: #5c2a20; }
+.chip-ps  { background: #232a15; color: #cfd8a0; }
+.chip-nps { background: #2e2313; color: #d0a466; }
+
+@media (max-width: 600px) {
+  .header-brand { font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 48vw; }
+}
+
+/* ---- Squad metrics (squad detail) ---------------------------------- */
+.squad-metrics { margin-top: 28px; }
+.metrics-badge {
+  font-family: var(--font-type); font-size: 11px; font-weight: normal; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--warning); border: 1px solid var(--kraft-dark);
+  border-radius: var(--radius); padding: 1px 6px; vertical-align: middle; margin-left: 6px;
+}
+.metrics-body {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 18px 28px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px;
+}
+.metrics-radar { width: 280px; max-width: 100%; flex: 0 0 auto; overflow: visible; }
+.mr-ring { fill: none; stroke: var(--border); stroke-width: 1; }
+.mr-spoke { stroke: var(--border); stroke-width: 1; }
+.mr-shape { fill: rgba(95, 111, 47, .45); stroke: var(--accent-light); stroke-width: 1.5; stroke-linejoin: round; }
+.mr-dot { fill: var(--accent-light); }
+.mr-label { fill: var(--text-muted); font-size: 9.5px; font-family: var(--font-body); }
+.metrics-list-wrap { flex: 1 1 280px; min-width: 240px; }
+.metrics-list { list-style: none; margin: 0; padding: 0; }
+.metric-head, .metric-row {
+  display: grid; grid-template-columns: 112px 1fr 34px 46px; align-items: center; gap: 8px; padding: 4px 0;
+}
+.metric-head { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
+.metric-row { border-top: 1px solid var(--border); cursor: help; }
+.metric-name { font-size: 13px; }
+.metric-bar { height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+.metric-fill { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+.metric-val { text-align: right; font-weight: bold; font-size: 13px; }
+.metric-raw { text-align: right; font-size: 12px; color: var(--text-muted); }
+.metrics-note { font-size: 12px; margin: 8px 0 0; }

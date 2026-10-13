@@ -40,9 +40,19 @@ function route() {
   const parts = hash.split('/').filter(Boolean);
   const key = parts[0] || 'cards';
   const rest = parts.slice(1);
-  updateActiveNav(key);
+  // Campaign editor (new or edit) lights up the nested campaign "Builder" link
+  updateActiveNav(key === 'campaigns' && (rest[0] === 'new' || rest[1] === 'edit') ? 'campaigns/new' : key);
+  // Tab title: section by default; detail / editor views refine it with setPageTitle
+  const section = { cards: 'nav.cards', squads: 'nav.squads', builder: 'nav.builder', campaigns: 'nav.campaigns',
+                    profile: 'nav.profile', translations: 'nav.translations' }[key];
+  setPageTitle(section ? t(section) : null);
   const handler = routes[key] || routes['404'];
   if (handler) handler(...rest);
+}
+
+// Browser tab title: "<parts> · <app>"
+function setPageTitle(...parts) {
+  document.title = [...parts.filter(Boolean), t('app.title')].join(' · ');
 }
 
 function navigate(path) {
@@ -102,6 +112,8 @@ function updateProfileLink() {
   if (link) link.style.display = currentUser ? '' : 'none';
   const trLink = document.getElementById('nav-translations');
   if (trLink) trLink.style.display = currentUser?.is_admin ? '' : 'none';
+  const cbLink = document.getElementById('nav-campaign-builder');   // campaign editor needs a login
+  if (cbLink) cbLink.style.display = currentUser ? '' : 'none';
 }
 
 // Switch UI + card language, persist it, and re-render the current view in place
@@ -160,6 +172,51 @@ function showError(msg) {
 
 function alertHtml(msg, type = 'error') {
   return `<div class="alert alert-${type}">${esc(msg)}</div>`;
+}
+
+// ---- Action icons + buttons (squad/campaign detail and builders) ---------
+// 24px line icons, stroke = currentColor, sized by .icon
+const ICON_PATHS = {
+  back:     '<path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>',
+  prev:     '<path d="m15 18-6-6 6-6"/>',
+  next:     '<path d="m9 18 6-6-6-6"/>',
+  up:       '<path d="m18 15-6-6-6 6"/>',
+  down:     '<path d="m6 9 6 6 6-6"/>',
+  edit:     '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  trash:    '<path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="m19 6-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>',
+  copy:     '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
+  upload:   '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/>',
+  save:     '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/>',
+  publish:  '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
+  validate: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>',
+  close:    '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  heart:    '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
+  plus:     '<path d="M12 5v14"/><path d="M5 12h14"/>',
+};
+function icon(name) {
+  return `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_PATHS[name]}</svg>`;
+}
+
+// Icon + label button. variant: ghost | primary | danger (outlined red). href → <a>; disabled href → inert <span>.
+// The label hides on narrow screens (secondary buttons only), the title keeps it discoverable.
+function actionBtn({ icon: ic, label, variant = 'ghost', id, href, title, attrs = '', cls: extra = '', iconOnly = false, disabled = false }) {
+  const cls = `btn btn-${variant === 'danger' ? 'danger-ghost' : variant}${iconOnly ? ' btn-square' : ''}${extra ? ' ' + extra : ''}`;
+  const inner = `${ic ? icon(ic) : ''}${iconOnly ? '' : `<span class="btn-label">${esc(label)}</span>`}`;
+  const common = `class="${cls}" ${id ? `id="${id}"` : ''} title="${esc(title || label)}" aria-label="${esc(label)}" ${attrs}`;
+  if (href != null) return disabled ? `<span ${common} aria-disabled="true">${inner}</span>` : `<a href="${href}" ${common}>${inner}</a>`;
+  return `<button type="button" ${common} ${disabled ? 'disabled' : ''}>${inner}</button>`;
+}
+
+// Page action bar shared by the four views:
+//   start: navigation (back / cancel, pager) · end: secondary actions | destructive · primary (rightmost)
+function pageToolbar(start, secondary = [], main = []) {
+  const sec = secondary.filter(Boolean).join(''), mn = main.filter(Boolean).join('');
+  return `
+    <div class="page-toolbar">
+      <div class="tb-start">${start}</div>
+      <div class="tb-end">${sec}${sec && mn ? '<span class="tb-sep" aria-hidden="true"></span>' : ''}${mn}</div>
+    </div>`;
 }
 
 function chipForCategory(cat) {
@@ -600,6 +657,7 @@ async function showCardDetail(idOrNumber) {
     showError(e.error || t('cards.not_found'));
     return;
   }
+  setPageTitle(card.name, t('nav.cards'));
 
   // Type → CSS theme class (sets --cd-accent / --cd-accent-bg)
   const TYPE_CLS = {
@@ -1013,6 +1071,59 @@ async function renderSquadList(containerEl) {
 }
 
 // ---------------------------------------------------------------------------
+// Squad metrics (spec 12; G0 estimate computed by app/metrics.py)
+// ---------------------------------------------------------------------------
+const METRIC_KEYS = ['ranged_fire', 'close_assault', 'anti_armour', 'demolition', 'supplies',
+                     'mobility', 'survivability', 'resilience', 'experience'];
+
+function metricsRadarSvg(metrics) {
+  const size = 280, c = size / 2, R = 88, n = METRIC_KEYS.length;
+  const pt = (i, r) => {
+    const a = -Math.PI / 2 + (2 * Math.PI * i) / n;
+    return [c + r * Math.cos(a), c + r * Math.sin(a)];
+  };
+  const rings = [0.25, 0.5, 0.75, 1].map(f =>
+    `<polygon class="mr-ring" points="${METRIC_KEYS.map((_, i) => pt(i, R * f).join(',')).join(' ')}"/>`).join('');
+  const spokes = METRIC_KEYS.map((_, i) => { const [x, y] = pt(i, R); return `<line class="mr-spoke" x1="${c}" y1="${c}" x2="${x}" y2="${y}"/>`; }).join('');
+  const shape = METRIC_KEYS.map((k, i) => pt(i, R * Math.max(0.02, metrics[k].score ?? 0)).join(',')).join(' ');
+  const dots = METRIC_KEYS.map((k, i) => { const [x, y] = pt(i, R * Math.max(0.02, metrics[k].score ?? 0)); return `<circle class="mr-dot" cx="${x}" cy="${y}" r="2.5"/>`; }).join('');
+  const labels = METRIC_KEYS.map((k, i) => {
+    const [x, y] = pt(i, R + 16);
+    const anchor = x < c - 6 ? 'end' : x > c + 6 ? 'start' : 'middle';
+    return `<text class="mr-label" x="${x}" y="${y + 3}" text-anchor="${anchor}">${esc(t('metrics.' + k))}</text>`;
+  }).join('');
+  return `<svg class="metrics-radar" viewBox="0 0 ${size} ${size}" role="img" aria-label="${esc(t('metrics.title'))}">
+    ${rings}${spokes}<polygon class="mr-shape" points="${shape}"/>${dots}${labels}</svg>`;
+}
+
+function metricsSectionHtml(m) {
+  if (!m || !m.metrics) return '';
+  const rows = METRIC_KEYS.map(k => {
+    const v = m.metrics[k];
+    const pct = v.score == null ? null : Math.round(v.score * 100);
+    const raw = Number.isInteger(v.raw) ? v.raw : v.raw.toFixed(v.raw < 10 ? 2 : 1);
+    return `<li class="metric-row" title="${esc(t('metrics.' + k + '_desc'))}\n${esc(v.detail || '')}">
+      <span class="metric-name">${esc(t('metrics.' + k))}</span>
+      <span class="metric-bar"><span class="metric-fill" style="width:${pct == null ? 0 : pct}%"></span></span>
+      <span class="metric-val">${pct == null ? '–' : pct}</span>
+      <span class="metric-raw">${esc(raw)}</span>
+    </li>`;
+  }).join('');
+  const n = m.sample ? m.sample.n : 0;
+  return `<div class="squad-metrics">
+    <h2 style="margin-bottom:8px">${esc(t('metrics.title'))} <span class="metrics-badge">${esc(t('metrics.estimate'))}</span></h2>
+    <div class="metrics-body">
+      ${metricsRadarSvg(m.metrics)}
+      <div class="metrics-list-wrap">
+        <div class="metric-head"><span></span><span></span><span class="metric-val">${esc(t('metrics.col_score'))}</span><span class="metric-raw">${esc(t('metrics.col_raw'))}</span></div>
+        <ul class="metrics-list">${rows}</ul>
+      </div>
+    </div>
+    <p class="metrics-note text-muted">${esc(t('metrics.note', { n }))}</p>
+  </div>`;
+}
+
+// ---------------------------------------------------------------------------
 // VIEW: Squad Detail
 // ---------------------------------------------------------------------------
 async function showSquadDetail(squadId) {
@@ -1029,40 +1140,49 @@ async function showSquadDetail(squadId) {
     return;
   }
 
+  setPageTitle(squad.name, t('nav.squads'));
   const isOwner = currentUser && currentUser.id === squad.owner.id;
   const isDraft = squad.status === 'draft';
-  const editBtn = isOwner ? `<button class="btn btn-sm btn-ghost" id="edit-squad-btn">${esc(t('common.edit'))}</button>` : '';
-  const deleteBtn = isOwner ? `<button class="btn btn-sm btn-danger" id="delete-squad-btn">${esc(t('common.delete'))}</button>` : '';
-  const publishBtn = isOwner && isDraft ? `<button class="btn btn-sm btn-primary" id="publish-btn">${esc(t('squad.publish'))}</button>` : '';
+  // One primary per view: Publish on an own draft, otherwise Edit on an own squad
+  const editBtn = isOwner ? actionBtn({ id: 'edit-squad-btn', icon: 'edit', label: t('common.edit'), variant: isDraft ? 'ghost' : 'primary' }) : '';
+  const deleteBtn = isOwner ? actionBtn({ id: 'delete-squad-btn', icon: 'trash', label: t('common.delete'), variant: 'danger' }) : '';
+  const publishBtn = isOwner && isDraft ? actionBtn({ id: 'publish-btn', icon: 'publish', label: t('squad.publish'), variant: 'primary' }) : '';
   const draftBadge = isDraft ? `<span class="badge-draft">${esc(t('squad.draft_badge'))}</span>` : '';
   const copyBtn = currentUser
-    ? `<button class="btn btn-sm btn-ghost" id="copy-squad-btn" title="${esc(t('squad.copy_tip'))}">${esc(t('squad.copy'))}</button>` : '';
+    ? actionBtn({ id: 'copy-squad-btn', icon: 'copy', label: t('squad.copy'), title: t('squad.copy_tip') }) : '';
   const basedOn = squad.parent
     ? `<div class="squad-based-on">${t('squad.based_on_html', {
         link: `<a href="#/squads/${squad.parent.id}">${esc(squad.parent.name)}</a>`,
         user: esc(squad.parent.owner.username) })}</div>` : '';
   const copiesInfo = squad.copies_count
     ? ` · <span class="text-muted">${esc(tn('squad.copies', squad.copies_count))}</span>` : '';
+  // Export: one button opening a menu — each format with what it is for
+  const exportItem = (fmt, label, tip) => `
+    <button class="export-item" role="menuitem" data-export="${fmt}">
+      <span class="export-item-label">${esc(label)}</span>
+      <span class="export-item-tip">${esc(tip)}</span>
+    </button>`;
   const exportBtns = `
-    <span class="export-group">
-      <span class="text-muted" style="font-size:12px">${esc(t('io.export'))}:</span>
-      <button class="btn btn-sm btn-ghost" data-export="text" title="${esc(t('io.text_tip'))}">${esc(t('io.text'))}</button>
-      <button class="btn btn-sm btn-ghost" data-export="csv">CSV</button>
-      <button class="btn btn-sm btn-ghost" data-export="tts" title="${esc(t('io.tts_tip'))}">TTS</button>
-    </span>`;
+    <div class="export-menu">
+      <button type="button" class="btn btn-ghost" id="export-toggle" title="${esc(t('io.export'))}" aria-label="${esc(t('io.export'))}" aria-haspopup="menu" aria-expanded="false">${icon('download')}<span class="btn-label">${esc(t('io.export'))}</span><span class="btn-caret">${icon('down')}</span></button>
+      <div class="export-menu-list" id="export-list" role="menu" hidden>
+        ${exportItem('text', t('io.text'), t('io.text_tip'))}
+        ${exportItem('csv', 'CSV', t('io.csv_tip'))}
+        ${exportItem('tts', 'Tabletop Simulator', t('io.tts_tip'))}
+      </div>
+    </div>`;
 
   const likedClass = squad.liked_by_me ? 'liked' : '';
-  const likeDisabled = !currentUser ? `disabled title="${esc(t('squad.login_to_like'))}"` : '';
+  const likeTitle = currentUser ? t('col.likes') : t('squad.login_to_like');
   const likeBtn = `
-    <button class="like-btn ${likedClass}" id="like-btn" ${likeDisabled}>
-      ♥ <span id="likes-count">${squad.likes_count}</span>
-    </button>`;
+    <button type="button" class="btn btn-ghost like-btn ${likedClass}" id="like-btn" aria-pressed="${!!squad.liked_by_me}"
+      title="${esc(likeTitle)}" aria-label="${esc(likeTitle)}" ${!currentUser ? 'disabled' : ''}>${icon('heart')}<span id="likes-count">${squad.likes_count}</span></button>`;
 
   // Minimal module set for soldiers + gear, any equivalent printing (app/required_modules.py)
   const requiredModules = (squad.required_modules || []).length ? `
-    <div class="required-modules" title="${esc(t('squad.required_modules'))}">
+    <span class="required-modules" title="${esc(t('squad.required_modules'))}">
       ${squad.required_modules.map(m => `<span class="chip">${esc(tv('module', m))}</span>`).join('')}
-    </div>` : '';
+    </span>` : '';
 
   const soldiersHtml = squad.soldiers.map(ss => {
     const c = ss.card;
@@ -1147,8 +1267,8 @@ async function showSquadDetail(squadId) {
         <div class="comment-body" data-raw="${esc(cm.body)}">${renderMentions(cm.body, commentMentions)}</div>
         ${canEdit ? `
           <div class="comment-actions">
-            <button class="btn btn-sm btn-ghost edit-comment-btn" data-cid="${cm.id}">${esc(t('common.edit'))}</button>
-            <button class="btn btn-sm btn-danger delete-comment-btn" data-cid="${cm.id}">${esc(t('common.delete'))}</button>
+            ${actionBtn({ icon: 'edit', label: t('common.edit'), cls: 'btn-sm edit-comment-btn', attrs: `data-cid="${cm.id}"` })}
+            ${actionBtn({ icon: 'trash', label: t('common.delete'), variant: 'danger', cls: 'btn-sm delete-comment-btn', attrs: `data-cid="${cm.id}"` })}
           </div>` : ''}
       </div>`;
   }).join('');
@@ -1166,28 +1286,23 @@ async function showSquadDetail(squadId) {
   const squadNavIdx = squadNavList.indexOf(squad.id);
   const prevSqId = squadNavIdx > 0 ? squadNavList[squadNavIdx - 1] : null;
   const nextSqId = squadNavIdx >= 0 && squadNavIdx < squadNavList.length - 1 ? squadNavList[squadNavIdx + 1] : null;
-  const prevSqBtn = prevSqId ? `<a href="#/squads/${prevSqId}" class="btn btn-ghost btn-sm">← ${esc(t('common.prev'))}</a>` : `<span class="btn btn-ghost btn-sm" style="opacity:.35;cursor:default">← ${esc(t('common.prev'))}</span>`;
-  const nextSqBtn = nextSqId ? `<a href="#/squads/${nextSqId}" class="btn btn-ghost btn-sm">${esc(t('common.next'))} →</a>` : `<span class="btn btn-ghost btn-sm" style="opacity:.35;cursor:default">${esc(t('common.next'))} →</span>`;
-  const squadNavPos = squadNavIdx >= 0 ? `<span class="text-muted" style="font-size:12px">${squadNavIdx + 1} / ${squadNavList.length}</span>` : '';
+  const prevSqBtn = actionBtn({ icon: 'prev', label: t('common.prev'), iconOnly: true, href: prevSqId ? '#/squads/' + prevSqId : '', disabled: !prevSqId });
+  const nextSqBtn = actionBtn({ icon: 'next', label: t('common.next'), iconOnly: true, href: nextSqId ? '#/squads/' + nextSqId : '', disabled: !nextSqId });
+  const squadNavPos = squadNavIdx >= 0 ? `<span class="tb-pager-pos">${squadNavIdx + 1} / ${squadNavList.length}</span>` : '';
 
   setMain(`
-    <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <a href="#/squads" class="btn btn-ghost btn-sm">← ${esc(t('nav.squads'))}</a>
-      ${editBtn} ${deleteBtn} ${publishBtn} ${copyBtn}
-      ${exportBtns}
-      <span style="flex:1"></span>
-      ${squadNavPos}
-      ${prevSqBtn}
-      ${nextSqBtn}
-    </div>
+    ${pageToolbar(
+      actionBtn({ icon: 'back', label: t('nav.squads'), href: '#/squads' }) +
+        (squadNavIdx >= 0 ? `<span class="tb-pager">${prevSqBtn}${squadNavPos}${nextSqBtn}</span>` : ''),
+      [likeBtn, copyBtn, exportBtns],
+      [deleteBtn, editBtn, publishBtn])}
 
     <div class="squad-header">
-      <div class="squad-title">${draftBadge} ${esc(squad.name)}</div>
+      <h1 class="squad-title">${draftBadge} ${esc(squad.name)}</h1>
       <div class="squad-meta">
-        ${esc(t('squad.by', { user: squad.owner.username }))} · ${fmtDate(squad.created_at)} · ${esc(nationLabel(squad.nation))}${copiesInfo}
+        ${esc(t('squad.by', { user: squad.owner.username }))} · ${fmtDate(squad.created_at)} · ${esc(nationLabel(squad.nation))}${requiredModules}${copiesInfo}
       </div>
       ${basedOn}
-      <div class="squad-like-row">${likeBtn}${requiredModules}</div>
     </div>
 
     <div class="squad-info-row">
@@ -1307,6 +1422,8 @@ async function showSquadDetail(squadId) {
     <h2 style="margin-bottom:12px">${esc(t('squad.soldiers'))}</h2>
     <div class="soldiers-grid">${soldiersHtml || `<p class="text-muted">${esc(t('squad.no_soldiers'))}</p>`}</div>
 
+    ${metricsSectionHtml(squad.metrics)}
+
     <div class="squad-author-notes">
       <h2 style="margin-bottom:8px">${esc(t('squad.strategy_notes'))}</h2>
       ${squad.notes
@@ -1333,9 +1450,29 @@ async function showSquadDetail(squadId) {
         ? await API.delete('/squads/' + squad.id + '/like')
         : await API.post('/squads/' + squad.id + '/like');
       btn.classList.toggle('liked', res.liked_by_me);
+      btn.setAttribute('aria-pressed', String(!!res.liked_by_me));
       document.getElementById('likes-count').textContent = res.likes_count;
     } catch (e) { /* silent */ }
   });
+
+  // Export menu: toggle, close on outside click / Escape / pick
+  const exportToggle = document.getElementById('export-toggle');
+  const exportList = document.getElementById('export-list');
+  const setExportOpen = open => {
+    exportList.hidden = !open;
+    exportToggle.setAttribute('aria-expanded', String(open));
+  };
+  exportToggle.addEventListener('click', e => { e.stopPropagation(); setExportOpen(exportList.hidden); });
+  const closeExport = e => {
+    if (!document.body.contains(exportList)) {   // view re-rendered: drop the listeners
+      document.removeEventListener('click', closeExport);
+      document.removeEventListener('keydown', closeExport);
+      return;
+    }
+    if (e.type === 'keydown' ? e.key === 'Escape' : !exportList.contains(e.target)) setExportOpen(false);
+  };
+  document.addEventListener('click', closeExport);
+  document.addEventListener('keydown', closeExport);
 
   document.getElementById('copy-squad-btn')?.addEventListener('click', () => {
     pendingBuilderDraft = {
@@ -1354,7 +1491,7 @@ async function showSquadDetail(squadId) {
   });
 
   document.querySelectorAll('[data-export]').forEach(btn =>
-    btn.addEventListener('click', () => exportSquad(squad, btn.dataset.export)));
+    btn.addEventListener('click', () => { setExportOpen(false); exportSquad(squad, btn.dataset.export); }));
 
   // Publish
   document.getElementById('publish-btn')?.addEventListener('click', async () => {
@@ -1416,7 +1553,8 @@ async function showSquadDetail(squadId) {
       ta.style.width = '100%';
       bodyEl.replaceWith(ta);
       attachMentionAutocomplete(ta);
-      editBtn.textContent = t('common.save');
+      editBtn.innerHTML = `${icon('save')}<span class="btn-label">${esc(t('common.save'))}</span>`;
+      editBtn.classList.replace('btn-ghost', 'btn-primary');
       editBtn.classList.remove('edit-comment-btn');
       editBtn.addEventListener('click', async () => {
         try {
@@ -1728,6 +1866,7 @@ function renderBuilder() {
     setMain(`<div class="alert alert-warning">${t('builder.login_required_html')}</div>`);
     return;
   }
+  setPageTitle(t(builderState.squadId ? 'builder.edit_title' : 'builder.new_title'));
 
   const _savedScrollY = document.querySelector('.builder-left')?.scrollTop ?? 0;
   const _savedPickerScrollY = document.querySelector('.builder-right')?.scrollTop ?? 0;
@@ -1759,7 +1898,7 @@ function renderBuilder() {
         <span ${cardImageAttr(g.card)} style="flex:1">${esc(g.card.name)}</span>
         <span class="text-muted" style="white-space:nowrap">${unitRp} ${esc(t('stat.rp'))}</span>
         ${g.quantity > 1 ? `<span class="gear-qty">×${g.quantity}</span>` : '<span></span>'}
-        <button class="btn btn-icon remove-gear-btn" data-sidx="${idx}" data-gidx="${gi}" title="${esc(t('common.remove'))}">✕</button>
+        <button class="btn btn-icon remove-gear-btn" data-sidx="${idx}" data-gidx="${gi}" title="${esc(t('common.remove'))}" aria-label="${esc(t('common.remove'))}">${icon('close')}</button>
       </div>`;
     }).join('');
 
@@ -1786,7 +1925,7 @@ function renderBuilder() {
           </span>
           <span>
             <span class="soldier-slot-cost text-muted">${c.resource_cost || 0} ${esc(t('stat.rp'))}</span>
-            <button class="btn btn-icon remove-soldier-btn" data-sidx="${idx}" title="${esc(t('builder.remove_soldier'))}">✕</button>
+            <button class="btn btn-icon remove-soldier-btn" data-sidx="${idx}" title="${esc(t('builder.remove_soldier'))}" aria-label="${esc(t('builder.remove_soldier'))}">${icon('close')}</button>
           </span>
         </div>
         ${isPS ? `
@@ -1797,10 +1936,10 @@ function renderBuilder() {
           </div>
           ${defaultGearHtml}
           <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
-            <button class="btn btn-sm btn-ghost add-weapon-btn" data-sidx="${idx}">+ ${esc(tv('card_type', 'Weapon'))}</button>
-            <button class="btn btn-sm btn-ghost add-equip-btn" data-sidx="${idx}">+ ${esc(tv('card_type', 'Equipment'))}</button>
-            <button class="btn btn-sm btn-ghost add-skill-btn" data-sidx="${idx}">+ ${esc(tv('card_type', 'Skill'))}</button>
-            <button class="btn btn-sm btn-ghost add-sr-btn" data-sidx="${idx}">+ ${esc(tv('card_type', 'Service Record'))}</button>
+            <button class="btn btn-sm btn-ghost add-weapon-btn" data-sidx="${idx}">${icon('plus')}${esc(tv('card_type', 'Weapon'))}</button>
+            <button class="btn btn-sm btn-ghost add-equip-btn" data-sidx="${idx}">${icon('plus')}${esc(tv('card_type', 'Equipment'))}</button>
+            <button class="btn btn-sm btn-ghost add-skill-btn" data-sidx="${idx}">${icon('plus')}${esc(tv('card_type', 'Skill'))}</button>
+            <button class="btn btn-sm btn-ghost add-sr-btn" data-sidx="${idx}">${icon('plus')}${esc(tv('card_type', 'Service Record'))}</button>
           </div>
         ` : (c.card_subtype === 'NPS' || c.card_subtype === 'Squad') ? `
           ${defaultGearHtml}
@@ -1809,24 +1948,25 @@ function renderBuilder() {
           <div class="nps-gear-note" style="font-size:11px;margin-top:4px">${esc(t('builder.nps_not_counted'))}</div>
           ${defaultGearHtml}
           <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
-            <button class="btn btn-sm btn-ghost add-nps-wpn-btn" data-sidx="${idx}">+ ${esc(tv('card_type', 'Weapon'))}</button>
-            <button class="btn btn-sm btn-ghost add-nps-eqp-btn" data-sidx="${idx}">+ ${esc(tv('card_type', 'Equipment'))}</button>
-            <button class="btn btn-sm btn-ghost add-nps-skl-btn" data-sidx="${idx}">+ ${esc(tv('card_type', 'Skill'))}</button>
-            <button class="btn btn-sm btn-ghost add-nps-act-btn" data-sidx="${idx}">+ ${esc(tv('card_type', 'Action'))}</button>
+            <button class="btn btn-sm btn-ghost add-nps-wpn-btn" data-sidx="${idx}">${icon('plus')}${esc(tv('card_type', 'Weapon'))}</button>
+            <button class="btn btn-sm btn-ghost add-nps-eqp-btn" data-sidx="${idx}">${icon('plus')}${esc(tv('card_type', 'Equipment'))}</button>
+            <button class="btn btn-sm btn-ghost add-nps-skl-btn" data-sidx="${idx}">${icon('plus')}${esc(tv('card_type', 'Skill'))}</button>
+            <button class="btn btn-sm btn-ghost add-nps-act-btn" data-sidx="${idx}">${icon('plus')}${esc(tv('card_type', 'Action'))}</button>
           </div>
         ` : ''}
       </div>`;
   }).join('');
 
   setMain(`
-    <div class="builder-actions">
-      ${builderState.fromSquadList ? `<a href="#/squads" class="btn btn-ghost btn-sm">← ${esc(t('nav.squads'))}</a>` : ''}
-      <button class="btn btn-ghost btn-sm" id="save-draft-btn">${esc(t('builder.save_draft'))}</button>
-      <button class="btn btn-primary" id="publish-squad-btn">${esc(t('squad.publish'))}</button>
-      <button class="btn btn-ghost btn-sm" id="validate-btn">${esc(t('builder.validate'))}</button>
-      <button class="btn btn-ghost btn-sm" id="builder-import-btn">${esc(t('io.import'))}</button>
-      ${builderState.squadId ? `<a href="#/squads/${builderState.squadId}" class="btn btn-ghost btn-sm">${esc(t('common.cancel'))}</a>` : ''}
-    </div>
+    ${pageToolbar(
+      // Cancel = leave: back to the list when opened from its edit pencil, else to the squad (or the list)
+      actionBtn({ icon: 'close', label: t('common.cancel'),
+        href: '#/squads' + (builderState.squadId && !builderState.fromSquadList ? '/' + builderState.squadId : '') }),
+      [actionBtn({ id: 'builder-import-btn', icon: 'upload', label: t('io.import') }),
+       actionBtn({ id: 'validate-btn', icon: 'validate', label: t('builder.validate') })],
+      [actionBtn({ id: 'save-draft-btn', icon: 'save', label: t('builder.save_draft') }),
+       actionBtn({ id: 'publish-squad-btn', icon: 'publish', label: t('squad.publish'), variant: 'primary' })])}
+    <h1 class="page-title">${esc(t(builderState.squadId ? 'builder.edit_title' : 'builder.new_title'))}</h1>
     ${builderState.parentSquadId ? `<div class="squad-based-on">${t('squad.based_on_short_html', {
       link: `<a href="#/squads/${builderState.parentSquadId}">${esc(builderState.parentName || '#' + builderState.parentSquadId)}</a>` })}</div>` : ''}
     <div id="builder-validation"></div>
@@ -1892,24 +2032,24 @@ function renderBuilder() {
                       <span><span ${cardImageAttr(oc)}><strong>${esc(oc.name)}</strong></span></span>
                       <span style="display:flex;gap:4px">
                         <button class="btn btn-sm btn-ghost" data-change-obj="1">${esc(t('common.change'))}</button>
-                        <button class="btn btn-sm btn-ghost remove-obj-btn" data-idx="${idx}" title="${esc(t('common.remove'))}" style="color:var(--text-muted)">✕</button>
+                        <button class="btn btn-icon remove-obj-btn" data-idx="${idx}" title="${esc(t('common.remove'))}" aria-label="${esc(t('common.remove'))}">${icon('close')}</button>
                       </span>
                     </div>
                     <div class="text-muted" style="font-size:11px;margin-top:3px">${esc([subtypeLabel, attrs].filter(Boolean).join(' · '))}</div>`;
                   } else {
                     return `<div class="flex justify-between items-center obj-compact-row">
                       <span style="font-size:13px"><span ${cardImageAttr(oc)}>${esc(oc.name)}</span></span>
-                      <button class="btn btn-sm btn-ghost remove-obj-btn" data-idx="${idx}" title="${esc(t('common.remove'))}" style="color:var(--text-muted)">✕</button>
+                      <button class="btn btn-icon remove-obj-btn" data-idx="${idx}" title="${esc(t('common.remove'))}" aria-label="${esc(t('common.remove'))}">${icon('close')}</button>
                     </div>`;
                   }
                 }).join('');
                 const addMoreBtn = builderState.missionCard
-                  ? `<button class="btn btn-ghost btn-sm" id="add-obj-btn" style="margin-top:6px">+ ${esc(t('builder.add_another'))}</button>`
+                  ? `<button class="btn btn-ghost btn-sm" id="add-obj-btn" style="margin-top:6px">${icon('plus')}${esc(t('builder.add_another'))}</button>`
                   : '';
                 return rows + addMoreBtn;
               })()
             : builderState.missionCard
-              ? `<button class="btn btn-ghost" id="pick-obj-btn">${esc(t('builder.add_objective'))}</button>`
+              ? `<button class="btn btn-ghost" id="pick-obj-btn">${icon('plus')}${esc(t('builder.add_objective'))}</button>`
               : `<span class="text-muted">${esc(t('builder.mission_first'))}</span>`}
         </div>
 
@@ -1934,7 +2074,7 @@ function renderBuilder() {
           </div>
           ${soldiersHtml}
           ${builderState.missionCard
-            ? `<button class="btn btn-ghost" id="add-soldier-btn" ${!builderState.nation ? `disabled title="${esc(t('builder.nation_first'))}"` : ''}>+ ${esc(t('builder.add_soldier'))}</button>`
+            ? `<button class="btn btn-ghost" id="add-soldier-btn" ${!builderState.nation ? `disabled title="${esc(t('builder.nation_first'))}"` : ''}>${icon('plus')}${esc(t('builder.add_soldier'))}</button>`
             : ''}
         </div>
 
@@ -2419,10 +2559,24 @@ register('profile', async function() {
 
     <div class="profile-section">
       <h2>${esc(t('profile.change_password'))}</h2>
-      <div class="form-field"><label>${esc(t('profile.current_password'))}</label><input type="password" id="cur-pw"></div>
-      <div class="form-field"><label>${esc(t('profile.new_password'))}</label><input type="password" id="new-pw"></div>
+      <div class="form-field"><label>${esc(t('profile.current_password'))}</label><input type="password" id="cur-pw" autocomplete="current-password"></div>
+      ${newPasswordFields('new')}
       <button class="btn btn-primary" id="save-pw-btn">${esc(t('profile.update_password'))}</button>
       <div id="pw-msg"></div>
+    </div>
+
+    <div class="profile-section">
+      <h2>${esc(t('profile.change_email'))}</h2>
+      <div class="form-field"><label>${esc(t('profile.new_email'))}</label><input type="email" id="new-email" autocomplete="email"></div>
+      <div class="form-field"><label>${esc(t('profile.current_password'))}</label><input type="password" id="email-pw" autocomplete="current-password"></div>
+      <button class="btn btn-primary" id="save-email-btn">${esc(t('profile.change_email'))}</button>
+      <div id="email-msg"></div>
+    </div>
+
+    <div class="profile-section">
+      <h2>${esc(t('profile.sessions'))}</h2>
+      <p class="text-muted" style="font-size:13px">${esc(t('profile.logout_all_intro'))}</p>
+      <button class="btn btn-ghost" id="logout-all-btn">${esc(t('profile.logout_all'))}</button>
     </div>
 
     <div class="profile-section">
@@ -2452,14 +2606,35 @@ register('profile', async function() {
 
   main.querySelector('#save-pw-btn')?.addEventListener('click', async () => {
     const cp = main.querySelector('#cur-pw').value;
-    const np = main.querySelector('#new-pw').value;
     const msg = main.querySelector('#pw-msg');
+    const np = readNewPassword('new', msg);
+    if (np === null) return;
     try {
       await API.put('/profile/password', { current_password: cp, new_password: np });
       msg.innerHTML = alertHtml(t('profile.password_updated'), 'success');
-      main.querySelector('#cur-pw').value = '';
-      main.querySelector('#new-pw').value = '';
+      ['#cur-pw', '#new-pw', '#new-pw2'].forEach(id => { main.querySelector(id).value = ''; });
     } catch (e) { msg.innerHTML = alertHtml(e.error || t('common.failed')); }
+  });
+
+  main.querySelector('#save-email-btn')?.addEventListener('click', async () => {
+    const msg = main.querySelector('#email-msg');
+    try {
+      const r = await API.put('/profile/email', {
+        new_email: main.querySelector('#new-email').value.trim(),
+        current_password: main.querySelector('#email-pw').value,
+      });
+      msg.innerHTML = alertHtml(r.message, 'success');
+      main.querySelector('#email-pw').value = '';
+    } catch (e) { msg.innerHTML = alertHtml(e.error || t('common.failed')); }
+  });
+
+  main.querySelector('#logout-all-btn')?.addEventListener('click', async () => {
+    if (!confirm(t('profile.logout_all_confirm'))) return;
+    try { await API.post('/auth/logout-all'); } catch (_) {}
+    currentUser = null;
+    renderHeader();
+    updateProfileLink();
+    navigate('login');
   });
 
   main.querySelector('#select-all-btn')?.addEventListener('click', () => {
@@ -2727,75 +2902,192 @@ async function showTranslationEditor(number) {
 }
 
 // ---------------------------------------------------------------------------
+// Auth views (spec/06_ui.md §Auth). Emailed links land on #/verify|reset|confirm-email/<token>.
+// ---------------------------------------------------------------------------
+const PASSWORD_MIN_LENGTH = 15;   // keep in sync with PASSWORD_MIN_LENGTH (app/config.py); server enforces it
+
+function authForm(title, body) {
+  setMain(`
+    <div class="auth-form-wrapper">
+      <h1>${esc(title)}</h1>
+      <div id="auth-msg"></div>
+      ${body}
+    </div>`);
+  return document.getElementById('auth-msg');
+}
+
+function authFooter(html) {
+  return `<div class="auth-form-footer mt-2" style="text-align:center;font-size:13px">${html}</div>`;
+}
+
+const loginLink = () => `<a href="#/login">${esc(t('header.login'))}</a>`;
+
+// Token from an emailed link: kept in memory, removed from the address bar + history
+function takeToken(view, token) {
+  if (token) history.replaceState(null, '', `#/${view}`);
+  return token || '';
+}
+
+// New password + repeat; returns the password, or null after showing the problem in `msg`
+function newPasswordFields(prefix, labelKey = 'profile.new_password') {
+  return `
+    <div class="form-field"><label>${esc(t(labelKey))}</label>
+      <input type="password" id="${prefix}-pw" autocomplete="new-password" maxlength="128">
+      <div class="text-muted" style="font-size:12px;margin-top:4px">${esc(t('auth.password_hint', { n: PASSWORD_MIN_LENGTH }))}</div></div>
+    <div class="form-field"><label>${esc(t('auth.password_repeat'))}</label>
+      <input type="password" id="${prefix}-pw2" autocomplete="new-password" maxlength="128"></div>`;
+}
+
+function readNewPassword(prefix, msg) {
+  const pw = document.getElementById(`${prefix}-pw`).value;
+  if (pw !== document.getElementById(`${prefix}-pw2`).value) {
+    msg.innerHTML = alertHtml(t('auth.password_mismatch'));
+    return null;
+  }
+  return pw;
+}
+
+function onEnter(id, fn) {
+  document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') fn(); });
+}
+
+// ---------------------------------------------------------------------------
 // VIEW: Login
 // ---------------------------------------------------------------------------
 register('login', function() {
-  setMain(`
-    <div class="auth-form-wrapper">
-      <h1>${esc(t('header.login'))}</h1>
-      <div id="login-msg"></div>
-      <div class="form-field"><label>${esc(t('auth.username'))}</label><input type="text" id="login-user" autocomplete="username"></div>
-      <div class="form-field"><label>${esc(t('auth.password'))}</label><input type="password" id="login-pw" autocomplete="current-password"></div>
-      <button class="btn btn-primary" id="login-btn" style="width:100%;margin-top:8px">${esc(t('header.login'))}</button>
-      <div class="auth-form-footer mt-2" style="text-align:center;font-size:13px">
-        ${esc(t('auth.no_account'))} <a href="#/register">${esc(t('header.register'))}</a>
-      </div>
-    </div>`);
+  const msg = authForm(t('header.login'), `
+    <div class="form-field"><label>${esc(t('auth.login_id'))}</label><input type="text" id="login-user" autocomplete="username"></div>
+    <div class="form-field"><label>${esc(t('auth.password'))}</label><input type="password" id="login-pw" autocomplete="current-password"></div>
+    <label style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" id="login-remember"> ${esc(t('auth.remember'))}</label>
+    <button class="btn btn-primary" id="login-btn" style="width:100%;margin-top:8px">${esc(t('header.login'))}</button>
+    ${authFooter(`<a href="#/forgot">${esc(t('auth.forgot_link'))}</a>`)}
+    ${authFooter(`${esc(t('auth.no_account'))} <a href="#/register">${esc(t('header.register'))}</a>`)}`);
 
   const doLogin = async () => {
-    const username = document.getElementById('login-user').value.trim();
-    const password = document.getElementById('login-pw').value;
-    const msg = document.getElementById('login-msg');
+    const login = document.getElementById('login-user').value.trim();
     try {
-      const data = await API.post('/auth/login', { username, password });
+      const data = await API.post('/auth/login', {
+        login,
+        password: document.getElementById('login-pw').value,
+        remember: document.getElementById('login-remember').checked,
+      });
       currentUser = data.user;
       await applyUserLanguage();
       renderHeader();
       updateProfileLink();
       navigate('squads');
-    } catch (e) { msg.innerHTML = alertHtml(e.error || t('auth.login_failed')); }
+    } catch (e) {
+      if (e.data?.code !== 'email_unverified') { msg.innerHTML = alertHtml(e.error || t('auth.login_failed')); return; }
+      msg.innerHTML = `<div class="alert alert-warning">${esc(e.error)}
+        <div class="mt-2"><button class="btn btn-sm btn-ghost" id="resend-btn">${esc(t('auth.resend'))}</button></div></div>`;
+      msg.querySelector('#resend-btn').addEventListener('click', async () => {
+        try { const r = await API.post('/auth/verify/resend', { login }); msg.innerHTML = alertHtml(r.message, 'info'); }
+        catch (e2) { msg.innerHTML = alertHtml(e2.error || t('common.failed')); }
+      });
+    }
   };
 
   document.getElementById('login-btn').addEventListener('click', doLogin);
-  document.getElementById('login-pw').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  onEnter('login-pw', doLogin);
 });
 
 // ---------------------------------------------------------------------------
-// VIEW: Register
+// VIEW: Register — no session until the emailed link confirms the address
 // ---------------------------------------------------------------------------
 register('register', function() {
-  setMain(`
-    <div class="auth-form-wrapper">
-      <h1>${esc(t('auth.create_account'))}</h1>
-      <div id="reg-msg"></div>
-      <div class="form-field"><label>${esc(t('auth.username'))}</label><input type="text" id="reg-user" autocomplete="username"></div>
-      <div class="form-field"><label>${esc(t('auth.email'))}</label><input type="email" id="reg-email" autocomplete="email"></div>
-      <div class="form-field"><label>${esc(t('auth.full_name'))} <span class="text-muted">(${esc(t('common.optional'))})</span></label><input type="text" id="reg-name"></div>
-      <div class="form-field"><label>${esc(t('auth.password'))}</label><input type="password" id="reg-pw" autocomplete="new-password"></div>
-      <button class="btn btn-primary" id="reg-btn" style="width:100%;margin-top:8px">${esc(t('auth.create_account'))}</button>
-      <div class="auth-form-footer mt-2" style="text-align:center;font-size:13px">
-        ${esc(t('auth.have_account'))} <a href="#/login">${esc(t('header.login'))}</a>
-      </div>
-    </div>`);
+  const msg = authForm(t('auth.create_account'), `
+    <div class="form-field"><label>${esc(t('auth.username'))}</label><input type="text" id="reg-user" autocomplete="username" maxlength="30"></div>
+    <div class="form-field"><label>${esc(t('auth.email'))}</label><input type="email" id="reg-email" autocomplete="email"></div>
+    <div class="form-field"><label>${esc(t('auth.full_name'))} <span class="text-muted">(${esc(t('common.optional'))})</span></label><input type="text" id="reg-name" autocomplete="name"></div>
+    ${newPasswordFields('reg', 'auth.password')}
+    <button class="btn btn-primary" id="reg-btn" style="width:100%;margin-top:8px">${esc(t('auth.create_account'))}</button>
+    ${authFooter(`${esc(t('auth.have_account'))} ${loginLink()}`)}`);
 
   document.getElementById('reg-btn').addEventListener('click', async () => {
-    const msg = document.getElementById('reg-msg');
+    const password = readNewPassword('reg', msg);
+    if (password === null) return;
     try {
       const data = await API.post('/auth/register', {
         username: document.getElementById('reg-user').value.trim(),
         email: document.getElementById('reg-email').value.trim(),
         full_name: document.getElementById('reg-name').value.trim(),
-        password: document.getElementById('reg-pw').value,
+        password,
+        language: I18N.lang,   // new accounts start with the language currently in use
       });
-      // New accounts start with the language currently in use
-      try { await API.put('/profile/', { language: I18N.lang }); data.user.language = I18N.lang; } catch (_) {}
-      currentUser = data.user;
-      renderHeader();
-      updateProfileLink();
-      navigate('profile');
+      authForm(t('auth.create_account'), `${alertHtml(data.message, 'success')}${authFooter(loginLink())}`);
     } catch (e) { msg.innerHTML = alertHtml(e.error || t('auth.register_failed')); }
   });
 });
+
+// ---------------------------------------------------------------------------
+// VIEW: Forgot password / Reset password
+// ---------------------------------------------------------------------------
+register('forgot', function() {
+  const msg = authForm(t('auth.forgot_title'), `
+    <p class="text-muted" style="font-size:13px">${esc(t('auth.forgot_intro'))}</p>
+    <div class="form-field"><label>${esc(t('auth.email'))}</label><input type="email" id="forgot-email" autocomplete="email"></div>
+    <button class="btn btn-primary" id="forgot-btn" style="width:100%;margin-top:8px">${esc(t('auth.send_link'))}</button>
+    ${authFooter(loginLink())}`);
+
+  const send = async () => {
+    try {
+      const r = await API.post('/auth/password/forgot', { email: document.getElementById('forgot-email').value.trim() });
+      authForm(t('auth.forgot_title'), `${alertHtml(r.message, 'success')}${authFooter(loginLink())}`);
+    } catch (e) { msg.innerHTML = alertHtml(e.error || t('common.failed')); }
+  };
+  document.getElementById('forgot-btn').addEventListener('click', send);
+  onEnter('forgot-email', send);
+});
+
+register('reset', function(rawToken) {
+  const token = takeToken('reset', rawToken);
+  if (!token) { navigate('forgot'); return; }
+  const msg = authForm(t('auth.reset_title'), `
+    ${newPasswordFields('reset')}
+    <button class="btn btn-primary" id="reset-btn" style="width:100%;margin-top:8px">${esc(t('profile.update_password'))}</button>`);
+
+  document.getElementById('reset-btn').addEventListener('click', async () => {
+    const password = readNewPassword('reset', msg);
+    if (password === null) return;
+    try {
+      const r = await API.post('/auth/password/reset', { token, password });
+      currentUser = null;   // every session was revoked
+      renderHeader();
+      updateProfileLink();
+      authForm(t('auth.reset_title'), `${alertHtml(r.message, 'success')}${authFooter(loginLink())}`);
+    } catch (e) {
+      msg.innerHTML = alertHtml(e.error || t('common.failed'));
+      if (e.data?.code === 'token_invalid') msg.innerHTML += authFooter(`<a href="#/forgot">${esc(t('auth.forgot_link'))}</a>`);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// VIEW: Email confirmation links. Spent only on click (POST) — mail scanners prefetch GET links.
+// ---------------------------------------------------------------------------
+function tokenConfirmView(view, introKey, endpoint, onDone) {
+  return function(rawToken) {
+    const token = takeToken(view, rawToken);
+    const title = t('auth.verify_title'), intro = t(introKey);
+    const msg = authForm(title, token ? `
+      <p class="text-muted" style="font-size:13px">${esc(intro)}</p>
+      <button class="btn btn-primary" id="confirm-btn" style="width:100%;margin-top:8px">${esc(t('auth.confirm'))}</button>`
+      : alertHtml(t('auth.link_invalid')));
+    document.getElementById('confirm-btn')?.addEventListener('click', async () => {
+      try {
+        const r = await API.post(endpoint, { token });
+        authForm(title, `${alertHtml(t('auth.email_confirmed'), 'success')}${authFooter(onDone(r))}`);
+      } catch (e) { msg.innerHTML = alertHtml(e.error || t('common.failed')); }
+    });
+  };
+}
+
+register('verify', tokenConfirmView('verify', 'auth.verify_intro', '/auth/verify', () => loginLink()));
+
+register('confirm-email', tokenConfirmView('confirm-email', 'auth.confirm_email_intro', '/profile/email/confirm', r => {
+    if (currentUser) currentUser.email = r.email;
+    return currentUser ? `<a href="#/profile">${esc(t('nav.profile'))}</a>` : loginLink();
+  }));
 
 // ---------------------------------------------------------------------------
 // 404

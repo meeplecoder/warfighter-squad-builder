@@ -8,15 +8,15 @@ const CAMPAIGN_PERSISTENCE = ['xp', 'wounds', 'skills', 'gear', 'soldiers', 'cas
 const CAMPAIGN_RULE_TEMPLATES = ['between', 'experience', 'casualties', 'hostiles', 'special', 'victory'];
 const CAMPAIGN_MISSION_TEXTS = ['briefing', 'requirements', 'setup', 'victory', 'rewards', 'debrief'];
 
-let campaignsActiveTab = 'community';
-let campaignFilters = { my: { q: '', page: 1 }, community: { q: '', page: 1 } };
+// One list: everyone's published campaigns plus the user's own (drafts included).
+// 'My campaigns' narrows it to the user's own (same pattern as the squads list).
+let campaignFilters = { q: '', mine: false, allLangs: false, page: 1 };
 let campaignState = null;   // editor state
 
 register('campaigns', async function(sub, action) {
   if (sub === 'new') { openCampaignEditor(null); return; }
   if (sub && action === 'edit') { openCampaignEditor(parseInt(sub)); return; }
   if (sub) { await showCampaignDetail(parseInt(sub)); return; }
-  if (!currentUser) campaignsActiveTab = 'community';
   renderCampaignsShell();
 });
 
@@ -24,63 +24,60 @@ register('campaigns', async function(sub, action) {
 // List
 // ---------------------------------------------------------------------------
 function renderCampaignsShell() {
-  const myTab = currentUser
-    ? `<button class="tab-btn ${campaignsActiveTab === 'my' ? 'active' : ''}" data-tab="my">${esc(t('campaigns.tab_my'))}</button>` : '';
   setMain(`
     <div class="flex justify-between items-center" style="margin-bottom:12px">
       <h1>${esc(t('campaigns.title'))}</h1>
       ${currentUser ? `<button class="btn btn-primary" id="new-campaign-btn">+ ${esc(t('campaigns.new'))}</button>` : ''}
     </div>
     <p class="text-muted" style="margin:-4px 0 12px;font-size:13px">${esc(t('campaigns.lead'))}</p>
-    <div class="tabs" style="margin-bottom:16px">
-      ${myTab}
-      <button class="tab-btn ${campaignsActiveTab === 'community' ? 'active' : ''}" data-tab="community">${esc(t('campaigns.tab_community'))}</button>
-    </div>
-    <div id="campaigns-tab-content"></div>`);
-  const main = document.getElementById('app-main');
-  main.querySelector('#new-campaign-btn')?.addEventListener('click', () => navigate('campaigns/new'));
-  main.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
-    campaignsActiveTab = btn.dataset.tab;
-    main.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === campaignsActiveTab));
-    loadCampaignList();
-  }));
+    <div id="campaigns-list"></div>`);
+  document.getElementById('new-campaign-btn')?.addEventListener('click', () => navigate('campaigns/new'));
   loadCampaignList();
 }
 
 async function loadCampaignList() {
-  const box = document.getElementById('campaigns-tab-content');
+  const box = document.getElementById('campaigns-list');
   if (!box) return;
-  const mine = campaignsActiveTab === 'my' && currentUser;
-  const f = campaignFilters[mine ? 'my' : 'community'];
+  const f = campaignFilters;
+  const mine = f.mine && currentUser;
   const params = new URLSearchParams({ page: f.page, sort: 'updated_at' });
   if (mine) params.set('user_id', currentUser.id);
   if (f.q) params.set('q', f.q);
+  if (!f.allLangs) params.set('lang', I18N.lang);
   let data;
   try { data = await API.get('/campaigns?' + params); }
   catch (e) { box.innerHTML = alertHtml(e.error || t('common.failed')); return; }
-  const rows = data.items.map(c => `
+  const rows = data.items.map(c => {
+    const own = currentUser && c.owner.id === currentUser.id;
+    const draft = c.status === 'draft'
+      ? ` <span class="badge badge-draft">${esc(tv('squad_status', c.status))}</span>` : '';
+    return `
     <tr class="clickable" data-id="${c.id}">
-      <td><strong>${esc(c.name)}</strong>${c.summary ? `<div class="text-muted" style="font-size:12px">${esc(c.summary)}</div>` : ''}</td>
+      <td class="squad-edit-cell">${own ? `<button class="squad-edit-btn" data-edit="${c.id}" title="${esc(t('common.edit'))}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>` : ''}</td>
+      <td><strong>${esc(c.name)}</strong>${c.language ? ` <span class="badge badge-lang">${esc(c.language.toUpperCase())}</span>` : ''}${draft}${c.summary ? `<div class="text-muted" style="font-size:12px">${esc(c.summary)}</div>` : ''}</td>
       <td>${c.nation ? esc(nationLabel(c.nation)) : '—'}</td>
       <td>${esc(c.theater || '—')}</td>
       <td>${c.mission_count}</td>
       <td>${esc(t('campaign.flow.' + c.flow_type))}</td>
-      ${mine ? `<td><span class="badge ${c.status === 'draft' ? 'badge-draft' : 'badge-ok'}">${esc(tv('squad_status', c.status))}</span></td>`
-             : `<td class="text-muted">${esc(c.owner.username)}</td>`}
+      <td>${own ? `<strong>${esc(c.owner.username)}</strong>` : esc(c.owner.username)}</td>
       <td class="text-muted">${fmtDate(c.updated_at)}</td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
   const hadFocus = document.activeElement?.id === 'campaign-q';
   box.innerHTML = `
     <div class="filter-bar" style="margin-bottom:8px">
       <input type="text" class="search-input" id="campaign-q" placeholder="${esc(t('campaigns.search_placeholder'))}" value="${esc(f.q)}" style="flex:1;min-width:160px">
+      ${currentUser ? `<button class="quick-filter ${f.mine ? 'active-purple' : ''}" id="mine-filter">${esc(t('campaigns.tab_my'))}</button>` : ''}
+      <button class="quick-filter ${f.allLangs ? 'active-blue' : ''}" id="lang-filter" title="${esc(t('campaigns.all_langs_tip', { lang: I18N.NAMES[I18N.lang] }))}">${esc(t('campaigns.all_langs'))}</button>
     </div>
     <table class="data-table">
       <thead><tr>
+        <th class="squad-edit-cell"></th>
         <th>${esc(t('col.name'))}</th><th>${esc(t('col.nation'))}</th><th>${esc(t('stat.theater'))}</th>
         <th>${esc(t('campaign.missions'))}</th><th>${esc(t('campaign.flow'))}</th>
-        <th>${esc(t(mine ? 'col.status' : 'campaign.author'))}</th><th>${esc(t('col.updated'))}</th>
+        <th>${esc(t('campaign.author'))}</th><th>${esc(t('col.updated'))}</th>
       </tr></thead>
-      <tbody>${rows || `<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">${esc(t(mine ? 'campaigns.none_mine' : 'campaigns.none'))}</td></tr>`}</tbody>
+      <tbody>${rows || `<tr><td colspan="8" style="text-align:center;color:var(--text-muted)">${esc(t(mine ? 'campaigns.none_mine' : 'campaigns.none'))}</td></tr>`}</tbody>
     </table>
     ${paginationHtml(data.page, data.pages)}`;
   const q = box.querySelector('#campaign-q');
@@ -89,6 +86,11 @@ async function loadCampaignList() {
     clearTimeout(q._t);
     q._t = setTimeout(() => { f.q = e.target.value; f.page = 1; loadCampaignList(); }, 300);
   });
+  box.querySelector('#mine-filter')?.addEventListener('click', () => { f.mine = !f.mine; f.page = 1; loadCampaignList(); });
+  box.querySelector('#lang-filter').addEventListener('click', () => { f.allLangs = !f.allLangs; f.page = 1; loadCampaignList(); });
+  box.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', e => {
+    e.stopPropagation(); navigate('campaigns/' + b.dataset.edit + '/edit');
+  }));
   box.querySelectorAll('tr[data-id]').forEach(r => r.addEventListener('click', () => navigate('campaigns/' + r.dataset.id)));
   box.querySelectorAll('[data-pg]').forEach(b => b.addEventListener('click', () => { f.page = parseInt(b.dataset.pg); loadCampaignList(); }));
 }
@@ -109,6 +111,7 @@ async function showCampaignDetail(id) {
   let c;
   try { c = (await API.get('/campaigns/' + id)).campaign; }
   catch (e) { setMain(alertHtml(e.error || t('common.failed'))); return; }
+  setPageTitle(c.name, t('campaigns.title'));
   const mine = currentUser && currentUser.id === c.owner.id;
   const s = c.settings || {};
   const force = s.force || {};
@@ -116,6 +119,7 @@ async function showCampaignDetail(id) {
 
   const info = [
     c.nation ? [t('col.nation'), nationLabel(c.nation)] : null,
+    c.language ? [t('campaign.language'), I18N.NAMES[c.language] || c.language] : null,
     c.theater ? [t('stat.theater'), c.theater] : null,
     c.enemy ? [t('campaign.enemy'), c.enemy] : null,
     c.period ? [t('campaign.period'), c.period] : null,
@@ -191,17 +195,14 @@ async function showCampaignDetail(id) {
 
   setMain(`
     <div class="campaign-detail">
-      <div class="flex justify-between items-center" style="gap:8px;flex-wrap:wrap">
-        <div>
-          <a href="#/campaigns" class="text-muted" style="font-size:12px">← ${esc(t('campaigns.title'))}</a>
-          <h1 style="margin:4px 0">${esc(c.name)}
-            ${c.status === 'draft' ? `<span class="badge badge-draft" style="vertical-align:middle">${esc(tv('squad_status', 'draft'))}</span>` : ''}</h1>
-          <div class="text-muted" style="font-size:12px">${esc(t('campaign.by', { user: c.owner.username }))} · ${fmtDate(c.updated_at)}</div>
-        </div>
-        ${mine ? `<span class="flex" style="gap:6px">
-          <button class="btn btn-ghost" id="campaign-edit-btn">${esc(t('common.edit'))}</button>
-          <button class="btn btn-ghost" id="campaign-delete-btn">${esc(t('common.delete'))}</button></span>` : ''}
-      </div>
+      ${pageToolbar(
+        actionBtn({ icon: 'back', label: t('campaigns.title'), href: '#/campaigns' }),
+        [],
+        mine ? [actionBtn({ id: 'campaign-delete-btn', icon: 'trash', label: t('common.delete'), variant: 'danger' }),
+                actionBtn({ id: 'campaign-edit-btn', icon: 'edit', label: t('common.edit'), variant: 'primary' })] : [])}
+      <h1 style="margin:4px 0">${esc(c.name)}
+        ${c.status === 'draft' ? `<span class="badge badge-draft" style="vertical-align:middle">${esc(tv('squad_status', 'draft'))}</span>` : ''}</h1>
+      <div class="text-muted" style="font-size:12px">${esc(t('campaign.by', { user: c.owner.username }))} · ${fmtDate(c.updated_at)}</div>
       ${c.summary ? `<p class="campaign-summary">${esc(c.summary)}</p>` : ''}
       <div class="mission-attrs" style="margin:8px 0">${info}</div>
       ${c.modules.length ? `<div class="campaign-carry"><span class="text-muted">${esc(t('campaign.modules'))}:</span>
@@ -252,11 +253,18 @@ async function openCampaignEditor(id) {
   }
   let mySquads = [];
   try { mySquads = (await API.get(`/squads?user_id=${currentUser.id}&per_page=200&sort=name&order=asc`)).items; } catch (_) {}
+  campaignState = campaignStateFrom(c, { id: c?.id || null, status: c?.status || 'draft', mySquads });
+  renderCampaignEditor();
+}
+
+// Editor state from a campaign detail (or an imported file); `base` keeps id/status/squads
+function campaignStateFrom(c, base) {
   const s = c?.settings || {};
-  campaignState = {
-    id: c?.id || null, status: c?.status || 'draft', mySquads,
+  const st = {
+    ...base,
     name: c?.name || '', summary: c?.summary || '', intro: c?.intro || '', nation: c?.nation || '',
     theater: c?.theater || '', enemy: c?.enemy || '', period: c?.period || '', flow_type: c?.flow_type || 'linear',
+    language: c ? (c.language || '') : I18N.lang,
     force: { squad_size: s.force?.squad_size ?? 8, restrictions: s.force?.restrictions || '', replacements: s.force?.replacements || '' },
     persistence: s.persistence || { xp: true, wounds: true, skills: true, soldiers: true, casualties: true, gear: false },
     rules: (s.rules || []).map(r => ({ title: r.title || '', body: r.body || '' })),
@@ -267,8 +275,8 @@ async function openCampaignEditor(id) {
       code: m.code || '', title: m.title || '', _open: false })),
     links: (c?.links || []).map(l => ({ from: l.from, to: l.to, condition: l.condition, label: l.label || '' })),
   };
-  if (!campaignState.missions.length) campaignState.missions.push(emptyCampaignMission());
-  renderCampaignEditor();
+  if (!st.missions.length) st.missions.push(emptyCampaignMission());
+  return st;
 }
 
 function ceField(label, html, wide = false) {
@@ -296,16 +304,16 @@ function renderCampaignMissionEditor(m, i) {
   return `
     <div class="ce-mission ${m._open ? 'open' : ''}" data-mi="${i}">
       <div class="ce-mission-head">
-        <button class="btn btn-sm btn-ghost ce-toggle" data-act="toggle" data-mi="${i}">${m._open ? '▾' : '▸'}</button>
+        <button class="btn btn-icon ce-toggle" data-act="toggle" data-mi="${i}" aria-expanded="${!!m._open}">${icon(m._open ? 'down' : 'next')}</button>
         <strong class="ce-mission-title">${esc(missionLabel(m, i))}</strong>
         ${card ? `<span class="text-muted" style="font-size:12px">${cardName(card)}${customMissionChip(card)}</span>`
                : `<span class="text-danger" style="font-size:12px">${esc(t('campaign.no_card'))}</span>`}
         ${st.flow_type === 'branching' && m.is_entry ? `<span class="chip chip-entry">${esc(t('campaign.entry'))}</span>` : ''}
         <span style="flex:1"></span>
-        <button class="btn btn-sm btn-ghost" data-act="up" data-mi="${i}" ${i === 0 ? 'disabled' : ''} title="${esc(t('campaign.move_up'))}">↑</button>
-        <button class="btn btn-sm btn-ghost" data-act="down" data-mi="${i}" ${i === st.missions.length - 1 ? 'disabled' : ''} title="${esc(t('campaign.move_down'))}">↓</button>
-        <button class="btn btn-sm btn-ghost" data-act="dup" data-mi="${i}" title="${esc(t('campaign.duplicate'))}">⧉</button>
-        <button class="btn btn-sm btn-ghost" data-act="del" data-mi="${i}" title="${esc(t('common.delete'))}">✕</button>
+        <button class="btn btn-icon" data-act="up" data-mi="${i}" ${i === 0 ? 'disabled' : ''} title="${esc(t('campaign.move_up'))}" aria-label="${esc(t('campaign.move_up'))}">${icon('up')}</button>
+        <button class="btn btn-icon" data-act="down" data-mi="${i}" ${i === st.missions.length - 1 ? 'disabled' : ''} title="${esc(t('campaign.move_down'))}" aria-label="${esc(t('campaign.move_down'))}">${icon('down')}</button>
+        <button class="btn btn-icon" data-act="dup" data-mi="${i}" title="${esc(t('campaign.duplicate'))}" aria-label="${esc(t('campaign.duplicate'))}">${icon('copy')}</button>
+        <button class="btn btn-icon btn-icon-danger" data-act="del" data-mi="${i}" title="${esc(t('common.delete'))}" aria-label="${esc(t('common.delete'))}">${icon('trash')}</button>
       </div>
       ${m._open ? `
       <div class="ce-mission-body ce-grid">
@@ -339,9 +347,9 @@ function renderCampaignMissionEditor(m, i) {
               <span>→</span>
               <select data-ce-link="${li}.to">${others.replace(`value="${esc(l.to)}"`, `value="${esc(l.to)}" selected`)}</select>
               <input type="text" data-ce-link="${li}.label" value="${esc(l.label)}" placeholder="${esc(t('campaign.link_label'))}" maxlength="120">
-              <button class="btn btn-sm btn-ghost" data-act="del-link" data-li="${li}">✕</button>
+              <button class="btn btn-icon" data-act="del-link" data-li="${li}" title="${esc(t('common.remove'))}" aria-label="${esc(t('common.remove'))}">${icon('close')}</button>
             </div>`).join('') || `<div class="text-muted" style="font-size:12px">${esc(t('campaign.no_links'))}</div>`}
-            <button class="btn btn-sm btn-ghost" data-act="add-link" data-mi="${i}">+ ${esc(t('campaign.add_link'))}</button>
+            <button class="btn btn-sm btn-ghost" data-act="add-link" data-mi="${i}">${icon('plus')}${esc(t('campaign.add_link'))}</button>
           </div>`, true) : ''}
       </div>` : ''}
     </div>`;
@@ -351,17 +359,19 @@ function renderCampaignEditor(errors = []) {
   const st = campaignState;
   const nationOpts = [`<option value="">—</option>`].concat(sortedNations(allNations).map(n =>
     `<option value="${esc(n)}" ${st.nation === n ? 'selected' : ''}>${esc(nationLabel(n))}</option>`)).join('');
+  setPageTitle(t(st.id ? 'campaign.edit_title' : 'campaign.new_title'));
   setMain(`
     <div class="campaign-editor">
-      <div class="flex justify-between items-center" style="gap:8px;flex-wrap:wrap;margin-bottom:12px">
-        <h1>${esc(t(st.id ? 'campaign.edit_title' : 'campaign.new_title'))}</h1>
-        <span class="flex" style="gap:6px">
-          <button class="btn btn-ghost" data-act="cancel">${esc(t('common.cancel'))}</button>
-          <button class="btn btn-ghost" data-act="save-draft">${esc(t('campaign.save_draft'))}</button>
-          <button class="btn btn-primary" data-act="publish">${esc(t(st.status === 'published' ? 'campaign.save_published' : 'campaign.publish'))}</button>
-        </span>
-      </div>
-      <div id="ce-errors">${errors.length ? alertHtml(errors.join(' · ')) : ''}</div>
+      ${pageToolbar(
+        actionBtn({ icon: 'close', label: t('common.cancel'), attrs: 'data-act="cancel"' }),
+        [actionBtn({ icon: 'upload', label: t('campaign.import'), title: t('campaign.import_tip'), attrs: 'data-act="import"' }),
+         actionBtn({ icon: 'validate', label: t('builder.validate'), title: t('campaign.validate_tip'), attrs: 'data-act="validate"' })],
+        [actionBtn({ icon: 'save', label: t('campaign.save_draft'), attrs: 'data-act="save-draft"' }),
+         st.status === 'published'
+           ? actionBtn({ icon: 'save', label: t('campaign.save_published'), variant: 'primary', attrs: 'data-act="publish"' })
+           : actionBtn({ icon: 'publish', label: t('campaign.publish'), variant: 'primary', attrs: 'data-act="publish"' })])}
+      <h1 class="page-title">${esc(t(st.id ? 'campaign.edit_title' : 'campaign.new_title'))}</h1>
+      <div id="ce-errors">${campaignErrorsHtml(errors)}</div>
 
       <section class="ce-section">
         <h2>1 · ${esc(t('campaign.sec.overview'))}</h2>
@@ -369,6 +379,8 @@ function renderCampaignEditor(errors = []) {
           ${ceField(t('col.name'), ceInput('name', st.name, 'maxlength="120"'), true)}
           ${ceField(t('campaign.summary'), ceInput('summary', st.summary, `maxlength="500" placeholder="${esc(t('campaign.summary_hint'))}"`), true)}
           ${ceField(t('col.nation'), `<select data-ce="nation">${nationOpts}</select>`)}
+          ${ceField(t('campaign.language'), `<select data-ce="language"><option value="">${esc(t('campaign.language_any'))}</option>${
+            I18N.SUPPORTED.map(l => `<option value="${l}" ${st.language === l ? 'selected' : ''}>${esc(I18N.NAMES[l])}</option>`).join('')}</select>`)}
           ${ceField(t('stat.theater'), ceInput('theater', st.theater, `placeholder="${esc(t('campaign.theater_hint'))}"`))}
           ${ceField(t('campaign.enemy'), ceInput('enemy', st.enemy, `placeholder="${esc(t('campaign.enemy_hint'))}"`))}
           ${ceField(t('campaign.period'), ceInput('period', st.period, `placeholder="${esc(t('campaign.period_hint'))}"`))}
@@ -392,12 +404,12 @@ function renderCampaignEditor(errors = []) {
         <p class="text-muted" style="font-size:12px">${esc(t('campaign.rules_hint'))}</p>
         ${st.rules.map((r, i) => `<div class="ce-rule">
           <div class="flex" style="gap:6px">${ceInput(`rules.${i}.title`, r.title, `maxlength="120" placeholder="${esc(t('campaign.rule_title'))}" style="flex:1"`)}
-            <button class="btn btn-sm btn-ghost" data-act="del-rule" data-ri="${i}">✕</button></div>
+            <button class="btn btn-icon" data-act="del-rule" data-ri="${i}" title="${esc(t('common.remove'))}" aria-label="${esc(t('common.remove'))}">${icon('close')}</button></div>
           ${ceArea(`rules.${i}.body`, r.body, 3, r._hint || '')}
         </div>`).join('')}
         <div class="flex" style="gap:6px;flex-wrap:wrap;margin-top:6px">
-          <button class="btn btn-sm btn-ghost" data-act="add-rule">+ ${esc(t('campaign.add_rule'))}</button>
-          ${CAMPAIGN_RULE_TEMPLATES.map(k => `<button class="btn btn-sm btn-ghost" data-act="add-rule" data-tpl="${k}">+ ${esc(t('campaign.tpl.' + k))}</button>`).join('')}
+          <button class="btn btn-sm btn-ghost" data-act="add-rule">${icon('plus')}${esc(t('campaign.add_rule'))}</button>
+          ${CAMPAIGN_RULE_TEMPLATES.map(k => `<button class="btn btn-sm btn-ghost" data-act="add-rule" data-tpl="${k}">${icon('plus')}${esc(t('campaign.tpl.' + k))}</button>`).join('')}
         </div>
       </section>
 
@@ -409,7 +421,7 @@ function renderCampaignEditor(errors = []) {
             <strong>${esc(t('campaign.flow.' + f))}</strong><span class="text-muted">${esc(t('campaign.flow_hint.' + f))}</span></label>`).join('')}
         </div>
         <div id="ce-missions">${st.missions.map(renderCampaignMissionEditor).join('')}</div>
-        <button class="btn btn-ghost" data-act="add-mission" style="margin-top:8px">+ ${esc(t('campaign.add_mission'))}</button>
+        <button class="btn btn-ghost" data-act="add-mission" style="margin-top:8px">${icon('plus')}${esc(t('campaign.add_mission'))}</button>
       </section>
 
       <section class="ce-section">
@@ -419,10 +431,10 @@ function renderCampaignEditor(errors = []) {
         ${st.outcomes.map((o, i) => `<div class="ce-outcome">
           ${ceInput(`outcomes.${i}.label`, o.label, `maxlength="120" placeholder="${esc(t('campaign.outcome'))}"`)}
           ${ceInput(`outcomes.${i}.condition`, o.condition, `maxlength="300" placeholder="${esc(t('campaign.condition_hint'))}"`)}
-          <button class="btn btn-sm btn-ghost" data-act="del-outcome" data-oi="${i}">✕</button>
+          <button class="btn btn-icon" data-act="del-outcome" data-oi="${i}" title="${esc(t('common.remove'))}" aria-label="${esc(t('common.remove'))}">${icon('close')}</button>
           ${ceArea(`outcomes.${i}.epilogue`, o.epilogue, 2, t('campaign.epilogue_hint'))}
         </div>`).join('')}
-        <button class="btn btn-sm btn-ghost" data-act="add-outcome" style="margin-top:6px">+ ${esc(t('campaign.add_outcome'))}</button>
+        <button class="btn btn-sm btn-ghost" data-act="add-outcome" style="margin-top:6px">${icon('plus')}${esc(t('campaign.add_outcome'))}</button>
       </section>
     </div>`);
   bindCampaignEditor();
@@ -480,6 +492,8 @@ function campaignEditorAction(act, d) {
     case 'cancel': navigate(st.id ? 'campaigns/' + st.id : 'campaigns'); return;
     case 'save-draft': saveCampaign('draft'); return;
     case 'publish': saveCampaign('published'); return;
+    case 'validate': validateCampaign(); return;
+    case 'import': openCampaignImportDialog(); return;
     case 'toggle': m._open = !m._open; break;
     case 'up': case 'down': {
       const j = act === 'up' ? i - 1 : i + 1;
@@ -527,11 +541,89 @@ function campaignEditorAction(act, d) {
   renderCampaignEditor();
 }
 
-async function saveCampaign(status) {
+function campaignErrorsHtml(errors) {
+  if (!errors.length) return '';
+  return `<div class="alert alert-error"><strong>${esc(t('validation.errors'))}:</strong><ul>${
+    errors.map(e => `<li>${esc(e)}</li>`).join('')}</ul></div>`;
+}
+
+// Import a campaign YAML file (docs/campaign_yaml.md) into the editor. Nothing is saved: the server parses
+// the file and resolves the cards; the editor is refilled and the user decides whether to save.
+function campaignEditorHasContent() {
   const st = campaignState;
-  const body = {
+  return !!(st.name || st.summary || st.intro || st.rules.length || st.outcomes.length
+    || st.missions.some(m => m.mission || m.objective || m.title || m.briefing));
+}
+
+function openCampaignImportDialog() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h2>${esc(t('campaign.import_title'))}</h2>
+      <p class="text-muted" style="font-size:12px">${esc(t('campaign.import_hint'))}</p>
+      <textarea id="ci-content" rows="14" spellcheck="false" style="width:100%;font-family:monospace;font-size:12px"></textarea>
+      <div style="display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap">
+        <label class="btn btn-ghost btn-sm" style="margin:0">${esc(t('io.import_file'))}<input type="file" id="ci-file" accept=".yaml,.yml,application/yaml,text/yaml,text/plain" style="display:none"></label>
+        <span id="ci-file-name" class="text-muted" style="font-size:12px"></span>
+        <span style="flex:1"></span>
+        <button class="btn btn-ghost btn-sm" id="ci-cancel">${esc(t('common.cancel'))}</button>
+        <button class="btn btn-primary btn-sm" id="ci-go">${esc(t('campaign.import_go'))}</button>
+      </div>
+      <div id="ci-msg"></div>
+    </div>`;
+  document.body.appendChild(overlay);
+  const close = () => overlay.remove();
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  overlay.querySelector('#ci-cancel').addEventListener('click', close);
+  overlay.querySelector('#ci-file').addEventListener('change', async e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    overlay.querySelector('#ci-content').value = await f.text();
+    overlay.querySelector('#ci-file-name').textContent = f.name;
+  });
+  overlay.querySelector('#ci-go').addEventListener('click', async () => {
+    const content = overlay.querySelector('#ci-content').value;
+    const msg = overlay.querySelector('#ci-msg');
+    if (!content.trim()) { msg.innerHTML = alertHtml(t('campaign.import_empty')); return; }
+    let r;
+    try { r = await API.post('/campaigns/import', { content }); }
+    catch (e) { msg.innerHTML = alertHtml(e.error || t('common.failed')); return; }
+    if (campaignEditorHasContent() && !confirm(t('campaign.import_replace'))) return;
+    const st = campaignState;
+    campaignState = campaignStateFrom(r.campaign, { id: st.id, status: st.status, mySquads: st.mySquads });
+    close();
+    renderCampaignEditor();
+    document.getElementById('ce-errors').innerHTML =
+      `<div class="alert alert-info">${esc(t('campaign.import_done', { n: r.campaign.missions.length }))}</div>` +
+      (r.warnings.length ? `<div class="alert alert-warning"><strong>${esc(t('campaign.import_warnings'))}</strong><ul>${
+        r.warnings.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>` : '');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  overlay.querySelector('#ci-content').focus();
+}
+
+// Basic checks (server side, the same ones publishing requires) without saving
+async function validateCampaign() {
+  const box = document.getElementById('ce-errors');
+  if (!box) return;
+  box.innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
+  try {
+    const r = await API.post('/campaigns/validate', campaignPayload('draft'));
+    box.innerHTML = r.valid
+      ? `<div class="alert alert-success">✓ ${esc(t('campaign.valid'))}</div>`
+      : campaignErrorsHtml(r.errors);
+  } catch (e) {
+    box.innerHTML = campaignErrorsHtml([e.error || t('common.failed')]);
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function campaignPayload(status) {
+  const st = campaignState;
+  return {
     status, name: st.name, summary: st.summary, intro: st.intro, nation: st.nation, theater: st.theater,
-    enemy: st.enemy, period: st.period, flow_type: st.flow_type,
+    enemy: st.enemy, period: st.period, flow_type: st.flow_type, language: st.language || null,
     settings: { force: st.force, persistence: st.persistence, scoring: st.scoring,
                 rules: st.rules.map(({ title, body }) => ({ title, body })), outcomes: st.outcomes },
     missions: st.missions.map(m => ({
@@ -544,6 +636,11 @@ async function saveCampaign(status) {
     })),
     links: st.flow_type === 'branching' ? st.links : [],
   };
+}
+
+async function saveCampaign(status) {
+  const st = campaignState;
+  const body = campaignPayload(status);
   try {
     const r = st.id ? await API.put('/campaigns/' + st.id, body) : await API.post('/campaigns', body);
     navigate('campaigns/' + r.campaign.id);
