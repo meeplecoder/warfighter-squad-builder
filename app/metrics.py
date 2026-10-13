@@ -252,10 +252,17 @@ def hth_value(soldier, weapons, cover_dist, alpha, per_card):
 
 # ── squad model ───────────────────────────────────────────────────────────────
 
+def objective_kinds(o):
+    """Names an objective goes by: its family (Fallback, Right Flank, …) and its mechanic (Keep Clear,
+    Escape, … — stored in card_subtype, which is what `mechanic` carries)."""
+    return {o.get('objective_family') or '', o.get('mechanic') or ''} - {''}
+
+
 def alpha_for(objectives, mission_type):
     a = ALPHA_BY_MISSION.get(mission_type or '', ALPHA_DEFAULT)
     for o in objectives:
-        a = max(a, ALPHA_BY_FAMILY.get(o.get('objective_family') or '', ALPHA_DEFAULT))
+        for kind in objective_kinds(o):
+            a = max(a, ALPHA_BY_FAMILY.get(kind, ALPHA_DEFAULT))
     return a
 
 
@@ -416,7 +423,7 @@ def analyse(squad, mission, objectives, hostile=None, locations=None):
     # 6 mobility
     objective_pos = mission.get('objective_position') or 4
     moves = max(1, objective_pos - 1) * (2 if mission.get('mission_type') == 'Raid' or
-                                         any(o.get('objective_family') == 'Escape' for o in objectives) else 1)
+                                         any('Escape' in objective_kinds(o) for o in objectives) else 1)
     d_cards = sum(p * sum(max(0, e - (s['card'].get('movement') or 0)) for s in soldiers)
                   for e, p in locations.items())
     need = moves * d_cards * (1 + MOVE_RESERVE)
@@ -504,27 +511,30 @@ def score_metrics(raw_metrics, budget):
 
 # ── ORM bridge ────────────────────────────────────────────────────────────────
 
+def soldier_input(card, gear_pairs):
+    """One soldier for `analyse`: card (ORM) + [(gear card ORM, quantity)] + the soldier's printed gear."""
+    from app.models import CardAssociation
+    gear = []
+    for gc, qty in gear_pairs:
+        d = gc.to_card_detail()
+        d['_qty'] = qty
+        gear.append(d)
+    default = []
+    for a in CardAssociation.query.filter_by(parent_card_id=card.id).order_by(CardAssociation.id).all():
+        d = a.child_card.to_card_detail()
+        d['_qty'] = a.quantity
+        default.append(d)
+    return {'card': card.to_card_detail(), 'gear': gear, 'default_gear': default}
+
+
 def squad_input(squad):
     """Build the plain-dict input for `analyse` from a Squad ORM object."""
-    from app.models import CardAssociation
-    soldiers = []
-    for ss in squad.soldiers:
-        gear = []
-        for sg in ss.gear:
-            d = sg.card.to_card_detail()
-            d['_qty'] = sg.quantity
-            gear.append(d)
-        assocs = CardAssociation.query.filter_by(parent_card_id=ss.card.id).order_by(CardAssociation.id).all()
-        default = []
-        for a in assocs:
-            d = a.child_card.to_card_detail()
-            d['_qty'] = a.quantity
-            default.append(d)
-        soldiers.append({'card': ss.card.to_card_detail(), 'gear': gear, 'default_gear': default})
+    soldiers = [soldier_input(ss.card, [(sg.card, sg.quantity) for sg in ss.gear]) for ss in squad.soldiers]
     mc = squad.mission_card
     mission = {'time': mc.time, 'objective_position': mc.objective_position, 'mission_type': mc.card_subtype,
                'budget': mc.resources}
-    objectives = [{'objective_family': so.card.objective_family, 'notes_en': so.card.notes} for so in squad.objectives]
+    objectives = [{'objective_family': so.card.objective_family, 'mechanic': so.card._objective_mechanic(),
+                   'notes_en': so.card.notes} for so in squad.objectives]
     return {'soldiers': soldiers}, mission, objectives
 
 
