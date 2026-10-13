@@ -91,6 +91,7 @@ def create_app():
     from app.profile import profile_bp
     from app.translations import translations_bp
     from app.campaigns import campaigns_bp
+    from app.generator import generator_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(cards_bp, url_prefix='/api/cards')
@@ -98,6 +99,7 @@ def create_app():
     app.register_blueprint(profile_bp, url_prefix='/api/profile')
     app.register_blueprint(translations_bp, url_prefix='/api/translations')
     app.register_blueprint(campaigns_bp, url_prefix='/api/campaigns')
+    app.register_blueprint(generator_bp, url_prefix='/api/generator')
 
     @app.route('/api/modules')
     def get_modules():

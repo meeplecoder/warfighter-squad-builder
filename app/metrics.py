@@ -521,6 +521,8 @@ def soldier_input(card, gear_pairs):
         gear.append(d)
     default = []
     for a in CardAssociation.query.filter_by(parent_card_id=card.id).order_by(CardAssociation.id).all():
+        if a.child_card is None:            # dangling association (child card removed): nothing to count
+            continue
         d = a.child_card.to_card_detail()
         d['_qty'] = a.quantity
         default.append(d)
