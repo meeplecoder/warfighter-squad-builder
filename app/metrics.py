@@ -62,6 +62,8 @@ def reference():
 def clear_cache():
     reference.cache_clear()
     _weapon.cache_clear()
+    _LIGHT.clear()
+    _ASSOC.clear()
 
 
 def _dist(d):
@@ -565,22 +567,41 @@ def score_metrics(raw_metrics, budget):
 
 # ── ORM bridge ────────────────────────────────────────────────────────────────
 
+_LIGHT = {}     # card id → the few fields the metrics read (no image lookups / translations)
+_ASSOC = {}     # soldier card id → [(light gear dict, quantity)] of its printed gear
+
+
+def light_card(c):
+    """Cheap, cached dict view of a Card for the metrics (a fresh copy: callers add `_qty`)."""
+    d = _LIGHT.get(c.id)
+    if d is None:
+        d = _LIGHT[c.id] = {
+            'id': c.id, 'number': c.number, 'name': c.name, 'name_en': c.name, 'card_type': c.card_type,
+            'card_subtype': c.card_subtype, 'nation': c.nation, 'module': c.module,
+            'resource_cost': c.resource_cost, 'health': c.health, 'loadout': c.loadout, 'movement': c.movement,
+            'cover': c.cover, 'hth': c.hth, 'actions': c.actions, 'cx': c.cx or 0, 'xp': c.xp or 0,
+            'notes_en': c.notes, 'health_actions_table': c.health_actions_table,
+            'weapon_range_table': c.weapon_range_table, 'weapon_mode_table': c.weapon_mode_table,
+        }
+    return dict(d)
+
+
+def _printed_gear(card):
+    rows = _ASSOC.get(card.id)
+    if rows is None:
+        from app.models import CardAssociation
+        rows = _ASSOC[card.id] = [
+            (light_card(a.child_card), a.quantity)
+            for a in CardAssociation.query.filter_by(parent_card_id=card.id).order_by(CardAssociation.id).all()
+            if a.child_card is not None]      # a dangling association (child card removed) counts for nothing
+    return rows
+
+
 def soldier_input(card, gear_pairs):
     """One soldier for `analyse`: card (ORM) + [(gear card ORM, quantity)] + the soldier's printed gear."""
-    from app.models import CardAssociation
-    gear = []
-    for gc, qty in gear_pairs:
-        d = gc.to_card_detail()
-        d['_qty'] = qty
-        gear.append(d)
-    default = []
-    for a in CardAssociation.query.filter_by(parent_card_id=card.id).order_by(CardAssociation.id).all():
-        if a.child_card is None:            # dangling association (child card removed): nothing to count
-            continue
-        d = a.child_card.to_card_detail()
-        d['_qty'] = a.quantity
-        default.append(d)
-    return {'card': card.to_card_detail(), 'gear': gear, 'default_gear': default}
+    gear = [dict(light_card(gc), _qty=qty) for gc, qty in gear_pairs]
+    default = [dict(d, _qty=q) for d, q in _printed_gear(card)]
+    return {'card': light_card(card), 'gear': gear, 'default_gear': default}
 
 
 def squad_input(squad):
