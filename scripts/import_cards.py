@@ -419,7 +419,7 @@ def main():
         for soldier in soldiers:
             if not soldier.notes:
                 continue
-            _, matched_lines = extract_refs(soldier.notes, soldier.nation, lookup)
+            _, matched_lines = extract_refs(soldier, lookup)
             if not matched_lines:
                 continue
             kept = [l for l in soldier.notes.split('\n') if l.strip() not in matched_lines]

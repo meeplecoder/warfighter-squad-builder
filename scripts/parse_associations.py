@@ -14,6 +14,13 @@ Algorithm (two-pass):
   Pass 2 — Suffix match for nation-prefixed names:
       "Keep Calm." -> find any card whose name ends with "-Keep Calm"
       If multiple matches, prefer the one matching the soldier's nation.
+
+Many gear names have several printings (e.g. "M1 Carbine" in Core Europe, Core Pacific, US #2,
+South Korea #2 …). best_printing() takes the first match in: the soldier's own module → Core Europe →
+expansions with the soldier's nation → any other expansion (module order, then card number).
+
+Repair rows linked to the wrong printing (no notes needed — they were stripped on first run):
+    python3 scripts/parse_associations.py --remap
 """
 
 import os
@@ -42,9 +49,38 @@ STAT_LABELS = {
 
 
 def build_gear_lookup():
-    """Return {lowercase_name: card_obj} for all gear-category cards."""
-    cards = Card.query.filter(Card.card_type.in_(GEAR_CATEGORIES)).all()
-    return {c.name.lower(): c for c in cards}
+    """Return {lowercase_name: [Card, …]} for all gear-category cards (every printing of a name)."""
+    lookup = {}
+    for c in Card.query.filter(Card.card_type.in_(GEAR_CATEGORIES)).order_by(Card.number).all():
+        lookup.setdefault(c.name.lower(), []).append(c)
+    return lookup
+
+
+CORE_MODULE = 'Core Europe'
+_MODULE_NO = re.compile(r'^#\s*(\d+)')
+
+
+def _module_order(module):
+    """Expansions in catalogue order: '#06 - US #2' → 6; unnumbered sets (KS, Multi-Era …) last."""
+    m = _MODULE_NO.match(module or '')
+    return (int(m.group(1)) if m else 10_000, module or '')
+
+
+def best_printing(soldier, candidates):
+    """The printing of an included gear card for `soldier`, first match in this order:
+    1. the soldier's own module, 2. Core Europe, 3. expansions with the soldier's nation,
+    4. any other expansion. Within a step: module order, then card number."""
+    def rank(c):
+        if c.module == soldier.module:
+            step = 0
+        elif c.module == CORE_MODULE:
+            step = 1
+        elif soldier.nation and c.nation == soldier.nation:
+            step = 2
+        else:
+            step = 3
+        return (step, _module_order(c.module), c.number)
+    return min(candidates, key=rank)
 
 
 def is_stat_line(candidate: str) -> bool:
@@ -62,28 +98,28 @@ def is_stat_line(candidate: str) -> bool:
     return False
 
 
-def extract_refs(notes: str, soldier_nation: str, lookup: dict) -> tuple:
+def extract_refs(soldier, lookup: dict) -> tuple:
     """
-    Return (refs, matched_lines) for card references found in notes.
+    Return (refs, matched_lines) for card references found in the soldier's notes.
 
     Parameters
     ----------
-    notes          : raw notes text from the soldier card
-    soldier_nation : nation string from the card (e.g. "US", "UK", "Germany")
-    lookup         : {lowercase_name: Card} for all gear-category cards
+    soldier : Soldier Card (its notes, nation and module are used)
+    lookup  : {lowercase_name: [Card, …]} from build_gear_lookup()
 
     Returns
     -------
     refs          : list of (Card, int) — unique, ordered as encountered
     matched_lines : set of original stripped line strings that resolved to a card
     """
+    notes = soldier.notes
     if not notes:
         return [], set()
 
     refs = []
     seen_ids = set()
     matched_lines = set()
-    soldier_nation_low = (soldier_nation or '').lower()
+    soldier_nation_low = (soldier.nation or '').lower()
 
     lines = [l.strip() for l in re.split(r'\n', notes) if l.strip()]
 
@@ -113,20 +149,19 @@ def extract_refs(notes: str, soldier_nation: str, lookup: dict) -> tuple:
             """Try exact then suffix match for a candidate string. Returns card or None."""
             # Pass 1: exact match
             if cand_low in lookup:
-                return lookup[cand_low]
+                return best_printing(soldier, lookup[cand_low])
             # Pass 2: suffix match — handles nation-prefixed names like "UK-Keep Calm"
             suffix = f'-{cand_low}'
-            matches = [(name, c) for name, c in lookup.items() if name.endswith(suffix)]
+            matches = [(name, cs) for name, cs in lookup.items() if name.endswith(suffix)]
             if not matches:
                 return None
-            if len(matches) == 1:
-                return matches[0][1]
-            # Multiple nation variants — prefer the one matching the soldier's nation
-            preferred = [
-                (name, c) for name, c in matches
-                if name.startswith(soldier_nation_low + '-')
-            ]
-            return preferred[0][1] if len(preferred) == 1 else None
+            names = {name for name, _ in matches}
+            if len(names) > 1:
+                # Multiple nation variants — prefer the one matching the soldier's nation
+                names = {name for name in names if name.startswith(soldier_nation_low + '-')}
+                if len(names) != 1:
+                    return None
+            return best_printing(soldier, lookup[names.pop()])
 
         card = _resolve(candidate_low)
 
@@ -145,12 +180,42 @@ def extract_refs(notes: str, soldier_nation: str, lookup: dict) -> tuple:
     return refs, matched_lines
 
 
+def remap_existing():
+    """Point every existing association at the printing best_printing() picks for its soldier."""
+    lookup = build_gear_lookup()
+    changed = merged = orphans = 0
+    for a in CardAssociation.query.all():
+        if not a.parent_card or not a.child_card:  # card deleted since; left as is
+            orphans += 1
+            continue
+        candidates = lookup.get(a.child_card.name.lower())
+        if not candidates:
+            continue
+        best = best_printing(a.parent_card, candidates)
+        if best.id == a.child_card_id:
+            continue
+        twin = CardAssociation.query.filter_by(parent_card_id=a.parent_card_id, child_card_id=best.id).first()
+        if twin:  # the soldier already lists the right printing
+            twin.quantity = max(twin.quantity or 1, a.quantity or 1)
+            db.session.delete(a)
+            merged += 1
+        else:
+            a.child_card_id = best.id
+            changed += 1
+    db.session.commit()
+    print(f'Remapped {changed} associations to the right printing; removed {merged} duplicates; '
+          f'skipped {orphans} pointing at deleted cards.')
+
+
 def main():
     app = create_app()
     with app.app_context():
+        if '--remap' in sys.argv:
+            remap_existing()
+            return
         print('Building gear lookup...')
         lookup = build_gear_lookup()
-        print(f'  {len(lookup)} gear/skill cards indexed.')
+        print(f'  {len(lookup)} gear/skill card names indexed.')
 
         soldiers = Card.query.filter_by(card_type='Soldier').all()
         print(f'  {len(soldiers)} soldier cards to process.')
@@ -161,7 +226,7 @@ def main():
         soldier_with_assoc = 0
 
         for soldier in soldiers:
-            refs, matched_lines = extract_refs(soldier.notes, soldier.nation, lookup)
+            refs, matched_lines = extract_refs(soldier, lookup)
             if not refs:
                 continue
             soldier_with_assoc += 1

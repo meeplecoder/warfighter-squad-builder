@@ -28,6 +28,7 @@ except ImportError:
 from werkzeug.security import generate_password_hash
 from app import create_app, db
 from app.models import Card, CardAssociation, Squad, SquadSoldier, SquadGear, SquadObjective, User
+from app.models import now_utc
 
 DEFAULT_NATION = 'US'
 ADMIN_USERNAME = 'admin'
@@ -235,6 +236,7 @@ def main():
                 email=ADMIN_EMAIL,
                 password_hash=generate_password_hash('changeme'),
                 full_name='Warfighter Admin',
+                email_verified_at=now_utc(),
             )
             if not args.dry_run:
                 db.session.add(admin)

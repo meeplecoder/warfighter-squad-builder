@@ -2,6 +2,8 @@
 Squad-building validation rules. No Flask imports — pure Python.
 """
 
+from app.utils import normalize_nation
+
 GEAR_LOADOUT_CATEGORIES = {'Weapon', 'Equipment'}
 SKILL_CATEGORIES = {'Skill'}
 NO_LOADOUT_CATEGORIES = {'Skill', 'Service Record'}
@@ -58,16 +60,19 @@ def validate_squad(payload, mission_card, soldiers_data):
     if not ps_soldiers:
         errors.append(_issue('NO_PLAYER_SOLDIER'))
 
-    # 2. Nation check on all soldier + gear cards
+    # 2. Nation check on all soldier + gear cards. The squad nation is a base nation
+    # (e.g. 'US') and cards may carry a variant of it ('US Airborne', 'USMC'), so compare
+    # on the normalized base — the same grouping the card picker uses.
+    squad_base = normalize_nation(nation)
     for s in soldiers_data:
         c = s['card']
         c_nation = c.get('nation')
-        if c_nation and c_nation != nation:
+        if c_nation and normalize_nation(c_nation) != squad_base:
             errors.append(_issue('NATION_MISMATCH', name=c['name'], nation=c_nation))
         for g in s['gear']:
             gc = g['card']
             gc_nation = gc.get('nation')
-            if gc_nation and gc_nation != nation:
+            if gc_nation and normalize_nation(gc_nation) != squad_base:
                 errors.append(_issue('NATION_MISMATCH', name=gc['name'], nation=gc_nation))
 
     # 3. RP budget (PS soldiers + PS gear only)
