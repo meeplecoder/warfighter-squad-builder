@@ -4,27 +4,31 @@
    ===================================================================== */
 
 :root {
-  /* Warfighter palette — olive drab frames, kraft-paper borders, parchment labels, rust ink */
-  --bg: #17160f;
-  --surface: #23221a;
-  --surface2: #2e2c21;
-  --border: #4a4532;
-  --text: #ece4cc;          /* parchment */
-  --text-muted: #a89f82;    /* faded khaki */
-  --accent: #5f6f2f;        /* olive drab */
-  --accent-hover: #73853a;
-  --accent-light: #cfd8a0;
-  --danger: #a8432a;        /* rust */
-  --danger-hover: #c9593b;
-  --warning: #d6a54a;
-  --warning-bg: #2e2510;
-  --success: #7a9a45;
-  --link: #d8b46a;          /* brass */
-  --kraft: #a07a4a;
-  --kraft-dark: #6b5233;
-  --paper: #ece2c6;
-  --paper-edge: #d8caa2;
-  --ink: #2a2216;
+  /* Warfighter palette — extracted from the card art itself (soldier + mission cards):
+     dark umber borders, mustard / ochre title banner, tan map-paper, khaki + cream notes, olive drab (minor).
+     Emphasis uses "rubber-stamp ink" colours: faded blue (links), red (danger), green (success). */
+  --bg: #18130c;            /* umber-black */
+  --surface: #221b11;
+  --surface2: #2e2517;
+  --border: #4e3e1f;        /* card border brown */
+  --text: #ecdcbf;          /* card cream */
+  --text-muted: #a99a78;    /* khaki, aged */
+  --accent: #c4a055;        /* mission-banner mustard */
+  --accent-hover: #d3b068;
+  --accent-light: #ddb764;
+  --on-accent: #2a1f10;     /* ink on mustard */
+  --danger: #b04a2f;        /* red stamp */
+  --danger-hover: #d9694a;
+  --warning: #e29a3c;
+  --warning-bg: #2f2412;
+  --success: #7fa86a;       /* green stamp */
+  --link: #8fb0cc;          /* faded blue stamp ink */
+  --olive: #8d863e;         /* soldier-card olive (minor accent) */
+  --kraft: #8d6c3b;         /* tan frame */
+  --kraft-dark: #614c28;
+  --paper: #ecdcbf;
+  --paper-edge: #c2b68c;
+  --ink: #2a1f10;
   --font-type: 'Special Elite', 'Courier New', monospace;
   --font-body: 'Roboto Condensed', 'Arial Narrow', system-ui, sans-serif;
   --radius: 3px;
@@ -97,7 +101,7 @@ h3 { font-size: 1rem; font-weight: 600; }
 .btn:hover { background: var(--border); text-decoration: none; }
 .btn:focus-visible { outline: 2px solid var(--accent-light); outline-offset: 1px; }
 .btn:disabled, .btn[aria-disabled="true"] { opacity: .35; cursor: default; pointer-events: none; }
-.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary { background: var(--accent); color: var(--on-accent); }
 .btn-primary:hover { background: var(--accent-hover); }
 .btn-danger { background: var(--danger); color: #fff; }
 .btn-danger:hover { background: var(--danger-hover); }
@@ -256,7 +260,7 @@ h3 { font-size: 1rem; font-weight: 600; }
   background: var(--surface2); color: var(--text-muted);
   border: 1px solid var(--border);
 }
-.chip-soldier { background: #1e3a2f; color: #6dbf8f; border-color: #2e5c44; }
+.chip-soldier { background: #1b2a3a; color: #7fb0d8; border-color: #2f4d6b; }
 .chip-weapon  { background: #3a1e1e; color: #bf6d6d; border-color: #5c2e2e; }
 .chip-equipment { background: #1e2e3a; color: #6d9bbf; border-color: #2e4a5c; }
 .chip-skill   { background: #2e1e3a; color: #9b6dbf; border-color: #4a2e5c; }
@@ -764,7 +768,7 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
 }
 .quick-filter:hover { background: var(--border); color: var(--text); }
 .quick-filter.active { background: #3a1a1a; border-color: var(--danger); color: var(--danger); }
-.quick-filter.active-accent { background: #1e2a12; border-color: var(--accent); color: var(--accent-light); }
+.quick-filter.active-accent { background: #2d2416; border-color: var(--accent); color: var(--accent-light); }
 .quick-filter.active-purple { background: #2a1a3a; border-color: #9b59b6; color: #c39bd3; }
 .quick-filter.active-blue { background: #14263a; border-color: #3498db; color: #85c1e9; }
 
@@ -868,7 +872,7 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
 }
 
 /* Type color themes — match existing chip palette */
-.cd-t-soldier    { --cd-accent: #6dbf8f; --cd-accent-bg: #192e24; }
+.cd-t-soldier    { --cd-accent: #7fb0d8; --cd-accent-bg: #182634; }
 .cd-t-weapon     { --cd-accent: #bf6d6d; --cd-accent-bg: #2c1818; }
 .cd-t-equipment  { --cd-accent: #6d9bbf; --cd-accent-bg: #18242e; }
 .cd-t-skill      { --cd-accent: #9b6dbf; --cd-accent-bg: #22182c; }
@@ -1014,7 +1018,7 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
   font-weight: 700;
   letter-spacing: 0.04em;
 }
-.cd-badge-cx { background: #192c19; color: #7dbf7d; border: 1px solid #2e4e2e; }
+.cd-badge-cx { background: #182634; color: #8fc1dd; border: 1px solid #2f4d6b; }
 .cd-badge-xp { background: #19192e; color: #7d7dbf; border: 1px solid #2e2e4e; }
 
 
@@ -1143,7 +1147,7 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
 .campaign-mission { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-top: 10px; scroll-margin-top: 12px; }
 .campaign-mission-head { display: flex; align-items: center; gap: 10px; }
 .campaign-mission-head h3 { margin: 0; font-size: 15px; }
-.campaign-mission-code { min-width: 28px; padding: 2px 8px; border-radius: 6px; background: var(--accent); color: #fff; font-weight: 700; font-size: 12px; text-align: center; }
+.campaign-mission-code { min-width: 28px; padding: 2px 8px; border-radius: 6px; background: var(--accent); color: var(--on-accent); font-weight: 700; font-size: 12px; text-align: center; }
 .campaign-mission-card, .campaign-mission-meta { margin-top: 6px; font-size: 13px; }
 .campaign-mission h4 { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); margin: 10px 0 2px; }
 .campaign-branches { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border); }
@@ -1151,7 +1155,7 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
 .campaign-branch.cond-success { border-color: #2e5c44; color: #6dbf8f; }
 .campaign-branch.cond-failure { border-color: #5c2e2e; color: #bf6d6d; }
 .campaign-branch.cond-choice  { border-color: #4a425c; color: #b3a6e0; }
-.chip-entry { background: #1e3a2f; color: #6dbf8f; border-color: #2e5c44; }
+.chip-entry { background: #1b2a3a; color: #7fb0d8; border-color: #2f4d6b; }
 
 .campaign-editor { max-width: 980px; }
 .ce-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 14px; }
@@ -1201,13 +1205,13 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
 
 
 /* =====================================================================
-   Warfighter theme — game look (olive drab, kraft paper, parchment labels,
+   Warfighter theme — game look (card browns, mustard, kraft paper, parchment labels,
    typewriter text, rubber stamps). Overrides the base rules above.
    ===================================================================== */
 body {
   background-color: var(--bg);
   background-image:
-    radial-gradient(ellipse at 20% 0%, rgba(95, 111, 47, .16), transparent 55%),
+    radial-gradient(ellipse at 20% 0%, rgba(196, 160, 85, .10), transparent 55%),
     radial-gradient(ellipse at 100% 100%, rgba(160, 122, 74, .12), transparent 50%),
     repeating-linear-gradient(45deg, rgba(255, 255, 255, .012) 0 2px, transparent 2px 5px);
   background-attachment: fixed;
@@ -1236,19 +1240,19 @@ h1.page-title, .squad-title, #app-main > h1, #app-main > .flex > h1, .auth-form-
   display: inline-block;
 }
 
-/* Header: olive-drab frame with a kraft stripe */
+/* Header: card-border brown with a mustard stripe */
 #app-header {
-  background: linear-gradient(180deg, #4b5528 0%, #3a4220 100%);
-  border-bottom: 3px solid var(--kraft);
+  background: linear-gradient(180deg, #4e3e1f 0%, #382913 100%);
+  border-bottom: 3px solid var(--accent);
   box-shadow: 0 2px 0 var(--kraft-dark), 0 4px 12px rgba(0, 0, 0, .5);
 }
 .header-brand { color: var(--paper); font-size: 1.15rem; text-shadow: 1px 1px 0 rgba(0, 0, 0, .55); }
 #header-auth .username { color: var(--paper-edge); }
 #app-header .btn-ghost, #app-header select { border-color: rgba(236, 226, 198, .35); background: rgba(0, 0, 0, .18); color: var(--paper); }
 
-/* Sidebar: dark leather with stencil nav */
+/* Sidebar: dark umber with stencil nav */
 #sidebar {
-  background: linear-gradient(180deg, #221d14, #1a1610);
+  background: linear-gradient(180deg, #1c160e, #120e08);
   border-right: 2px solid var(--kraft-dark);
 }
 #sidebar .nav-link {
@@ -1257,7 +1261,7 @@ h1.page-title, .squad-title, #app-main > h1, #app-main > .flex > h1, .auth-form-
 #sidebar .nav-link.nav-sub { font-size: 11.5px; letter-spacing: .06em; }
 #sidebar .nav-link:hover { color: var(--paper); background: rgba(160, 122, 74, .12); }
 #sidebar .nav-link.active {
-  color: var(--paper); background: #2c3119;
+  color: var(--paper); background: #3a2d17;
   border-left-color: var(--kraft);
 }
 
@@ -1274,10 +1278,10 @@ h1.page-title, .squad-title, #app-main > h1, #app-main > .flex > h1, .auth-form-
 .btn { border-radius: var(--radius); font-weight: 700; letter-spacing: .05em; text-transform: uppercase; font-size: 12.5px; }
 .btn-sm { font-size: 11.5px; }
 .btn-primary {
-  background: linear-gradient(180deg, #6b7c35, #55632a); color: var(--paper);
-  border: 1px solid #3b441d; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), 0 1px 0 rgba(0, 0, 0, .4);
+  background: linear-gradient(180deg, #d1ae63, #b38d47); color: var(--on-accent); font-weight: 700;
+  border: 1px solid #7a5c2c; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), 0 1px 0 rgba(0, 0, 0, .4);
 }
-.btn-primary:hover { background: linear-gradient(180deg, #7b8e3d, #627230); }
+.btn-primary:hover { background: linear-gradient(180deg, #dcbb74, #c19a52); }
 .btn-ghost { border-color: var(--kraft-dark); color: var(--text); }
 .btn-ghost:hover { background: rgba(160, 122, 74, .14); border-color: var(--kraft); }
 .btn-danger { background: var(--danger); color: var(--paper); }
@@ -1285,7 +1289,7 @@ h1.page-title, .squad-title, #app-main > h1, #app-main > .flex > h1, .auth-form-
 .page-toolbar { border-bottom-color: var(--kraft-dark); }
 
 /* Inputs */
-input, select, textarea { background: #13120c; border-color: var(--border); color: var(--text); }
+input, select, textarea { background: #120e08; border-color: var(--border); color: var(--text); }
 input::placeholder, textarea::placeholder { color: #6f6852; }
 input:focus, select:focus, textarea:focus { outline-color: var(--kraft); }
 
@@ -1298,13 +1302,13 @@ input:focus, select:focus, textarea:focus { outline-color: var(--kraft); }
 .ce-section h2, .profile-section h2 {
   color: var(--paper); border-bottom: 1px dashed var(--kraft-dark); padding-bottom: 6px;
 }
-.modal { background: linear-gradient(180deg, #2a281e, var(--surface)); border-width: 2px; }
+.modal { background: linear-gradient(180deg, #2a2216, var(--surface)); border-width: 2px; }
 .modal h2 { color: var(--paper); }
 .stat-item, .mission-attr { border-color: var(--kraft-dark); }
 
 /* Tables: dark olive header strip */
 .data-table th {
-  background: #2c3119;
+  background: #3a2d17;
   color: var(--accent-light); text-transform: uppercase; font-size: 11.5px; font-weight: 700; letter-spacing: .07em;
   border-bottom: 2px solid var(--kraft-dark);
 }
@@ -1312,7 +1316,7 @@ input:focus, select:focus, textarea:focus { outline-color: var(--kraft); }
 .data-table .sort-header.sort-active { color: var(--link); }
 .data-table td { border-bottom-color: rgba(107, 82, 51, .45); }
 .data-table tbody tr:nth-child(even) { background: rgba(255, 255, 255, .015); }
-.data-table tbody tr:hover { background: rgba(95, 111, 47, .18); }
+.data-table tbody tr:hover { background: rgba(196, 160, 85, .10); }
 
 /* Quick filters and tabs */
 .quick-filter { border-radius: 2px; text-transform: uppercase; letter-spacing: .05em; font-weight: 700; font-size: 11.5px; }
@@ -1334,23 +1338,23 @@ input:focus, select:focus, textarea:focus { outline-color: var(--kraft); }
 }
 
 /* Card-type colours in the game palette (detail header + chips) */
-.cd-t-soldier    { --cd-accent: #a9b964; --cd-accent-bg: #232a15; }
-.cd-t-weapon     { --cd-accent: #d0a466; --cd-accent-bg: #2e2313; }
-.cd-t-equipment  { --cd-accent: #bfb48a; --cd-accent-bg: #27251a; }
-.cd-t-skill      { --cd-accent: #d98b52; --cd-accent-bg: #2e1c10; }
-.cd-t-sr         { --cd-accent: #a89f82; --cd-accent-bg: #222019; }
+.cd-t-soldier    { --cd-accent: #8fb7d8; --cd-accent-bg: #1b2835; }
+.cd-t-weapon     { --cd-accent: #e58a8a; --cd-accent-bg: #311a1c; }
+.cd-t-equipment  { --cd-accent: #6fb7ad; --cd-accent-bg: #172829; }
+.cd-t-skill      { --cd-accent: #b58ad6; --cd-accent-bg: #231a2e; }
+.cd-t-sr         { --cd-accent: #a9adb3; --cd-accent-bg: #25262a; }
 .cd-t-mission    { --cd-accent: #dbb768; --cd-accent-bg: #2e2510; }
-.cd-t-objective  { --cd-accent: #cf9469; --cd-accent-bg: #2e1f13; }
+.cd-t-objective  { --cd-accent: #eda05b; --cd-accent-bg: #33200f; }
 .cd-t-situation  { --cd-accent: #9fb0a6; --cd-accent-bg: #1e2421; }
 .cd-t-hostile    { --cd-accent: #d8664f; --cd-accent-bg: #2e1510; }
-.chip-soldier   { background: #232a15; color: #a9b964; border-color: #46542a; }
-.chip-weapon    { background: #2e2313; color: #d0a466; border-color: #5c4526; }
-.chip-equipment { background: #27251a; color: #bfb48a; border-color: #4f4a33; }
-.chip-skill     { background: #2e1c10; color: #d98b52; border-color: #5c3820; }
+.chip-soldier   { background: #1b2835; color: #8fb7d8; border-color: #34506b; }
+.chip-weapon    { background: #311a1c; color: #e58a8a; border-color: #6b3434; }
+.chip-equipment { background: #172829; color: #6fb7ad; border-color: #2f5a56; }
+.chip-skill     { background: #231a2e; color: #b58ad6; border-color: #4a3a63; }
 .chip-mission   { background: #2e2510; color: #dbb768; border-color: #5c4a20; }
 .chip-hostile   { background: #2e1510; color: #d8664f; border-color: #5c2a20; }
-.chip-ps  { background: #232a15; color: #cfd8a0; }
-.chip-nps { background: #2e2313; color: #d0a466; }
+.chip-ps  { background: #1b2835; color: #b9d3ea; }
+.chip-nps { background: #33200f; color: #eda05b; }
 
 @media (max-width: 600px) {
   .header-brand { font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 48vw; }
@@ -1370,7 +1374,7 @@ input:focus, select:focus, textarea:focus { outline-color: var(--kraft); }
 .metrics-radar { width: 280px; max-width: 100%; flex: 0 0 auto; overflow: visible; }
 .mr-ring { fill: none; stroke: var(--border); stroke-width: 1; }
 .mr-spoke { stroke: var(--border); stroke-width: 1; }
-.mr-shape { fill: rgba(95, 111, 47, .45); stroke: var(--accent-light); stroke-width: 1.5; stroke-linejoin: round; }
+.mr-shape { fill: rgba(196, 160, 85, .35); stroke: var(--accent-light); stroke-width: 1.5; stroke-linejoin: round; }
 .mr-dot { fill: var(--accent-light); }
 .mr-label { fill: var(--text-muted); font-size: 9.5px; font-family: var(--font-body); }
 .metrics-list-wrap { flex: 1 1 280px; min-width: 240px; }
@@ -1437,7 +1441,7 @@ input:focus, select:focus, textarea:focus { outline-color: var(--kraft); }
   background: var(--surface2); border-right: 1px solid var(--border);
 }
 .gen-seg-item:last-child span { border-right: 0; }
-.gen-seg-item input:checked + span { background: var(--accent); color: #fff; font-weight: bold; }
+.gen-seg-item input:checked + span { background: var(--accent); color: var(--on-accent); font-weight: bold; }
 .gen-seg-item input:focus-visible + span { outline: 2px solid var(--link); outline-offset: -2px; }
 .gen-val { color: var(--text); font-weight: bold; margin-left: 4px; }
 .gen-field input[type=range] { width: 100%; accent-color: var(--accent); }
@@ -1455,7 +1459,7 @@ input:focus, select:focus, textarea:focus { outline-color: var(--kraft); }
   background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-top: 0; padding: 6px 8px;
 }
 .gen-pick-item:first-child { border-top: 1px solid var(--border); }
-.gen-pick-item:hover { background: #38362a; }
+.gen-pick-item:hover { background: #3a2f1d; }
 
 .gen-result { min-width: 0; }
 .gen-empty {
