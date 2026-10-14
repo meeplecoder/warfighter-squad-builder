@@ -6,7 +6,7 @@ squad's own relationships, read by `squad_metrics(squad)`.
 
 Everything here is a G0 *estimate* (see spec/12_squad_metrics.md): expected values computed analytically
 from card tables and a Hostile / Location reference (app/metric_reference.json, built by
-scripts/build_metric_reference.py from cards2.csv). Card text is parsed with small regexes on the fly
+scripts/build_metric_reference.py from the cards CSV). Card text is parsed with small regexes on the fly
 (no card_tags table yet); skill effects (Spotter, Marksman, …) are NOT applied yet.
 """
 

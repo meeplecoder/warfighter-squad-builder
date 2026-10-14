@@ -1,7 +1,7 @@
 """
 Build app/metric_reference.json — the reference data behind the squad metrics (app/metrics.py, spec 12).
 
-  hostiles   Cover / Penetration distributions and Hostiles per card, from the Hostile cards of cards2.csv
+  hostiles   Cover / Penetration distributions and Hostiles per card, from the Hostile cards of the cards CSV
              (not imported into the DB): key 'all' and '<nation>|<Frontline|Elite>'.
   locations  entrance-cost distribution of the Location cards: 'all' and per deck.
   community  raw metric values of the published squads in the DB, per budget band — the scale the
@@ -20,7 +20,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-CSV_PATH = os.path.join(os.path.dirname(ROOT), 'cards2.csv')
+CSV_PATH = os.environ.get('CARDS_CSV') or os.path.join(ROOT, 'cards', 'warfighter_cards.csv')
 OUT = os.path.join(ROOT, 'app', 'metric_reference.json')
 
 

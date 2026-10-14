@@ -20,7 +20,7 @@ class Config:
         else f"sqlite:///{os.path.join(_BASE, 'data', 'warfighter.db')}"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    CARDS_CSV = os.environ.get('CARDS_CSV', os.path.join(_BASE, '..', 'cards2.csv'))
+    CARDS_CSV = os.environ.get('CARDS_CSV', os.path.join(_BASE, 'cards', 'warfighter_cards.csv'))
     CARD_IMAGES_DIR = os.path.join(_BASE, 'static', 'card_images')
     DEBUG = os.environ.get('DEBUG', 'false').lower() == 'true'
     # Card images: CARD_IMAGES_DIR/<lang>/<prefix>/<number>.<jpg|png|webp>, lowercase (see app/card_images.py)
@@ -51,7 +51,7 @@ class Config:
 
     # --- Outgoing mail (app/mailer.py) ---
     MAIL_BACKEND = os.environ.get('MAIL_BACKEND', 'console')   # console | resend | smtp | memory (tests)
-    MAIL_FROM = os.environ.get('MAIL_FROM', 'Warfighter Squad Builder <no-reply@localhost>')
+    MAIL_FROM = os.environ.get('MAIL_FROM', 'Warfighter WWII - Squad Builder <no-reply@localhost>')
     RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')       # MAIL_BACKEND=resend
     MAIL_HOST = os.environ.get('MAIL_HOST', '')                 # MAIL_BACKEND=smtp
     MAIL_PORT = int(os.environ.get('MAIL_PORT', '587'))

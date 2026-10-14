@@ -2,7 +2,7 @@
 """
 Import cards from CSV into the SQLite database.
 Run from the warfighter-squad-builder/ directory:
-    python scripts/import_cards.py [--csv path/to/cards2.csv]
+    python scripts/import_cards.py [--csv path/to/cards.csv]     # default: cards/warfighter_cards.csv (CARDS_CSV)
 """
 import os
 import sys
@@ -222,24 +222,16 @@ def main():
     app = create_app()
 
     with app.app_context():
-        csv_path = args.csv or app.config.get('CARDS_CSV', '../cards2.csv')
+        csv_path = args.csv or app.config['CARDS_CSV']
         if not os.path.isabs(csv_path):
-            csv_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), csv_path)
-            # If that doesn't exist, try relative to cwd
-            if not os.path.exists(csv_path):
-                csv_path = os.path.join(os.getcwd(), args.csv or '../cards2.csv')
-
-        # Also try the squad_builder directory
-        if not os.path.exists(csv_path):
-            alt = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '..', 'cards2.csv')
-            alt = os.path.normpath(alt)
-            if os.path.exists(alt):
-                csv_path = alt
+            # relative to the repository root first, then to the current directory
+            repo_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), csv_path)
+            csv_path = repo_path if os.path.exists(repo_path) else os.path.join(os.getcwd(), csv_path)
 
         if not os.path.exists(csv_path):
             print(f'ERROR: CSV file not found at {csv_path}')
             print('Pass --csv /path/to/cards.csv to specify the location.')
-            print('No card data yet? Try the fictional demo set:  --csv examples/cards.sample.csv  (see docs/card_data.md).')
+            print('Or try the fictional demo set:  --csv examples/cards.sample.csv  (see docs/card_data.md).')
             sys.exit(1)
 
         print(f'Importing from: {csv_path}')
