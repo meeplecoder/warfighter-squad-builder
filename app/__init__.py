@@ -19,6 +19,9 @@ def _check_auth_config(app):
         app.config['APP_BASE_URL'] = 'http://localhost:5000'
     if app.config['MAIL_BACKEND'] == 'resend' and not app.config['RESEND_API_KEY']:
         raise RuntimeError('MAIL_BACKEND=resend needs RESEND_API_KEY.')
+    if app.config['MAIL_BACKEND'] in ('resend', 'smtp') and not app.config['DEBUG'] \
+            and app.config['MAIL_FROM'].rstrip('> ').endswith('@localhost'):
+        raise RuntimeError('MAIL_FROM must be a real sender address (on a domain verified with your mail provider).')
     if app.config['DEBUG']:
         return
     if app.config['SECRET_KEY'] in (DEV_SECRET_KEY, 'change-me-in-production') or len(app.config['SECRET_KEY']) < 32:
