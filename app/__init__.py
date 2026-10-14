@@ -102,6 +102,12 @@ def create_app():
     app.register_blueprint(campaigns_bp, url_prefix='/api/campaigns')
     app.register_blueprint(generator_bp, url_prefix='/api/generator')
 
+    @app.route('/healthz')
+    def healthz():
+        # Liveness probe for load balancers / Fly health checks: cheap, with a database ping
+        db.session.execute(db.text('SELECT 1'))
+        return jsonify(status='ok')
+
     @app.route('/api/modules')
     def get_modules():
         from app.models import Card

@@ -142,7 +142,9 @@ The built-in server is for development. A minimal production setup:
 4. **Backups** — everything lives in the SQLite file: `sqlite3 data/warfighter.db ".backup backup.db"` (safe while running).
 5. **Updating** — `git pull`, `pip install -r requirements.txt`, restart. Database tables are created automatically;
    re-run `scripts/import_cards.py` if the card data changed.
-6. **Legal** — keep the footer notice and read [NOTICE.md](NOTICE.md) before hosting a public instance that shows
+6. **Docker / Fly.io** — a `Dockerfile` is included: see [docs/deploy-docker.md](docs/deploy-docker.md) and
+   [docs/deploy-fly.md](docs/deploy-fly.md).
+7. **Legal** — keep the footer notice and read [NOTICE.md](NOTICE.md) before hosting a public instance that shows
    Warfighter content.
 
 ## Troubleshooting
