@@ -3,6 +3,7 @@ from flask_login import current_user, login_required, login_user
 from app import db, limiter, mailer, security
 from app.auth import EMAIL_RE, _info, _lang, mail_password_changed
 from app.models import Card, User, UserModule, now_utc
+from app.required_modules import module_rank
 from app.i18n import _, normalize_lang
 
 profile_bp = Blueprint('profile', __name__)
@@ -24,6 +25,33 @@ def _all_modules_with_owned(user):
         else:
             result.append({'module': m, 'owned': True})
     return result
+
+
+@profile_bp.route('/expansions', methods=['GET'])
+@login_required
+def get_expansions():
+    """Every expansion (card module) with the user's ownership flag and what it contains — the 'My Expansions' view."""
+    from sqlalchemy import func
+    from app.utils import normalize_nation
+    cat = Card.catalog()
+    cards = dict(cat.with_entities(Card.module, func.count(Card.id)).group_by(Card.module).all())
+    ps, missions, nations = {}, {}, {}
+    for module, ctype, subtype, nation, n in (cat.with_entities(Card.module, Card.card_type, Card.card_subtype, Card.nation, func.count(Card.id))
+                                              .filter(Card.card_type.in_(('Soldier', 'Mission')))
+                                              .group_by(Card.module, Card.card_type, Card.card_subtype, Card.nation).all()):
+        if ctype == 'Mission':
+            missions[module] = missions.get(module, 0) + n
+        else:
+            if subtype == 'Player':
+                ps[module] = ps.get(module, 0) + n
+            if nation:
+                nations.setdefault(module, set()).add(normalize_nation(nation))
+    items = [{'module': m['module'], 'owned': m['owned'], 'cards': cards.get(m['module'], 0),
+              'player_soldiers': ps.get(m['module'], 0), 'missions': missions.get(m['module'], 0),
+              'nations': sorted(nations.get(m['module'], []))}
+             for m in _all_modules_with_owned(current_user)]
+    items.sort(key=lambda i: module_rank(i['module']))      # Core Europe first, then box numbers, then the rest
+    return jsonify(expansions=items, owned=sum(1 for i in items if i['owned']), total=len(items))
 
 
 @profile_bp.route('', methods=['GET'])

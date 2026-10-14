@@ -1513,3 +1513,73 @@ input:focus, select:focus, textarea:focus { outline-color: var(--kraft); }
 .gen-save .gen-field { flex: 1 1 100%; }
 .gen-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
 .gen-actions .btn { gap: 6px; }
+
+/* ---- User menu (header) ---------------------------------------------- */
+.user-menu-wrap { position: relative; }
+.user-btn {
+  display: inline-flex; align-items: center; gap: 8px; padding: 3px 4px 3px 12px; cursor: pointer;
+  background: rgba(0, 0, 0, .18); border: 1px solid rgba(232, 224, 204, .3); border-radius: 999px;
+  color: var(--paper); font: inherit; font-size: 13px;
+}
+.user-btn:hover, .user-btn[aria-expanded="true"] { background: rgba(255, 255, 255, .08); border-color: rgba(232, 224, 204, .55); }
+.user-avatar {
+  display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%;
+  background: var(--surface2); border: 1px solid var(--border); color: var(--paper);
+}
+.user-avatar .icon { width: 16px; height: 16px; }
+.user-menu {
+  position: absolute; right: 0; top: calc(100% + 10px); min-width: 210px; z-index: 200; padding: 6px 0;
+  background: var(--surface); border: 1px solid var(--border); border-top: 3px solid var(--stripe);
+  border-radius: var(--radius); box-shadow: 0 10px 28px rgba(0, 0, 0, .55);
+}
+.user-menu[hidden] { display: none; }
+.user-menu a, .user-menu button {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 16px; background: none; border: 0;
+  color: var(--text); font: inherit; font-size: 14px; text-align: left; text-decoration: none; cursor: pointer;
+}
+.user-menu a:hover, .user-menu button:hover, .user-menu a:focus-visible, .user-menu button:focus-visible {
+  background: rgba(255, 255, 255, .07); outline: none;
+}
+.user-menu .icon { width: 16px; height: 16px; color: var(--text-muted); flex: none; }
+.user-menu hr { border: 0; border-top: 1px solid var(--border); margin: 6px 0; }
+@media (max-width: 480px) { .user-btn .username { display: none; } .user-btn { padding: 3px; } }
+
+/* ---- My Expansions ---------------------------------------------------- */
+.exp-page { max-width: 1100px; }
+.exp-intro { max-width: 70ch; margin: 0 0 14px; }
+.exp-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 14px; padding: 10px 14px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+}
+.exp-summary { flex: 1 1 180px; font-size: 14px; }
+.exp-search { flex: 1 1 200px; max-width: 320px; }
+.exp-filter { flex: 0 0 auto; min-width: 270px; }
+.exp-actions { display: flex; gap: 6px; }
+.exp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.exp-item {
+  display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; cursor: pointer; opacity: .78;
+  background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--border); border-radius: var(--radius);
+}
+.exp-item.is-owned { opacity: 1; border-left-color: var(--accent); background: var(--surface2); }
+.exp-item:hover { border-color: var(--text-muted); }
+.exp-item input { margin-top: 3px; width: 16px; height: 16px; accent-color: var(--accent); flex: none; }
+.exp-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.exp-name { font-weight: 700; font-size: 14px; }
+.exp-facts { font-size: 12px; color: var(--text-muted); }
+.exp-nations { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.exp-save-bar {
+  position: sticky; bottom: 12px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 16px; padding: 10px 14px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 6px 20px rgba(0, 0, 0, .4);
+}
+.exp-save-bar .btn { gap: 8px; }
+.nav-short { display: none; }
+@media (max-width: 767px) {
+  .exp-save-bar { bottom: 68px; }      /* clear the bottom tab bar */
+  .nav-long { display: none; }
+  .nav-short { display: inline; }
+}
+
+/* Phone tab bar: six items must fit on 360–390 px wide screens */
+@media (max-width: 767px) {
+  #sidebar .nav-link, #sidebar .nav-link.nav-sub { letter-spacing: .03em; padding: 8px 2px; font-size: 10.5px; }
+}

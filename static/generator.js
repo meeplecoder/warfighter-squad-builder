@@ -65,14 +65,14 @@ function renderGenerator() {
   setMain(`
     <div class="gen-page">
       <div class="gen-head">
-        <h1>${esc(t('gen.title'))}</h1>
+        <h1 class="page-title">${esc(t('gen.title'))}</h1>
         <p class="gen-sub">${esc(t('gen.subtitle'))}</p>
       </div>
       <div class="gen-collection">
         <span class="gen-collection-ico">${icon('box')}</span>
         <span class="gen-collection-text"><strong>${esc(t('gen.collection', { owned: c.owned_modules, total: c.total_modules }))}</strong>
           ${all ? `<span class="text-muted"> — ${esc(t('gen.collection_all'))}</span>` : `<span class="text-muted"> — ${esc(t('gen.collection_only'))}</span>`}</span>
-        <a class="btn btn-sm btn-ghost" href="#/profile">${esc(t('gen.edit_modules'))}</a>
+        <a class="btn btn-sm btn-ghost" href="#/expansions">${esc(t('gen.edit_modules'))}</a>
       </div>
       <div class="gen-layout">
         <form class="gen-form" id="gen-form" autocomplete="off" onsubmit="return false"></form>

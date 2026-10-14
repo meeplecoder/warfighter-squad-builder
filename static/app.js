@@ -44,7 +44,7 @@ function route() {
   updateActiveNav(key === 'campaigns' && (rest[0] === 'new' || rest[1] === 'edit') ? 'campaigns/new' : key);
   // Tab title: section by default; detail / editor views refine it with setPageTitle
   const section = { cards: 'nav.cards', squads: 'nav.squads', builder: 'nav.builder', generator: 'nav.generator', campaigns: 'nav.campaigns',
-                    profile: 'nav.profile', translations: 'nav.translations' }[key];
+                    expansions: 'nav.expansions', profile: 'nav.profile', translations: 'nav.translations' }[key];
   setPageTitle(section ? t(section) : null);
   const handler = routes[key] || routes['404'];
   if (handler) handler(...rest);
@@ -95,9 +95,20 @@ function renderHeader() {
   if (currentUser) {
     nav.innerHTML = `
       ${langSelect}
-      <span class="username">${esc(currentUser.username)}</span>
-      <button class="btn btn-sm btn-ghost" id="logout-btn">${esc(t('header.logout'))}</button>`;
-    nav.querySelector('#logout-btn').addEventListener('click', doLogout);
+      <div class="user-menu-wrap">
+        <button type="button" class="user-btn" id="user-menu-btn" aria-haspopup="menu" aria-expanded="false"
+                aria-controls="user-menu" title="${esc(t('user.menu'))}">
+          <span class="username">${esc(currentUser.username)}</span>
+          <span class="user-avatar" aria-hidden="true">${icon('user')}</span>
+        </button>
+        <div class="user-menu" id="user-menu" role="menu" hidden>
+          <a role="menuitem" href="#/expansions">${icon('layers')}<span>${esc(t('nav.expansions'))}</span></a>
+          <a role="menuitem" href="#/profile">${icon('user')}<span>${esc(t('nav.profile'))}</span></a>
+          <hr>
+          <button type="button" role="menuitem" id="logout-btn">${icon('logout')}<span>${esc(t('header.logout'))}</span></button>
+        </div>
+      </div>`;
+    wireUserMenu(nav);
   } else {
     nav.innerHTML = `
       ${langSelect}
@@ -107,8 +118,38 @@ function renderHeader() {
   nav.querySelector('#lang-select').addEventListener('change', e => changeLanguage(e.target.value));
 }
 
+// Header user menu: opens from the icon next to the name; closes on outside click, Esc, selection and navigation
+function wireUserMenu(root) {
+  const btn = root.querySelector('#user-menu-btn'), menu = root.querySelector('#user-menu');
+  const items = () => [...menu.querySelectorAll('[role=menuitem]')];
+  const setOpen = open => {
+    menu.hidden = !open;
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) items()[0]?.focus();
+  };
+  btn.addEventListener('click', e => { e.stopPropagation(); setOpen(menu.hidden); });
+  menu.addEventListener('click', e => { if (e.target.closest('[role=menuitem]')) setOpen(false); });
+  menu.addEventListener('keydown', e => {
+    const list = items(), i = list.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown') { e.preventDefault(); list[(i + 1) % list.length].focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); list[(i - 1 + list.length) % list.length].focus(); }
+    else if (e.key === 'Escape') { setOpen(false); btn.focus(); }
+    else if (e.key === 'Tab') setOpen(false);
+  });
+  root.querySelector('#logout-btn').addEventListener('click', doLogout);
+  if (!wireUserMenu.global) {                 // page-level listeners are added once, whatever the header re-renders
+    wireUserMenu.global = true;
+    const close = () => {
+      const m = document.getElementById('user-menu'), b = document.getElementById('user-menu-btn');
+      if (m && !m.hidden) { m.hidden = true; b?.setAttribute('aria-expanded', 'false'); }
+    };
+    document.addEventListener('click', e => { const m = document.getElementById('user-menu'); if (m && !m.contains(e.target)) close(); });
+    window.addEventListener('hashchange', close);
+  }
+}
+
 function updateProfileLink() {
-  const link = document.getElementById('nav-profile');
+  const link = document.getElementById('nav-expansions');           // My Expansions needs a login
   if (link) link.style.display = currentUser ? '' : 'none';
   const trLink = document.getElementById('nav-translations');
   if (trLink) trLink.style.display = currentUser?.is_admin ? '' : 'none';
@@ -195,6 +236,9 @@ const ICON_PATHS = {
   close:    '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
   heart:    '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
   plus:     '<path d="M12 5v14"/><path d="M5 12h14"/>',
+  user:     '<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/>',
+  layers:   '<path d="m12 3 9 5-9 5-9-5Z"/><path d="m3 13 9 5 9-5"/><path d="m3 17.500 9 5 9-5"/>',
+  logout:   '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
 };
 function icon(name) {
   return `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_PATHS[name]}</svg>`;
@@ -2526,11 +2570,7 @@ register('profile', async function() {
     return;
   }
 
-  const moduleItems = profile.modules.map(m => `
-    <label class="module-item">
-      <input type="checkbox" name="module" value="${esc(m.module)}" ${m.owned ? 'checked' : ''}>
-      ${esc(tv('module', m.module))}
-    </label>`).join('');
+  const ownedCount = profile.modules.filter(m => m.owned).length;
 
   setMain(`
     <h1 style="margin-bottom:20px">${esc(t('profile.title'))}</h1>
@@ -2582,14 +2622,9 @@ register('profile', async function() {
     </div>
 
     <div class="profile-section">
-      <h2>${esc(t('profile.owned_modules'))}</h2>
-      <div class="module-actions">
-        <button class="btn btn-sm btn-ghost" id="select-all-btn">${esc(t('profile.select_all'))}</button>
-        <button class="btn btn-sm btn-ghost" id="deselect-all-btn">${esc(t('profile.deselect_all'))}</button>
-      </div>
-      <div class="module-list">${moduleItems}</div>
-      <button class="btn btn-primary mt-2" id="save-modules-btn">${esc(t('profile.save_modules'))}</button>
-      <div id="modules-msg"></div>
+      <h2>${esc(t('nav.expansions'))}</h2>
+      <p class="text-muted" style="font-size:13px">${esc(t('profile.expansions_intro', { owned: ownedCount, total: profile.modules.length }))}</p>
+      <a class="btn btn-ghost" href="#/expansions">${esc(t('profile.manage_expansions'))}</a>
     </div>
   `);
 
@@ -2637,22 +2672,6 @@ register('profile', async function() {
     renderHeader();
     updateProfileLink();
     navigate('login');
-  });
-
-  main.querySelector('#select-all-btn')?.addEventListener('click', () => {
-    main.querySelectorAll('.module-list input[type=checkbox]').forEach(cb => cb.checked = true);
-  });
-  main.querySelector('#deselect-all-btn')?.addEventListener('click', () => {
-    main.querySelectorAll('.module-list input[type=checkbox]').forEach(cb => cb.checked = false);
-  });
-
-  main.querySelector('#save-modules-btn')?.addEventListener('click', async () => {
-    const owned = [...main.querySelectorAll('.module-list input[type=checkbox]:checked')].map(cb => cb.value);
-    const msg = main.querySelector('#modules-msg');
-    try {
-      await API.put('/profile/modules', { owned_modules: owned });
-      msg.innerHTML = alertHtml(tn('profile.modules_saved', owned.length), 'success');
-    } catch (e) { msg.innerHTML = alertHtml(e.error || t('common.failed')); }
   });
 });
 

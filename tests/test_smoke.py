@@ -77,3 +77,35 @@ def test_generator_builds_a_valid_squad(app, client, login):
     b = client.post('/api/generator/generate', json=body).get_json()
     names = lambda r: [s['card']['name'] for s in r['soldiers']]
     assert names(a) == names(b)
+
+
+def test_bundled_card_csv_format():
+    """The shipped card CSV (when present) has the columns the importer reads and no card images are tracked."""
+    import csv
+    import pathlib
+    import subprocess
+    root = pathlib.Path(__file__).resolve().parent.parent
+    path = root / 'cards' / 'warfighter_cards.csv'
+    if path.exists():
+        with open(path, newline='', encoding='utf-8') as f:
+            header = next(csv.reader(f))
+        assert {'Number', 'Name', 'Type', 'Nation', 'Stats', 'Notes', 'Module'} <= set(header)
+    tracked = subprocess.run(['git', 'ls-files', 'static/card_images'], cwd=root, capture_output=True, text=True).stdout.split()
+    assert tracked in ([], ['static/card_images/README.md'])      # card images never belong in the repository
+
+
+def test_expansions_endpoint(app, client, login):
+    assert client.get('/api/profile/expansions').status_code == 401
+    login(client)
+    r = client.get('/api/profile/expansions').get_json()
+    assert (r['owned'], r['total']) == (1, 1)
+    exp = r['expansions'][0]
+    assert exp['module'] == 'Sample Set' and exp['owned'] and exp['cards'] == 19
+    assert exp['player_soldiers'] == 4 and exp['missions'] == 3 and exp['nations'] == ['US']
+
+
+def test_expansions_order_core_first():
+    from app.required_modules import module_rank
+    names = ['Multi-Era Expansion #01', '#10 - UK #1', 'KS', '#02 - US #1', 'Core Europe', '#01 - Core Pacific']
+    assert sorted(names, key=module_rank) == ['Core Europe', '#01 - Core Pacific', '#02 - US #1', '#10 - UK #1',
+                                              'KS', 'Multi-Era Expansion #01']
