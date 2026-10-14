@@ -66,7 +66,7 @@ def mail_verify(user):
     url = security.link('verify', security.issue_token(user, 'verify_email'))
     with _lang(user.language):
         mailer.send(user.email, _('Confirm your email address'), _(
-            'Hi {username},\n\nConfirm your email address to activate your Warfighter Squad Builder account:\n\n'
+            'Hi {username},\n\nConfirm your email address to activate your Warfighter WWII - Squad Builder account:\n\n'
             '{link}\n\nThe link expires in 24 hours. If you did not sign up, ignore this email.',
             username=user.username, link=url))
 
@@ -74,7 +74,7 @@ def mail_verify(user):
 def mail_signup_attempt(user):
     with _lang(user.language):
         mailer.send(user.email, _('Sign-up attempt with your email'), _(
-            'Hi {username},\n\nSomeone tried to create a new Warfighter Squad Builder account with this email '
+            'Hi {username},\n\nSomeone tried to create a new Warfighter WWII - Squad Builder account with this email '
             'address, which already has an account (username: {username}).\n\nIf it was you, log in instead. '
             'Forgot your password? Reset it here:\n\n{link}\n\nIf it was not you, you can ignore this email.',
             username=user.username, link=security.link('forgot')))
@@ -84,7 +84,7 @@ def mail_reset(user):
     url = security.link('reset', security.issue_token(user, 'reset_password'))
     with _lang(user.language):
         mailer.send(user.email, _('Reset your password'), _(
-            'Hi {username},\n\nWe received a request to reset your Warfighter Squad Builder password. '
+            'Hi {username},\n\nWe received a request to reset your Warfighter WWII - Squad Builder password. '
             'Choose a new one here:\n\n{link}\n\nThe link expires in 30 minutes and works once. If you did not '
             'ask for this, ignore this email — your password stays the same.',
             username=user.username, link=url))
@@ -93,7 +93,7 @@ def mail_reset(user):
 def mail_password_changed(user):
     with _lang(user.language):
         mailer.send(user.email, _('Your password was changed'), _(
-            'Hi {username},\n\nThe password of your Warfighter Squad Builder account was just changed and your '
+            'Hi {username},\n\nThe password of your Warfighter WWII - Squad Builder account was just changed and your '
             'other sessions were signed out.\n\nIf this was not you, reset your password now:\n\n{link}',
             username=user.username, link=security.link('forgot')))
 

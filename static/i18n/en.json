@@ -1,6 +1,6 @@
 {
  "app.not_found_html": "Page not found. <a href=\"#/cards\">Go to Cards</a>",
- "app.title": "Warfighter Squad Builder",
+ "app.title": "Warfighter WWII - Squad Builder",
  "auth.create_account": "Create Account",
  "auth.email": "Email",
  "auth.full_name": "Full name",

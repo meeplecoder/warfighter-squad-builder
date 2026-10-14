@@ -126,7 +126,7 @@ def change_email():
         if User.query.filter_by(email=new_email).first():
             # Same response as success; only the owner of that address learns it is taken
             mailer.send(new_email, _('Email change attempt'), _(
-                'Hello,\n\nSomeone asked to move a Warfighter Squad Builder account to this address, but it '
+                'Hello,\n\nSomeone asked to move a Warfighter WWII - Squad Builder account to this address, but it '
                 'already belongs to an account. No change was made. If it was you, log in with this address instead.'))
         else:
             url = security.link('confirm-email', security.issue_token(user, 'change_email', new_email=new_email))
@@ -135,7 +135,7 @@ def change_email():
                 'Builder account:\n\n{link}\n\nThe link expires in 24 hours. If you did not ask for this, ignore '
                 'this email.', username=user.username, link=url))
             mailer.send(user.email, _('Email change requested'), _(
-                'Hi {username},\n\nSomeone asked to change the email of your Warfighter Squad Builder account to '
+                'Hi {username},\n\nSomeone asked to change the email of your Warfighter WWII - Squad Builder account to '
                 '{new_email}. Nothing changes until the new address is confirmed.\n\nIf this was not you, reset '
                 'your password now:\n\n{link}',
                 username=user.username, new_email=new_email, link=security.link('forgot')))
@@ -159,7 +159,7 @@ def confirm_email_change():
     db.session.commit()
     with _lang(user.language):
         mailer.send(old_email, _('Your email was changed'), _(
-            'Hi {username},\n\nThe email of your Warfighter Squad Builder account was changed to {new_email}.'
+            'Hi {username},\n\nThe email of your Warfighter WWII - Squad Builder account was changed to {new_email}.'
             '\n\nIf this was not you, contact the site administrator.',
             username=user.username, new_email=user.email))
     _info('email_changed', user)

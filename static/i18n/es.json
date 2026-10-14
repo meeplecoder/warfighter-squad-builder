@@ -1,6 +1,6 @@
 {
  "app.not_found_html": "Página no encontrada. <a href=\"#/cards\">Ir a Cartas</a>",
- "app.title": "Warfighter — Creador de Escuadras",
+ "app.title": "Warfighter WWII - Creador de Escuadras",
  "auth.create_account": "Crear cuenta",
  "auth.email": "Correo",
  "auth.full_name": "Nombre completo",

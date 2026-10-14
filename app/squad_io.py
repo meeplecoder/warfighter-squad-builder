@@ -59,7 +59,7 @@ def export_text(squad):
             lines.append(f"  ({_('Included')}: {names})")
     if squad.notes:
         lines += ['', f"{_('Strategy Notes')}:", squad.notes.strip()]
-    lines += ['', f"— Warfighter Squad Builder"]
+    lines += ['', f"— Warfighter WWII - Squad Builder"]
     return '\n'.join(lines) + '\n'
 
 
