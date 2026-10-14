@@ -1,0 +1,16 @@
+.git
+.github
+.env
+.venv
+venv
+__pycache__
+*.pyc
+.pytest_cache
+data
+instance
+*.db
+*.bundle
+static/card_images/*
+!static/card_images/README.md
+tests
+docs/screenshots

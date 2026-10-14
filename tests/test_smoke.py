@@ -109,3 +109,8 @@ def test_expansions_order_core_first():
     names = ['Multi-Era Expansion #01', '#10 - UK #1', 'KS', '#02 - US #1', 'Core Europe', '#01 - Core Pacific']
     assert sorted(names, key=module_rank) == ['Core Europe', '#01 - Core Pacific', '#02 - US #1', '#10 - UK #1',
                                               'KS', 'Multi-Era Expansion #01']
+
+
+def test_healthz(client):
+    r = client.get('/healthz')
+    assert r.status_code == 200 and r.get_json()['status'] == 'ok'
