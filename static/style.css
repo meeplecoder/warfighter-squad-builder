@@ -1583,3 +1583,12 @@ input:focus, select:focus, textarea:focus { outline-color: var(--kraft); }
 @media (max-width: 767px) {
   #sidebar .nav-link, #sidebar .nav-link.nav-sub { letter-spacing: .03em; padding: 8px 2px; font-size: 10.5px; }
 }
+
+/* ---- Role chip + user-menu header ------------------------------------- */
+.user-menu-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 16px 6px; }
+.user-menu-name { font-weight: 700; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.role-chip {
+  display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; border: 1px solid var(--border); color: var(--text-muted);
+}
+.role-chip.role-admin { color: var(--stripe); border-color: var(--stripe); }

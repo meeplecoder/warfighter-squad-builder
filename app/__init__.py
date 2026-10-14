@@ -92,6 +92,7 @@ def create_app():
     from app.translations import translations_bp
     from app.campaigns import campaigns_bp
     from app.generator import generator_bp
+    from app.roles import ADMIN_USERNAME
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(cards_bp, url_prefix='/api/cards')
@@ -251,6 +252,14 @@ def create_app():
                     conn.commit()
                 except Exception:
                     pass  # Column already exists
+            # Roles: only the account named `admin` is an admin (app/roles.py). The stored flag is legacy and never
+            # trusted; keep it consistent so nobody reading the database is misled.
+            try:
+                conn.execute(db.text("UPDATE users SET is_admin = CASE WHEN lower(username) = :a THEN 1 ELSE 0 END"),
+                             {'a': ADMIN_USERNAME})
+                conn.commit()
+            except Exception:
+                pass
 
             # Local auth hardening (spec/01_system.md §Authentication). Accounts that existed before
             # email verification are treated as verified.

@@ -543,7 +543,7 @@
  "stat.turns": "Turnos",
  "stat.xp": "XP",
  "stat.xp_value": "Valor XP",
- "tr.admin_only": "Solo el propietario del sitio puede editar traducciones.",
+ "tr.admin_only": "Solo el administrador puede abrir esta página.",
  "tr.all_statuses": "Todos los estados",
  "tr.count_one": "{n} carta",
  "tr.count_other": "{n} cartas",
@@ -760,5 +760,9 @@
  "campaign.export_txt_tip": "Archivo de texto plano, fácil de imprimir o pegar en cualquier sitio.",
  "campaign.export_md": "Markdown (.md)",
  "campaign.export_md_tip": "Con formato para notas, wikis, GitHub y mensajes de foro.",
- "campaign.export_footer": "Exportado desde {app} — {url}"
+ "campaign.export_footer": "Exportado desde {app} — {url}",
+ "auth.login_required": "Inicia sesión para usar el constructor de escuadrones, el generador y el constructor de campañas.",
+ "role.admin": "Administrador",
+ "role.user": "Usuario",
+ "profile.role": "Rol"
 }

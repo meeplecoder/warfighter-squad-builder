@@ -407,7 +407,7 @@
  "stat.turns": "Turns",
  "stat.xp": "XP",
  "stat.xp_value": "XP Value",
- "tr.admin_only": "Only the site owner can edit translations.",
+ "tr.admin_only": "Only the administrator can open this page.",
  "tr.all_statuses": "All statuses",
  "tr.count_one": "{n} card",
  "tr.count_other": "{n} cards",
@@ -624,5 +624,9 @@
  "campaign.export_txt_tip": "Plain text file, easy to print or paste anywhere.",
  "campaign.export_md": "Markdown (.md)",
  "campaign.export_md_tip": "Formatted for notes, wikis, GitHub and forum posts.",
- "campaign.export_footer": "Exported from {app} — {url}"
+ "campaign.export_footer": "Exported from {app} — {url}",
+ "auth.login_required": "Log in to use the squad builder, the generator and the campaign builder.",
+ "role.admin": "Admin",
+ "role.user": "User",
+ "profile.role": "Role"
 }
