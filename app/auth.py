@@ -208,6 +208,9 @@ def login():
     if not security.verify_password(user, password):
         _info('login_failed', user)
         return jsonify(error=_('Invalid credentials.')), 401
+    if user.disabled_at:
+        _info('login_disabled', user)
+        return jsonify(error=_('This account has been disabled. Contact the administrator.'), code='account_disabled'), 403
     if not user.email_verified_at:
         return jsonify(error=_('Please confirm your email address first. Check your inbox.'),
                        code='email_unverified'), 403

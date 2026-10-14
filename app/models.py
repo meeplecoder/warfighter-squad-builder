@@ -182,6 +182,7 @@ class User(UserMixin, db.Model):
     email_verified_at = db.Column(db.Text)                         # NULL = not confirmed; login refused
     session_version = db.Column(db.Integer, nullable=False, default=1)  # bump to revoke every session/remember cookie
     password_changed_at = db.Column(db.Text)
+    disabled_at = db.Column(db.Text)                               # set by the admin: login and sessions refused
 
     modules = db.relationship('UserModule', backref='user', cascade='all, delete-orphan')
     squads = db.relationship('Squad', foreign_keys='Squad.user_id', backref='owner', cascade='all, delete-orphan')
@@ -204,6 +205,13 @@ class User(UserMixin, db.Model):
         from app.roles import ROLE_ADMIN
         return self.role == ROLE_ADMIN
 
+    @property
+    def status(self):
+        """'disabled' (blocked by the admin) / 'pending' (email not confirmed yet) / 'enabled'."""
+        if self.disabled_at:
+            return 'disabled'
+        return 'enabled' if self.email_verified_at else 'pending'
+
     def get_id(self):
         # Session / remember cookies carry the version; load_user rejects stale ones
         return f'{self.id}:{self.session_version or 1}'
@@ -220,6 +228,7 @@ class User(UserMixin, db.Model):
             'role': self.role,
             'is_admin': self.is_admin,
             'email_verified': bool(self.email_verified_at),
+            'status': self.status,
         }
 
 

@@ -122,5 +122,11 @@
  "{where}: {type} card \"{ref}\" not found.": "{where}: carta {type} \"{ref}\" no encontrada.",
  "{where}: \"{ref}\" matches several cards; using {number}. Use the card number to choose.": "{where}: \"{ref}\" coincide con varias cartas; se usa {number}. Usa el número de carta para elegir.",
  "Unsupported language \"{lang}\"; left empty.": "Idioma no compatible \"{lang}\"; se deja vacío.",
- "This username is reserved.": "Este nombre de usuario está reservado."
+ "This username is reserved.": "Este nombre de usuario está reservado.",
+ "User not found.": "Usuario no encontrado.",
+ "Invalid status.": "Estado no válido.",
+ "The admin account cannot be renamed.": "La cuenta de administrador no se puede renombrar.",
+ "The admin account cannot be disabled.": "La cuenta de administrador no se puede desactivar.",
+ "The admin account cannot be deleted.": "La cuenta de administrador no se puede eliminar.",
+ "This account has been disabled. Contact the administrator.": "Esta cuenta ha sido desactivada. Contacta con el administrador."
 }

@@ -62,7 +62,7 @@ function route() {
   updateActiveNav(key === 'campaigns' && (rest[0] === 'new' || rest[1] === 'edit') ? 'campaigns/new' : key);
   // Tab title: section by default; detail / editor views refine it with setPageTitle
   const section = { cards: 'nav.cards', squads: 'nav.squads', builder: 'nav.builder', generator: 'nav.generator', campaigns: 'nav.campaigns',
-                    expansions: 'nav.expansions', profile: 'nav.profile', translations: 'nav.translations' }[key];
+                    expansions: 'nav.expansions', profile: 'nav.profile', translations: 'nav.translations', users: 'nav.users' }[key];
   setPageTitle(section ? t(section) : null);
   if (key !== 'login') loginReturn = null;             // a pending "return to" only lives while the login page is shown
   const handler = routes[key] || routes['404'];
@@ -175,6 +175,8 @@ function updateProfileLink() {
   if (link) link.style.display = currentUser ? '' : 'none';
   const trLink = document.getElementById('nav-translations');       // admin-only views
   if (trLink) trLink.style.display = isAdmin() ? '' : 'none';
+  const usersLink = document.getElementById('nav-users');
+  if (usersLink) usersLink.style.display = isAdmin() ? '' : 'none';
   // Builder, Generator and Campaign builder links are shown to everyone; opening one while logged out
   // goes to the login page (requireLogin) and comes back afterwards.
 }
@@ -255,6 +257,7 @@ const ICON_PATHS = {
   validate: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>',
   close:    '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
   heart:    '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
+  ban:      '<circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/>',
   plus:     '<path d="M12 5v14"/><path d="M5 12h14"/>',
   user:     '<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/>',
   layers:   '<path d="m12 3 9 5-9 5-9-5Z"/><path d="m3 13 9 5 9-5"/><path d="m3 17.500 9 5 9-5"/>',

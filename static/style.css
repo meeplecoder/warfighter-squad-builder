@@ -1592,3 +1592,20 @@ input:focus, select:focus, textarea:focus { outline-color: var(--kraft); }
   text-transform: uppercase; border: 1px solid var(--border); color: var(--text-muted);
 }
 .role-chip.role-admin { color: var(--stripe); border-color: var(--stripe); }
+
+/* Admin Users view */
+.user-badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.user-badge-enabled  { background: #13301f; color: #5fd08a; }
+.user-badge-pending  { background: var(--warning-bg); color: var(--warning); }
+.user-badge-disabled { background: #3a1d1a; color: #f08a7e; }
+.users-table tbody tr { cursor: default; }
+.users-table .user-email { word-break: break-all; }
+.users-table .user-date { white-space: nowrap; color: var(--text-muted); }
+.users-table .user-actions { white-space: nowrap; text-align: right; }
+.users-table .user-actions .btn-icon { padding: 4px; }
+.users-table .user-actions .icon { width: 16px; height: 16px; }
+.user-link { font-weight: 600; }
+.user-detail { max-width: 560px; }
+.user-facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 18px 0 0; font-size: 13px; }
+.user-facts dt { color: var(--text-muted); }
+.user-facts dd { margin: 0; }
