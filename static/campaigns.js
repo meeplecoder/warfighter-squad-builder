@@ -109,6 +109,11 @@ function missionLabel(m, i) {
 // ---------------------------------------------------------------------------
 // Export (TXT / Markdown) — built in the browser from the loaded campaign, in the UI language
 // ---------------------------------------------------------------------------
+// A flag emoji is two regional-indicator letters: export it as those letters ("🇺🇸" → "US"); not every system draws flags
+function flagsToText(text) {
+  return String(text || '').replace(/[\u{1F1E6}-\u{1F1FF}]{2}/gu, m => [...m].map(ch => String.fromCharCode(ch.codePointAt(0) - 0x1F1E6 + 65)).join(''));
+}
+
 // Card mentions "[[W-001]]" / "[[Card name]]" become the card's name
 function plainMentions(text, mentions = {}) {
   return String(text || '').replace(/\[\[([^\[\]\n]{1,80})\]\]/g, (_, k) => (mentions[k] ? mentions[k].name : k));
@@ -203,7 +208,7 @@ function campaignToText(c) {
     d.outcomes.forEach(o => L.push(`* ${o.label}${o.condition ? ` — ${o.condition}` : ''}`, ...(o.epilogue ? [`  ${o.epilogue.replace(/\n/g, '\n  ')}`] : []), ''));
   }
   L.push('', '-'.repeat(40), d.footer, '');
-  return L.join('\n').replace(/\n{3,}/g, '\n\n');
+  return flagsToText(L.join('\n')).replace(/\n{3,}/g, '\n\n');
 }
 
 function campaignToMarkdown(c) {
@@ -244,7 +249,7 @@ function campaignToMarkdown(c) {
     }
   }
   L.push('', '---', '', `*${d.footer}*`, '');
-  return L.join('\n').replace(/\n{3,}/g, '\n\n');
+  return flagsToText(L.join('\n')).replace(/\n{3,}/g, '\n\n');
 }
 
 function exportCampaign(c, format) {
