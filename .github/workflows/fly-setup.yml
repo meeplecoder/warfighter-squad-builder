@@ -1,0 +1,77 @@
+# Manual one-time Fly.io tasks, run from the GitHub "Actions" tab (no local fly CLI needed).
+#   Repository secrets used: FLY_API_TOKEN (required), RESEND_API_KEY (optional), ADMIN_PASSWORD (for create-admin)
+#   Optional repository secret SECRET_KEY; if missing a random one is generated the first time.
+# Delete this file if you deploy another way.
+name: Fly.io setup
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: 'What to do'
+        type: choice
+        options: [setup, create-admin, status]
+        default: setup
+      admin_email:
+        description: 'create-admin: email of the admin account'
+        required: false
+
+env:
+  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+jobs:
+  fly:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: status
+        if: inputs.task == 'status'
+        run: |
+          flyctl status
+          flyctl volumes list
+          flyctl ips list
+          flyctl secrets list
+
+      - name: setup (volume, secrets, one machine, IPs)
+        if: inputs.task == 'setup'
+        env:
+          GH_SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          GH_RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: |
+          APP=$(sed -n 's/^app *= *"\(.*\)"/\1/p' fly.toml)
+          REGION=$(sed -n 's/^primary_region *= *"\([a-z]*\)".*/\1/p' fly.toml)
+          VOL=$(sed -n 's/^ *source *= *"\(.*\)"/\1/p' fly.toml)
+          echo "app=$APP region=$REGION volume=$VOL"
+          # volume
+          if flyctl volumes list -a "$APP" --json | grep -q "\"name\": *\"$VOL\""; then
+            echo "volume $VOL exists"
+          else
+            flyctl volumes create "$VOL" -a "$APP" -r "$REGION" -n 1 --size 1 -y
+          fi
+          # secrets (staged: applied by the next deploy)
+          if [ -n "$GH_SECRET_KEY" ]; then
+            flyctl secrets set -a "$APP" --stage SECRET_KEY="$GH_SECRET_KEY"
+          elif ! flyctl secrets list -a "$APP" | grep -q SECRET_KEY; then
+            flyctl secrets set -a "$APP" --stage SECRET_KEY="$(openssl rand -base64 48 | tr -d '\n')"
+          fi
+          if [ -n "$GH_RESEND_API_KEY" ]; then
+            flyctl secrets set -a "$APP" --stage RESEND_API_KEY="$GH_RESEND_API_KEY"
+          fi
+          # public addresses (ignore "already allocated")
+          flyctl ips allocate-v4 --shared -a "$APP" -y || true
+          flyctl ips allocate-v6 -a "$APP" || true
+          # SQLite: exactly one machine
+          flyctl scale count 1 -a "$APP" -y || true
+          flyctl status -a "$APP" || true
+
+      - name: create-admin
+        if: inputs.task == 'create-admin'
+        env:
+          ADMIN_EMAIL: ${{ inputs.admin_email }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+        run: |
+          test -n "$ADMIN_EMAIL" && test -n "$ADMIN_PASSWORD" || { echo "need admin_email input and ADMIN_PASSWORD secret"; exit 1; }
+          B64=$(printf '%s' "$ADMIN_PASSWORD" | base64 -w0)
+          flyctl ssh console -C "sh -c 'ADMIN_PASSWORD=\$(echo $B64 | base64 -d) python scripts/create_admin.py --email $ADMIN_EMAIL'"
