@@ -4,29 +4,30 @@
    ===================================================================== */
 
 :root {
-  /* Warfighter palette — extracted from the card art itself (soldier + mission cards):
-     dark umber borders, mustard / ochre title banner, tan map-paper, khaki + cream notes, olive drab (minor).
-     Emphasis uses "rubber-stamp ink" colours: faded blue (links), red (danger), green (success). */
-  --bg: #18130c;            /* umber-black */
-  --surface: #221b11;
-  --surface2: #2e2517;
-  --border: #4e3e1f;        /* card border brown */
-  --text: #ecdcbf;          /* card cream */
-  --text-muted: #a99a78;    /* khaki, aged */
-  --accent: #c4a055;        /* mission-banner mustard */
-  --accent-hover: #d3b068;
-  --accent-light: #ddb764;
-  --on-accent: #2a1f10;     /* ink on mustard */
+  /* Warfighter palette. Neutral warm charcoal for the big areas; muted navy for actions and charts;
+     card-art mustard / tan used sparingly (header stripe, title rules, Mission badge);
+     "rubber-stamp ink" colours (blue links, red danger, green success) for emphasis. */
+  --bg: #151412;
+  --surface: #1f1d1a;
+  --surface2: #2a2723;
+  --border: #433e36;
+  --text: #e8e4da;          /* off-white paper */
+  --text-muted: #a39d90;    /* faded khaki-grey */
+  --accent: #4f6a84;        /* muted navy / field blue */
+  --accent-hover: #5f7d99;
+  --accent-light: #a9bfd3;
+  --on-accent: #fbf8ef;
   --danger: #b04a2f;        /* red stamp */
   --danger-hover: #d9694a;
   --warning: #e29a3c;
   --warning-bg: #2f2412;
   --success: #7fa86a;       /* green stamp */
-  --link: #8fb0cc;          /* faded blue stamp ink */
-  --olive: #8d863e;         /* soldier-card olive (minor accent) */
+  --link: #94b4d0;          /* faded blue stamp ink */
+  --stripe: #a98a4c;        /* mission-banner mustard, as a thin accent only */
+  --olive: #8d863e;
   --kraft: #8d6c3b;         /* tan frame */
-  --kraft-dark: #614c28;
-  --paper: #ecdcbf;
+  --kraft-dark: #504b42;
+  --paper: #e8e0cc;
   --paper-edge: #c2b68c;
   --ink: #2a1f10;
   --font-type: 'Special Elite', 'Courier New', monospace;
@@ -768,7 +769,7 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
 }
 .quick-filter:hover { background: var(--border); color: var(--text); }
 .quick-filter.active { background: #3a1a1a; border-color: var(--danger); color: var(--danger); }
-.quick-filter.active-accent { background: #2d2416; border-color: var(--accent); color: var(--accent-light); }
+.quick-filter.active-accent { background: #222a33; border-color: var(--accent); color: var(--accent-light); }
 .quick-filter.active-purple { background: #2a1a3a; border-color: #9b59b6; color: #c39bd3; }
 .quick-filter.active-blue { background: #14263a; border-color: #3498db; color: #85c1e9; }
 
@@ -1205,14 +1206,14 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
 
 
 /* =====================================================================
-   Warfighter theme — game look (card browns, mustard, kraft paper, parchment labels,
+   Warfighter theme — game look (charcoal, navy, kraft paper, parchment labels,
    typewriter text, rubber stamps). Overrides the base rules above.
    ===================================================================== */
 body {
   background-color: var(--bg);
   background-image:
-    radial-gradient(ellipse at 20% 0%, rgba(196, 160, 85, .10), transparent 55%),
-    radial-gradient(ellipse at 100% 100%, rgba(160, 122, 74, .12), transparent 50%),
+    radial-gradient(ellipse at 20% 0%, rgba(79, 106, 132, .10), transparent 55%),
+    radial-gradient(ellipse at 100% 100%, rgba(160, 122, 74, .05), transparent 50%),
     repeating-linear-gradient(45deg, rgba(255, 255, 255, .012) 0 2px, transparent 2px 5px);
   background-attachment: fixed;
 }
@@ -1240,28 +1241,28 @@ h1.page-title, .squad-title, #app-main > h1, #app-main > .flex > h1, .auth-form-
   display: inline-block;
 }
 
-/* Header: card-border brown with a mustard stripe */
+/* Header: dark charcoal with a thin mustard stripe */
 #app-header {
-  background: linear-gradient(180deg, #4e3e1f 0%, #382913 100%);
-  border-bottom: 3px solid var(--accent);
+  background: linear-gradient(180deg, #3d382f 0%, #2b2721 100%);
+  border-bottom: 3px solid var(--stripe);
   box-shadow: 0 2px 0 var(--kraft-dark), 0 4px 12px rgba(0, 0, 0, .5);
 }
 .header-brand { color: var(--paper); font-size: 1.15rem; text-shadow: 1px 1px 0 rgba(0, 0, 0, .55); }
 #header-auth .username { color: var(--paper-edge); }
 #app-header .btn-ghost, #app-header select { border-color: rgba(236, 226, 198, .35); background: rgba(0, 0, 0, .18); color: var(--paper); }
 
-/* Sidebar: dark umber with stencil nav */
+/* Sidebar: dark charcoal with stencil nav */
 #sidebar {
-  background: linear-gradient(180deg, #1c160e, #120e08);
+  background: linear-gradient(180deg, #161513, #0f0e0d);
   border-right: 2px solid var(--kraft-dark);
 }
 #sidebar .nav-link {
   font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted);
 }
 #sidebar .nav-link.nav-sub { font-size: 11.5px; letter-spacing: .06em; }
-#sidebar .nav-link:hover { color: var(--paper); background: rgba(160, 122, 74, .12); }
+#sidebar .nav-link:hover { color: var(--paper); background: rgba(255, 255, 255, .05); }
 #sidebar .nav-link.active {
-  color: var(--paper); background: #3a2d17;
+  color: var(--paper); background: #2f2b25;
   border-left-color: var(--kraft);
 }
 
@@ -1278,18 +1279,18 @@ h1.page-title, .squad-title, #app-main > h1, #app-main > .flex > h1, .auth-form-
 .btn { border-radius: var(--radius); font-weight: 700; letter-spacing: .05em; text-transform: uppercase; font-size: 12.5px; }
 .btn-sm { font-size: 11.5px; }
 .btn-primary {
-  background: linear-gradient(180deg, #d1ae63, #b38d47); color: var(--on-accent); font-weight: 700;
-  border: 1px solid #7a5c2c; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), 0 1px 0 rgba(0, 0, 0, .4);
+  background: linear-gradient(180deg, #4f6a84, #3b5167); color: var(--on-accent); font-weight: 700;
+  border: 1px solid #2b3b4b; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), 0 1px 0 rgba(0, 0, 0, .4);
 }
-.btn-primary:hover { background: linear-gradient(180deg, #dcbb74, #c19a52); }
+.btn-primary:hover { background: linear-gradient(180deg, #587590, #415b73); }
 .btn-ghost { border-color: var(--kraft-dark); color: var(--text); }
-.btn-ghost:hover { background: rgba(160, 122, 74, .14); border-color: var(--kraft); }
+.btn-ghost:hover { background: rgba(255, 255, 255, .06); border-color: var(--text-muted); }
 .btn-danger { background: var(--danger); color: var(--paper); }
 .btn-icon { text-transform: none; }
 .page-toolbar { border-bottom-color: var(--kraft-dark); }
 
 /* Inputs */
-input, select, textarea { background: #120e08; border-color: var(--border); color: var(--text); }
+input, select, textarea { background: #0f0e0d; border-color: var(--border); color: var(--text); }
 input::placeholder, textarea::placeholder { color: #6f6852; }
 input:focus, select:focus, textarea:focus { outline-color: var(--kraft); }
 
@@ -1302,13 +1303,13 @@ input:focus, select:focus, textarea:focus { outline-color: var(--kraft); }
 .ce-section h2, .profile-section h2 {
   color: var(--paper); border-bottom: 1px dashed var(--kraft-dark); padding-bottom: 6px;
 }
-.modal { background: linear-gradient(180deg, #2a2216, var(--surface)); border-width: 2px; }
+.modal { background: linear-gradient(180deg, #26231f, var(--surface)); border-width: 2px; }
 .modal h2 { color: var(--paper); }
 .stat-item, .mission-attr { border-color: var(--kraft-dark); }
 
 /* Tables: dark olive header strip */
 .data-table th {
-  background: #3a2d17;
+  background: #2f2b25;
   color: var(--accent-light); text-transform: uppercase; font-size: 11.5px; font-weight: 700; letter-spacing: .07em;
   border-bottom: 2px solid var(--kraft-dark);
 }
@@ -1316,7 +1317,7 @@ input:focus, select:focus, textarea:focus { outline-color: var(--kraft); }
 .data-table .sort-header.sort-active { color: var(--link); }
 .data-table td { border-bottom-color: rgba(107, 82, 51, .45); }
 .data-table tbody tr:nth-child(even) { background: rgba(255, 255, 255, .015); }
-.data-table tbody tr:hover { background: rgba(196, 160, 85, .10); }
+.data-table tbody tr:hover { background: rgba(79, 106, 132, .10); }
 
 /* Quick filters and tabs */
 .quick-filter { border-radius: 2px; text-transform: uppercase; letter-spacing: .05em; font-weight: 700; font-size: 11.5px; }
@@ -1374,7 +1375,7 @@ input:focus, select:focus, textarea:focus { outline-color: var(--kraft); }
 .metrics-radar { width: 280px; max-width: 100%; flex: 0 0 auto; overflow: visible; }
 .mr-ring { fill: none; stroke: var(--border); stroke-width: 1; }
 .mr-spoke { stroke: var(--border); stroke-width: 1; }
-.mr-shape { fill: rgba(196, 160, 85, .35); stroke: var(--accent-light); stroke-width: 1.5; stroke-linejoin: round; }
+.mr-shape { fill: rgba(79, 106, 132, .40); stroke: var(--accent-light); stroke-width: 1.5; stroke-linejoin: round; }
 .mr-dot { fill: var(--accent-light); }
 .mr-label { fill: var(--text-muted); font-size: 9.5px; font-family: var(--font-body); }
 .metrics-list-wrap { flex: 1 1 280px; min-width: 240px; }
@@ -1459,7 +1460,7 @@ input:focus, select:focus, textarea:focus { outline-color: var(--kraft); }
   background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-top: 0; padding: 6px 8px;
 }
 .gen-pick-item:first-child { border-top: 1px solid var(--border); }
-.gen-pick-item:hover { background: #3a2f1d; }
+.gen-pick-item:hover { background: #34302a; }
 
 .gen-result { min-width: 0; }
 .gen-empty {
