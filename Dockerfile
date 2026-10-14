@@ -1,15 +1,22 @@
-FROM python:3.12.15 AS builder
+# Warfighter WWII - Squad Builder — container image (any Docker host; see docs/deploy-docker.md)
+FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
-WORKDIR /app
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PORT=8080 \
+    DATABASE_URL=sqlite:////data/warfighter.db
 
-
-RUN python -m venv .venv
-COPY requirements.txt ./
-RUN .venv/bin/pip install -r requirements.txt
-FROM python:3.12.15-slim
 WORKDIR /app
-COPY --from=builder /app/.venv .venv/
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
 COPY . .
-CMD ["/app/.venv/bin/flask", "run", "--host=0.0.0.0", "--port=8080"]
+RUN useradd --system --no-create-home app \
+    && mkdir -p /data \
+    && chown -R app:app /app /data \
+    && chmod +x docker/entrypoint.sh
+
+VOLUME /data
+EXPOSE 8080
+ENTRYPOINT ["docker/entrypoint.sh"]
