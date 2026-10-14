@@ -1,11 +1,12 @@
 # Card data
 
-The application needs a **cards CSV**. This repository ships only a small *fictional* demo set,
-[`examples/cards.sample.csv`](../examples/cards.sample.csv), because the real Warfighter cards are the property of
-DVG (see [NOTICE.md](../NOTICE.md)). If you own the game you can transcribe your own cards into the same format for
-personal use. Please do not publish or share the resulting file.
+The application loads its cards from a **CSV file**. The repository includes `cards/warfighter_cards.csv` (names, stats and
+card text; DVG's content — see [NOTICE.md](../NOTICE.md)), and a small *fictional* demo set,
+[`examples/cards.sample.csv`](../examples/cards.sample.csv), that the tests and screenshots use. Card **images** are not
+included. You can also import your own file in the same format:
 
 ```bash
+python scripts/import_cards.py                        # cards/warfighter_cards.csv
 python scripts/import_cards.py --csv path/to/cards.csv
 ```
 
@@ -21,7 +22,7 @@ The first row is the header; columns are matched **by name**. The first (unnamed
 | `Nation` | no | `US`, `UK`, `German`, `Japan`, … Empty = usable by every nation. Variants such as `US Airborne` are grouped under their base nation |
 | `Stats` | no | One `KEY:value` per line, see below |
 | `Notes` | no | The card text. Weapon range/mode tables, soldier health/action tables and the objective Hostile table are written in the notes and parsed from them |
-| `Module` | yes* | The product the card belongs to (the "collection" unit). *If empty, it is inferred from other cards with the same number prefix |
+| `Module` | yes* | The expansion (box / product) the card belongs to. It is the unit of **My Expansions**: users tick the expansions they own, and the generator and pickers use only those. *If empty, it is inferred from other cards with the same number prefix. `Core Europe` is always listed first, then boxes by their `#NN` number |
 | `Vassal Module` | no | Informational |
 
 ## Types the importer understands

@@ -10,4 +10,4 @@ labels: enhancement
 
 **Ideas for how it could work** (optional)
 
-> Please describe rules in your own words — do not paste DVG card text.
+> Please describe rules in your own words.

@@ -2,7 +2,7 @@
 
 ## This is a fan-made project
 
-**Warfighter Squad Builder is an unofficial, fan-made web application. It is not affiliated with, authorised,
+**Warfighter WWII - Squad Builder is an unofficial, fan-made web application. It is not affiliated with, authorised,
 sponsored or endorsed by DVG (Dan Verssen Games).**
 
 *Warfighter* (including *Warfighter WWII* and all related games, expansions, card names and texts, rules, artwork,
@@ -14,18 +14,17 @@ to DVG. If you enjoy the game, please support the publisher: <https://www.dvg.co
 | Part | Terms |
 |---|---|
 | Source code and documentation in this repository | [MIT License](LICENSE) |
-| Warfighter cards, card text, rules text, artwork, logos, names | **Not covered** — owned by DVG. Not included in this repository |
-| `app/metric_reference.json` | Aggregate statistics only (distributions of Hostile Cover/Penetration, Location entrance costs, and metric values of reference squads) — numbers, no card text. Rebuild it from your own data with `scripts/build_metric_reference.py` |
+| `cards/warfighter_cards.csv` — card names, stats, card text, module names | **Not covered by the MIT License.** Owned by DVG. A fan transcription included only so that players can use the app; see below |
+| Warfighter card images, scans, artwork, logos, rulebook text | **Not included** and not covered — owned by DVG |
+| `app/metric_reference.json` | Aggregate statistics only (distributions of Hostile Cover/Penetration, Location entrance costs, metric values of reference squads) — numbers, no card text |
 | The demo card set (`examples/cards.sample.csv`) | Entirely fictional placeholder cards written for this project (MIT) |
 
-The repository deliberately contains **no** Warfighter card database, scans, images, or rulebook text. To use the app
-with your own copy of the game you supply your own card data and images; see [docs/card_data.md](docs/card_data.md).
-Please do not open issues or pull requests that attach DVG's card text, scans or artwork, and do not publicly
-redistribute them from a deployment you run.
-
-If you host a public instance, keep the footer notice, and consider a non-commercial, no-ads setup in the spirit of
-fan content. If DVG (or any rights holder) asks for changes or removal, they will be made promptly — please open an
-issue or contact the maintainer.
+The card CSV is included for the convenience of people who own the game. It is DVG's intellectual property and remains
+so; no license to it is granted by this repository. **If DVG (or any rights holder) asks for it to be changed or removed,
+it will be removed promptly** — please open an issue or contact the maintainer. Card images are never part of this
+repository: to see them in the app you add your own scans locally (they are git-ignored). Please do not commit or publicly
+redistribute scans or artwork, and if you host a public instance consider a non-commercial, no-ads setup in the spirit of
+fan content and keep the footer notice.
 
 ## Community content included with credit
 

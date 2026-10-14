@@ -16,5 +16,5 @@ labels: bug
 
 **Environment** (browser/OS; for server problems: Python version and how you run the app)
 
-> Please do not attach DVG card text, scans or artwork. Use the fictional demo set (`examples/cards.sample.csv`) to
+> Please do not attach card scans or artwork. Use the fictional demo set (`examples/cards.sample.csv`) to
 > reproduce if you can. Security problems: see SECURITY.md, not a public issue.

@@ -1,4 +1,4 @@
-# Installing and running Warfighter Squad Builder
+# Installing and running Warfighter WWII - Squad Builder
 
 This guide covers a local development setup, loading card data, and a basic production deployment.
 
@@ -30,32 +30,31 @@ variable is described in the table in [section 8](#8-configuration-reference).
 
 ## 4. Load card data
 
-The database starts empty. You need a cards CSV.
-
-**Try it with the demo set** (fictional cards, included):
+The database starts empty. The repository ships the card data as `cards/warfighter_cards.csv`, so:
 
 ```bash
-python scripts/import_cards.py --csv examples/cards.sample.csv
+python scripts/import_cards.py
 ```
 
-**Use your own Warfighter data.** The repository does not ship DVG's cards (see [NOTICE.md](NOTICE.md)). Create a CSV in
-the format described in [docs/card_data.md](docs/card_data.md) and import it the same way:
+To use a different file (your own transcription, or a newer data set):
 
 ```bash
-python scripts/import_cards.py --csv /path/to/my_cards.csv
+python scripts/import_cards.py --csv /path/to/my_cards.csv      # format: docs/card_data.md
+python scripts/import_cards.py --csv examples/cards.sample.csv  # the small fictional demo set
 ```
 
 The import is **idempotent**: run it again after editing the CSV and cards are updated in place. It also records each
 soldier's pre-printed gear and skills (`card_associations`), so no extra step is needed.
 
 *Advanced:* `python scripts/build_metric_reference.py` rebuilds the reference statistics behind the squad metrics
-(`app/metric_reference.json`, which ships with the app) from your CSV's Hostile and Location cards and from the squads in
+(`app/metric_reference.json`, which ships with the app) from the CSV's Hostile and Location cards and from the squads in
 your database. It **overwrites that tracked file**, so only run it if you need metrics calibrated to your own data.
 
 ### Card images (optional)
 
-Put your own images in `static/card_images/<lang>/<prefix>/<number>.jpg` (all lowercase, e.g. `en/w/w-001.jpg`). See
-[static/card_images/README.md](static/card_images/README.md). Images are ignored by git — do not commit or publicly
+Card images are **not** part of the repository. If you own the game, put your own scans in
+`static/card_images/<lang>/<prefix>/<number>.jpg` (all lowercase, e.g. `en/w/w-001.jpg`). See
+[static/card_images/README.md](static/card_images/README.md). Images are ignored by git — never commit or publicly
 redistribute them. Re-run the card import after adding images.
 
 ## 5. Run
@@ -80,10 +79,10 @@ The card-translation editor is admin-only:
 python scripts/make_admin.py YOUR_USERNAME
 ```
 
-### Choose the modules you own
+### Choose the expansions you own
 
-The generator and pickers only use cards from the modules you own. Open **Profile** and tick them. Until you save a
-selection, every module counts as owned.
+The generator and the card pickers only use cards from the expansions you own. Open the user menu (the icon next to your
+name, top right) → **My Expansions** and tick them. Until you save a selection, every expansion counts as owned.
 
 ## 6. Optional data
 
@@ -110,7 +109,7 @@ The tests create a temporary database from the demo cards, so they never touch y
 | `DEBUG` | `false` | `true` for development. With `false` the app refuses to start with an unsafe configuration |
 | `SECRET_KEY` | dev placeholder | **Required in production**: random, 32+ characters (`python -c "import secrets; print(secrets.token_urlsafe(48))"`) |
 | `DATABASE_URL` | `sqlite:///data/warfighter.db` | SQLAlchemy URL; the SQLite file lives in `data/` (git-ignored) |
-| `CARDS_CSV` | `../cards2.csv` | Default CSV for `import_cards.py` (or pass `--csv`) |
+| `CARDS_CSV` | `cards/warfighter_cards.csv` | Default CSV for `import_cards.py` (or pass `--csv`) |
 | `APP_BASE_URL` | — | Public origin used in emailed links (e.g. `https://squads.example.com`). **Required when `DEBUG=false`** |
 | `HOST`, `PORT` | `127.0.0.1`, `5000` | Development server only |
 | `LOCAL_REGISTRATION_ENABLED` | `true` | Set `false` to close sign-ups |
@@ -118,7 +117,7 @@ The tests create a temporary database from the demo cards, so they never touch y
 | `COOKIE_SECURE` | `true` unless `DEBUG` | Send session cookies over HTTPS only |
 | `PROXY_FIX_HOPS` | `0` | Number of reverse proxies in front of the app (client IP and https scheme) |
 | `MAIL_BACKEND` | `console` | `console` (prints), `smtp`, or `resend` |
-| `MAIL_FROM` | `Warfighter Squad Builder <no-reply@localhost>` | Sender address |
+| `MAIL_FROM` | `Warfighter WWII - Squad Builder <no-reply@localhost>` | Sender address |
 | `RESEND_API_KEY` | — | For `MAIL_BACKEND=resend` |
 | `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_USE_SSL` | — / `587` | For `MAIL_BACKEND=smtp` |
 | `TTS_IMAGE_BASE_URL`, `TTS_CARD_BACK_URL` | — | Public URLs of card images for the Tabletop Simulator export |
@@ -147,6 +146,6 @@ The built-in server is for development. A minimal production setup:
 |---|---|
 | `RuntimeError: APP_BASE_URL must be set` or `SECRET_KEY must be…` | You are running with `DEBUG=false`; set the variables above, or use `DEBUG=true` for local work |
 | `ERROR: CSV file not found` | Pass `--csv path/to/file.csv`, or try `--csv examples/cards.sample.csv` |
-| The generator says you own no Player Soldier for a nation | Import a CSV that has Player Soldiers for that nation, and check your modules in **Profile** |
+| The generator says you own no Player Soldier for a nation | Check **My Expansions** (and that your CSV has Player Soldiers for that nation) |
 | No verification email arrives | In development it is printed in the server terminal (`MAIL_BACKEND=console`) |
 | `No module named venv` / `ensurepip` | `sudo apt install python3-venv` (Debian/Ubuntu) |

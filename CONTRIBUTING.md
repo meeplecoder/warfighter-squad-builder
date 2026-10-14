@@ -8,9 +8,10 @@ fixes, translations, documentation and code.
 This project is **unofficial**. *Warfighter* and everything that makes up its cards belongs to DVG (see
 [NOTICE.md](NOTICE.md)). Therefore:
 
-- **Never** add DVG's card text, rulebook text, card scans or artwork to the repository, an issue or a pull request —
-  not even "just a few cards". Use the fictional demo set in [`examples/`](examples/cards.sample.csv) for tests,
-  screenshots and bug reports.
+- **Never** add card images, scans, artwork or rulebook text to the repository, an issue or a pull request. Use the
+  fictional demo set in [`examples/`](examples/cards.sample.csv) for tests, screenshots and bug reports.
+- Corrections to the card data are welcome as changes to `cards/warfighter_cards.csv` (keep the format; one card per row;
+  say which printed card you checked). Do not add text from outside the cards themselves.
 - Describe rules problems in your own words and point at the page of the rulebook.
 - Third-party fan content (campaigns, squad lists) may only be added with its author's permission and credit.
 
