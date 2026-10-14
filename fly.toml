@@ -1,45 +1,46 @@
-# Fly.io configuration — the only Fly-specific file besides .github/workflows/deploy.yml.
-# See docs/deploy-fly.md. Other hosts: docs/deploy-docker.md.
-app = "warfighter-squad-builder"
-primary_region = "mad"        # change to the region nearest your players (fly platform regions)
+# fly.toml app configuration file generated for warfighterww2 on 2026-10-14T20:08:42Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'warfighterww2'
+primary_region = 'cdg'
 
 [build]
-  dockerfile = "Dockerfile"
+  dockerfile = 'Dockerfile'
+
+[deploy]
+  strategy = 'immediate'
 
 [env]
-  DEBUG = "false"
-  PROXY_FIX_HOPS = "1"
-  # Change if you use your own domain (then also `fly certs add your.domain`)
-  APP_BASE_URL = "https://warfighter-squad-builder.fly.dev"
-  DATABASE_URL = "sqlite:////data/warfighter.db"
-  MAIL_BACKEND = "resend"
-  # MAIL_FROM = "Warfighter WWII - Squad Builder <no-reply@your.domain>"
-  # Secrets (never here):  fly secrets set SECRET_KEY=... RESEND_API_KEY=...
+  APP_BASE_URL = 'https://warfighter-squad-builder.fly.dev'
+  DATABASE_URL = 'sqlite:////data/warfighter.db'
+  DEBUG = 'false'
+  MAIL_BACKEND = 'resend'
+  PROXY_FIX_HOPS = '1'
 
-[mounts]
-  source = "wf_data"
-  destination = "/data"
-  initial_size = "1gb"
+[[mounts]]
+  source = 'wf_data'
+  destination = '/data'
+  initial_size = '1gb'
 
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = "off"     # always on; SQLite lives on the volume of this one machine
+  auto_stop_machines = 'off'
   auto_start_machines = true
   min_machines_running = 1
 
   [[http_service.checks]]
-    method = "GET"
-    path = "/healthz"
-    interval = "30s"
-    timeout = "5s"
-    grace_period = "30s"
-    [http_service.checks.headers]
-      X-Forwarded-Proto = "https"
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '30s'
+    method = 'GET'
+    path = '/healthz'
 
-[deploy]
-  strategy = "immediate"         # canary/bluegreen do not work with a volume
+    [http_service.checks.headers]
+      X-Forwarded-Proto = 'https'
 
 [[vm]]
-  size = "shared-cpu-1x"
-  memory = "512mb"
+  size = 'shared-cpu-1x'
+  memory = '512mb'
