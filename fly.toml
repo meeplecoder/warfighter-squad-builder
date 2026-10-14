@@ -12,7 +12,9 @@ primary_region = "ams"        # change to the region nearest your players (fly p
   # Change if you use your own domain (then also `fly certs add your.domain`)
   APP_BASE_URL = "https://warfighterww2.fly.dev"
   MAIL_BACKEND = "resend"
-  # MAIL_FROM = "Warfighter WWII - Squad Builder <no-reply@your.domain>"
+  # Test sender: Resend delivers it only to the e-mail of your own Resend account. For real users verify a domain
+  # in Resend and use e.g. "Warfighter WWII - Squad Builder <no-reply@your.domain>"
+  MAIL_FROM = "Warfighter WWII - Squad Builder <onboarding@resend.dev>"
   # Secrets (never here):  fly secrets set SECRET_KEY=... RESEND_API_KEY=...
 
 [mounts]
