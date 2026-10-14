@@ -65,7 +65,7 @@ def create_app():
         if not uid.isdigit() or not version.isdigit():
             return None
         user = db.session.get(User, int(uid))
-        if not user or (user.session_version or 1) != int(version) or not user.email_verified_at:
+        if not user or (user.session_version or 1) != int(version) or not user.email_verified_at or user.disabled_at:
             return None
         return user
 
@@ -95,6 +95,7 @@ def create_app():
     from app.translations import translations_bp
     from app.campaigns import campaigns_bp
     from app.generator import generator_bp
+    from app.admin_users import admin_users_bp
     from app.roles import ADMIN_USERNAME
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
@@ -104,6 +105,7 @@ def create_app():
     app.register_blueprint(translations_bp, url_prefix='/api/translations')
     app.register_blueprint(campaigns_bp, url_prefix='/api/campaigns')
     app.register_blueprint(generator_bp, url_prefix='/api/generator')
+    app.register_blueprint(admin_users_bp, url_prefix='/api/admin/users')
 
     @app.route('/healthz')
     def healthz():
@@ -284,6 +286,7 @@ def create_app():
                 "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_username_lower ON users (username_lower)",
                 "ALTER TABLE users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 1",
                 "ALTER TABLE users ADD COLUMN password_changed_at TEXT",
+                "ALTER TABLE users ADD COLUMN disabled_at TEXT",
             ):
                 try:
                     conn.execute(db.text(ddl))

@@ -29,7 +29,8 @@ and validate squads, **generate a squad for a mission automatically**, and desig
   them from YAML files ([format](docs/campaign_yaml.md)) and export any campaign as **text or Markdown**.
 - **Accounts and roles** — email-verified accounts and password reset. Two roles: *User* (manages their own squads and
   campaigns) and *Admin* (the `admin` account: can edit any squad or campaign and open admin-only views such as the
-  translation editor).
+  translation editor and the **Users** page: list, enable/disable, delete and edit any account, set a new
+  password without ever seeing one).
 - **Collection** — **My Expansions** (user menu, top right, or the
   left menu) records which expansions you own; the squad generator and the card pickers only use those.
 - **Translations** — English and Spanish UI; card texts can be translated (optionally machine-drafted) and reviewed in

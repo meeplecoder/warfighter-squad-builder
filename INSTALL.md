@@ -75,7 +75,8 @@ terminal** where the server runs — open the link it shows to activate the acco
 
 There are two roles: **User** and **Admin**. The Admin is the single account named **`admin`** (the name is reserved,
 so nobody can register it). The admin can edit, publish and delete **any** squad and campaign, sees every draft, and is
-the only one who can open the translation editor (and any future admin views). Everyone else manages only their own
+the only one who can open the translation editor and the **Users** page (list every account; enable, disable or delete it;
+edit any field; set a new password — passwords are never shown). Unconfirmed sign-ups are removed automatically after 7 days. Everyone else manages only their own
 squads and campaigns. Create the account, or reset its password, from the command line:
 
 ```bash
