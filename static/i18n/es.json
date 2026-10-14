@@ -753,5 +753,12 @@
  "profile.expansions_intro": "Tienes {owned} de {total} expansiones. Deciden qué cartas usan el generador de escuadrones y los selectores.",
  "profile.manage_expansions": "Gestionar mis expansiones",
  "nav.expansions_short": "Expansiones",
- "app.brand": "Warfighter WWII ★ Creador de Escuadras"
+ "app.brand": "Warfighter WWII ★ Creador de Escuadras",
+ "campaign.mission": "Carta de misión",
+ "campaign.branches": "Qué pasa después",
+ "campaign.export_txt": "Texto (.txt)",
+ "campaign.export_txt_tip": "Archivo de texto plano, fácil de imprimir o pegar en cualquier sitio.",
+ "campaign.export_md": "Markdown (.md)",
+ "campaign.export_md_tip": "Con formato para notas, wikis, GitHub y mensajes de foro.",
+ "campaign.export_footer": "Exportado desde {app} — {url}"
 }

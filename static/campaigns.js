@@ -106,6 +106,153 @@ function missionLabel(m, i) {
   return [m.code || String(i + 1), m.title || t('campaign.untitled_mission')].join(' · ');
 }
 
+// ---------------------------------------------------------------------------
+// Export (TXT / Markdown) — built in the browser from the loaded campaign, in the UI language
+// ---------------------------------------------------------------------------
+// Card mentions "[[W-001]]" / "[[Card name]]" become the card's name
+function plainMentions(text, mentions = {}) {
+  return String(text || '').replace(/\[\[([^\[\]\n]{1,80})\]\]/g, (_, k) => (mentions[k] ? mentions[k].name : k));
+}
+
+// One neutral document model; the two renderers below turn it into text or Markdown
+function campaignDoc(c) {
+  const s = c.settings || {}, force = s.force || {}, men = c.mentions || {};
+  const P = txt => plainMentions(txt, men).trim();
+  const byId = Object.fromEntries(c.missions.map((m, i) => [m.key, { m, i }]));
+  const facts = [
+    c.nation ? [t('col.nation'), tv('nation', c.nation)] : null,
+    c.language ? [t('campaign.language'), I18N.NAMES[c.language] || c.language] : null,
+    c.theater ? [t('stat.theater'), c.theater] : null,
+    c.enemy ? [t('campaign.enemy'), c.enemy] : null,
+    c.period ? [t('campaign.period'), c.period] : null,
+    [t('campaign.missions'), String(c.missions.length)],
+    [t('campaign.flow'), t('campaign.flow.' + c.flow_type)],
+    force.squad_size ? [t('campaign.squad_size'), String(force.squad_size)] : null,
+    c.modules.length ? [t('campaign.modules'), c.modules.map(m => tv('module', m)).join(', ')] : null,
+  ].filter(Boolean);
+  const carries = CAMPAIGN_PERSISTENCE.filter(k => (s.persistence || {})[k]).map(k => t('campaign.persist.' + k));
+  const missions = c.missions.map((m, i) => {
+    const card = m.mission;
+    const stats = card ? [
+      `${m.rp_override ?? card.resources} ${t('stat.rp')}`,
+      card.time != null || m.time_override != null ? `${m.time_override ?? card.time} ${t('stat.turns')}` : null,
+      card.objective_position != null ? `${t('stat.obj_loc_short')}: ${card.objective_position}` : null,
+      `${t('stat.loadout')}: ${(v => (v >= 0 ? '+' : '') + v)(m.loadout_override ?? card.loadout_modifier ?? 0)}`,
+    ].filter(Boolean).join(' · ') : '';
+    const refs = [
+      card ? [t('campaign.mission'), card.name + (card.mission_type && card.mission_type !== 'Standard' ? ` (${tv('card_subtype', card.mission_type)})` : '') + (stats ? ` — ${stats}` : '')] : null,
+      m.objective ? [t('campaign.objective'), m.objective.name] : null,
+      m.situation ? [t('squad.situation'), m.situation.name] : null,
+      m.squad ? [t('campaign.squad'), `${m.squad.name} — ${m.squad.rp_total} ${t('stat.rp')}`] : null,
+    ].filter(Boolean);
+    const out = c.links.filter(l => l.from === m.key);
+    const branches = c.flow_type === 'branching'
+      ? (out.length ? out.map(l => {
+          const tg = byId[l.to];
+          return `${t('campaign.cond.' + l.condition)}${l.label ? ` (${l.label})` : ''} → ${tg ? missionLabel(tg.m, tg.i) : '?'}`;
+        }) : [t('campaign.end')]) : [];
+    return {
+      label: missionLabel(m, i), entry: c.flow_type === 'branching' && m.is_entry, refs, branches,
+      texts: CAMPAIGN_MISSION_TEXTS.filter(f => m[f]).map(f => [t('campaign.m.' + f), P(m[f])]),
+    };
+  });
+  return {
+    title: c.name, byline: `${t('campaign.by', { user: c.owner.username })} · ${fmtDate(c.updated_at)}`,
+    summary: P(c.summary), facts, intro: P(c.intro),
+    force: { carries, restrictions: P(force.restrictions), replacements: P(force.replacements) },
+    rules: (s.rules || []).map(r => ({ title: (r.title || '').trim(), body: P(r.body) })),
+    flowHint: t('campaign.flow_hint.' + c.flow_type), missions,
+    scoring: P(s.scoring),
+    outcomes: (s.outcomes || []).map(o => ({ label: (o.label || '').trim(), condition: (o.condition || '').trim(), epilogue: P(o.epilogue) })),
+    footer: t('campaign.export_footer', { app: t('app.title'), url: `${location.origin}/#/campaigns/${c.id}` }),
+  };
+}
+
+function campaignToText(c) {
+  const d = campaignDoc(c), L = [];
+  const h1 = x => L.push(x.toUpperCase(), '='.repeat(Math.min(x.length, 78)), '');
+  const h2 = x => L.push('', x.toUpperCase(), '-'.repeat(Math.min(x.length, 78)), '');
+  const h3 = x => L.push('', x, '~'.repeat(Math.min(x.length, 78)));
+  h1(d.title);
+  L.push(d.byline, '');
+  if (d.summary) L.push(d.summary, '');
+  d.facts.forEach(([k, v]) => L.push(`${k}: ${v}`));
+  if (d.intro) { L.push('', d.intro); }
+  if (d.force.carries.length || d.force.restrictions || d.force.replacements) {
+    h2(t('campaign.sec.force'));
+    if (d.force.carries.length) L.push(`${t('campaign.carry_over')}: ${d.force.carries.join(', ')}`, '');
+    if (d.force.restrictions) L.push(`${t('campaign.restrictions')}:`, d.force.restrictions, '');
+    if (d.force.replacements) L.push(`${t('campaign.replacements')}:`, d.force.replacements, '');
+  }
+  if (d.rules.length) {
+    h2(t('campaign.sec.rules'));
+    d.rules.forEach(r => { if (r.title) L.push(r.title.toUpperCase()); L.push(r.body, ''); });
+  }
+  h2(t('campaign.sec.missions'));
+  if (d.flowHint) L.push(d.flowHint);
+  if (!d.missions.length) L.push(t('campaign.no_missions'));
+  d.missions.forEach(m => {
+    h3(m.label + (m.entry ? ` [${t('campaign.entry')}]` : ''));
+    m.refs.forEach(([k, v]) => L.push(`${k}: ${v}`));
+    m.texts.forEach(([k, v]) => L.push('', `${k}:`, v));
+    if (m.branches.length) { L.push('', `${t('campaign.branches')}:`); m.branches.forEach(b => L.push(`  - ${b}`)); }
+  });
+  if (d.scoring || d.outcomes.length) {
+    h2(t('campaign.sec.resolution'));
+    if (d.scoring) L.push(d.scoring, '');
+    d.outcomes.forEach(o => L.push(`* ${o.label}${o.condition ? ` — ${o.condition}` : ''}`, ...(o.epilogue ? [`  ${o.epilogue.replace(/\n/g, '\n  ')}`] : []), ''));
+  }
+  L.push('', '-'.repeat(40), d.footer, '');
+  return L.join('\n').replace(/\n{3,}/g, '\n\n');
+}
+
+function campaignToMarkdown(c) {
+  const d = campaignDoc(c), L = [];
+  const br = x => x.replace(/([^\n])\n(?!\n)/g, '$1  \n');      // keep the author's single line breaks (paragraphs stay as they are)
+  const cell = x => String(x || '').replace(/\|/g, '\\|').replace(/\n/g, '<br>');
+  L.push(`# ${d.title}`, '', `*${d.byline}*`, '');
+  if (d.summary) L.push(`> ${d.summary.replace(/\n/g, '\n> ')}`, '');
+  d.facts.forEach(([k, v]) => L.push(`- **${k}:** ${v}`));
+  if (d.intro) L.push('', br(d.intro));
+  if (d.force.carries.length || d.force.restrictions || d.force.replacements) {
+    L.push('', `## ${t('campaign.sec.force')}`, '');
+    if (d.force.carries.length) L.push(`**${t('campaign.carry_over')}:** ${d.force.carries.join(', ')}`, '');
+    if (d.force.restrictions) L.push(`### ${t('campaign.restrictions')}`, '', br(d.force.restrictions), '');
+    if (d.force.replacements) L.push(`### ${t('campaign.replacements')}`, '', br(d.force.replacements), '');
+  }
+  if (d.rules.length) {
+    L.push('', `## ${t('campaign.sec.rules')}`, '');
+    d.rules.forEach(r => { if (r.title) L.push(`### ${r.title}`, ''); L.push(br(r.body), ''); });
+  }
+  L.push('', `## ${t('campaign.sec.missions')}`, '');
+  if (d.flowHint) L.push(`*${d.flowHint}*`, '');
+  if (!d.missions.length) L.push(t('campaign.no_missions'));
+  d.missions.forEach(m => {
+    L.push(`### ${m.label}${m.entry ? ` \`${t('campaign.entry')}\`` : ''}`, '');
+    m.refs.forEach(([k, v]) => L.push(`- **${k}:** ${v}`));
+    m.texts.forEach(([k, v]) => L.push('', `#### ${k}`, '', br(v)));
+    if (m.branches.length) { L.push('', `#### ${t('campaign.branches')}`, ''); m.branches.forEach(b => L.push(`- ${b}`)); }
+    L.push('');
+  });
+  if (d.scoring || d.outcomes.length) {
+    L.push('', `## ${t('campaign.sec.resolution')}`, '');
+    if (d.scoring) L.push(br(d.scoring), '');
+    if (d.outcomes.length) {
+      L.push(`| ${t('campaign.outcome')} | ${t('campaign.condition')} | ${t('campaign.epilogue')} |`, '|---|---|---|');
+      d.outcomes.forEach(o => L.push(`| **${cell(o.label)}** | ${cell(o.condition)} | ${cell(o.epilogue)} |`));
+      L.push('');
+    }
+  }
+  L.push('', '---', '', `*${d.footer}*`, '');
+  return L.join('\n').replace(/\n{3,}/g, '\n\n');
+}
+
+function exportCampaign(c, format) {
+  const slug = (c.name || 'campaign').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '') || 'campaign';
+  if (format === 'md') downloadBlob(campaignToMarkdown(c), slug + '.md', 'text/markdown;charset=utf-8');
+  else downloadBlob(campaignToText(c), slug + '.txt', 'text/plain;charset=utf-8');
+}
+
 async function showCampaignDetail(id) {
   showSpinner();
   let c;
@@ -197,7 +344,13 @@ async function showCampaignDetail(id) {
     <div class="campaign-detail">
       ${pageToolbar(
         actionBtn({ icon: 'back', label: t('campaigns.title'), href: '#/campaigns' }),
-        [],
+        [`<div class="export-menu">
+            <button type="button" class="btn btn-ghost" id="campaign-export-toggle" title="${esc(t('io.export'))}" aria-label="${esc(t('io.export'))}" aria-haspopup="menu" aria-expanded="false">${icon('download')}<span class="btn-label">${esc(t('io.export'))}</span><span class="btn-caret">${icon('down')}</span></button>
+            <div class="export-menu-list" id="campaign-export-list" role="menu" hidden>
+              <button class="export-item" role="menuitem" data-cexport="txt"><span class="export-item-label">${esc(t('campaign.export_txt'))}</span><span class="export-item-tip">${esc(t('campaign.export_txt_tip'))}</span></button>
+              <button class="export-item" role="menuitem" data-cexport="md"><span class="export-item-label">${esc(t('campaign.export_md'))}</span><span class="export-item-tip">${esc(t('campaign.export_md_tip'))}</span></button>
+            </div>
+          </div>`],
         mine ? [actionBtn({ id: 'campaign-delete-btn', icon: 'trash', label: t('common.delete'), variant: 'danger' }),
                 actionBtn({ id: 'campaign-edit-btn', icon: 'edit', label: t('common.edit'), variant: 'primary' })] : [])}
       <h1 style="margin:4px 0">${esc(c.name)}
@@ -219,6 +372,17 @@ async function showCampaignDetail(id) {
     </div>`);
   const main = document.getElementById('app-main');
   main.querySelector('#campaign-edit-btn')?.addEventListener('click', () => navigate(`campaigns/${c.id}/edit`));
+  // Export menu: toggle, close on outside click / Escape / pick
+  const expToggle = main.querySelector('#campaign-export-toggle'), expList = main.querySelector('#campaign-export-list');
+  const setExpOpen = open => { expList.hidden = !open; expToggle.setAttribute('aria-expanded', String(open)); };
+  expToggle.addEventListener('click', e => { e.stopPropagation(); setExpOpen(expList.hidden); });
+  const closeExp = e => {
+    if (!document.body.contains(expList)) { document.removeEventListener('click', closeExp); document.removeEventListener('keydown', closeExp); return; }
+    if (e.type === 'keydown' ? e.key === 'Escape' : !expList.contains(e.target)) setExpOpen(false);
+  };
+  document.addEventListener('click', closeExp);
+  document.addEventListener('keydown', closeExp);
+  main.querySelectorAll('[data-cexport]').forEach(b => b.addEventListener('click', () => { setExpOpen(false); exportCampaign(c, b.dataset.cexport); }));
   main.querySelector('#campaign-delete-btn')?.addEventListener('click', async () => {
     if (!confirm(t('campaign.confirm_delete', { name: c.name }))) return;
     try { await API.delete('/campaigns/' + c.id); navigate('campaigns'); }

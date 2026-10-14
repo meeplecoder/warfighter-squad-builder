@@ -26,7 +26,7 @@ and validate squads, **generate a squad for a mission automatically**, and desig
 - **Squad metrics** — every squad gets nine estimated metrics (ranged fire, close assault, anti-armour, demolition,
   supplies, mobility, survivability, resilience, experience) shown as a radar chart and ranked against reference squads.
 - **Campaign designer** — build campaigns from mission/objective pairs, with branching, rules and epilogues; import
-  them from YAML files ([format](docs/campaign_yaml.md)).
+  them from YAML files ([format](docs/campaign_yaml.md)) and export any campaign as **text or Markdown**.
 - **Accounts and collection** — email-verified accounts and password reset. **My Expansions** (user menu, top right, or the
   left menu) records which expansions you own; the squad generator and the card pickers only use those.
 - **Translations** — English and Spanish UI; card texts can be translated (optionally machine-drafted) and reviewed in

@@ -617,5 +617,12 @@
  "profile.expansions_intro": "You own {owned} of {total} expansions. They decide which cards the squad generator and the pickers use.",
  "profile.manage_expansions": "Manage my expansions",
  "nav.expansions_short": "Expansions",
- "app.brand": "Warfighter WWII ★ Squad Builder"
+ "app.brand": "Warfighter WWII ★ Squad Builder",
+ "campaign.mission": "Mission card",
+ "campaign.branches": "What happens next",
+ "campaign.export_txt": "Text (.txt)",
+ "campaign.export_txt_tip": "Plain text file, easy to print or paste anywhere.",
+ "campaign.export_md": "Markdown (.md)",
+ "campaign.export_md_tip": "Formatted for notes, wikis, GitHub and forum posts.",
+ "campaign.export_footer": "Exported from {app} — {url}"
 }
