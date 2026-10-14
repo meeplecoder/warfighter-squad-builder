@@ -38,7 +38,7 @@ function genLoadForm() {
 function genSaveForm() { try { localStorage.setItem(GEN_STORE, JSON.stringify(gen.form)); } catch (_) {} }
 
 register('generator', async function () {
-  if (!currentUser) { navigate('login'); return; }
+  if (!requireLogin()) return;
   showSpinner();
   try {
     gen.opts = await API.get('/generator/options');

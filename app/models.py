@@ -175,7 +175,9 @@ class User(UserMixin, db.Model):
     avatar_url = db.Column(db.Text)
     created_at = db.Column(db.Text, nullable=False, default=now_utc)
     language = db.Column(db.Text)                                  # preferred UI language; NULL = browser default
-    is_admin = db.Column(db.Integer, nullable=False, default=0)    # set manually; grants translation editor
+    # Legacy column, kept so old databases keep loading; it is NOT trusted — the role comes from the username
+    # (app/roles.py) and the column is re-synced at startup.
+    _legacy_is_admin = db.Column('is_admin', db.Integer, nullable=False, default=0)
     username_lower = db.Column(db.Text, unique=True)               # case-insensitive uniqueness + login lookup
     email_verified_at = db.Column(db.Text)                         # NULL = not confirmed; login refused
     session_version = db.Column(db.Integer, nullable=False, default=1)  # bump to revoke every session/remember cookie
@@ -192,6 +194,16 @@ class User(UserMixin, db.Model):
         self.username_lower = value.lower() if value else None
         return value
 
+    @property
+    def role(self):
+        from app.roles import role_of
+        return role_of(self)
+
+    @property
+    def is_admin(self):
+        from app.roles import ROLE_ADMIN
+        return self.role == ROLE_ADMIN
+
     def get_id(self):
         # Session / remember cookies carry the version; load_user rejects stale ones
         return f'{self.id}:{self.session_version or 1}'
@@ -205,7 +217,8 @@ class User(UserMixin, db.Model):
             'avatar_url': self.avatar_url,
             'created_at': self.created_at,
             'language': self.language,
-            'is_admin': bool(self.is_admin),
+            'role': self.role,
+            'is_admin': self.is_admin,
             'email_verified': bool(self.email_verified_at),
         }
 

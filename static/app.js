@@ -35,6 +35,24 @@ const routes = {};
 
 function register(name, fn) { routes[name] = fn; }
 
+// ---------------------------------------------------------------------------
+// Roles and access control (server rules: app/roles.py). One admin — the account named `admin` — may edit
+// any squad / campaign and open admin-only views; every other account manages only its own things.
+// ---------------------------------------------------------------------------
+const isAdmin = () => !!(currentUser && (currentUser.role === 'admin' || currentUser.is_admin));
+const canManage = ownerId => !!(currentUser && (currentUser.id === ownerId || isAdmin()));
+
+// Pages that need an account (builder, generator, campaign builder, …): anonymous visitors are sent to the login
+// page with a notice, and come back to the page they asked for after logging in.
+let loginReturn = null, loginNotice = false;
+function requireLogin() {
+  if (currentUser) return true;
+  loginReturn = (location.hash.slice(1) || '/cards').split('?')[0];
+  loginNotice = true;
+  navigate('login');
+  return false;
+}
+
 function route() {
   const hash = location.hash.slice(1) || '/cards';
   const parts = hash.split('/').filter(Boolean);
@@ -46,6 +64,7 @@ function route() {
   const section = { cards: 'nav.cards', squads: 'nav.squads', builder: 'nav.builder', generator: 'nav.generator', campaigns: 'nav.campaigns',
                     expansions: 'nav.expansions', profile: 'nav.profile', translations: 'nav.translations' }[key];
   setPageTitle(section ? t(section) : null);
+  if (key !== 'login') loginReturn = null;             // a pending "return to" only lives while the login page is shown
   const handler = routes[key] || routes['404'];
   if (handler) handler(...rest);
 }
@@ -102,6 +121,9 @@ function renderHeader() {
           <span class="user-avatar" aria-hidden="true">${icon('user')}</span>
         </button>
         <div class="user-menu" id="user-menu" role="menu" hidden>
+          <div class="user-menu-head"><span class="user-menu-name">${esc(currentUser.username)}</span>
+            <span class="role-chip role-${esc(currentUser.role || 'user')}">${esc(t('role.' + (currentUser.role || 'user')))}</span></div>
+          <hr>
           <a role="menuitem" href="#/expansions">${icon('layers')}<span>${esc(t('nav.expansions'))}</span></a>
           <a role="menuitem" href="#/profile">${icon('user')}<span>${esc(t('nav.profile'))}</span></a>
           <hr>
@@ -151,12 +173,10 @@ function wireUserMenu(root) {
 function updateProfileLink() {
   const link = document.getElementById('nav-expansions');           // My Expansions needs a login
   if (link) link.style.display = currentUser ? '' : 'none';
-  const trLink = document.getElementById('nav-translations');
-  if (trLink) trLink.style.display = currentUser?.is_admin ? '' : 'none';
-  const cbLink = document.getElementById('nav-campaign-builder');   // campaign editor needs a login
-  if (cbLink) cbLink.style.display = currentUser ? '' : 'none';
-  const genLink = document.getElementById('nav-generator');          // generator needs a login
-  if (genLink) genLink.style.display = currentUser ? '' : 'none';
+  const trLink = document.getElementById('nav-translations');       // admin-only views
+  if (trLink) trLink.style.display = isAdmin() ? '' : 'none';
+  // Builder, Generator and Campaign builder links are shown to everyone; opening one while logged out
+  // goes to the login page (requireLogin) and comes back afterwards.
 }
 
 // Switch UI + card language, persist it, and re-render the current view in place
@@ -295,7 +315,7 @@ function cardKey(card) {
   return (card.name_en || card.name || '').toLowerCase();
 }
 
-// Owner-only marker for cards whose translation is missing / unreviewed
+// Admin-only marker for cards whose translation is missing / unreviewed
 function trMarker(card) {
   const st = card?.translation_status;
   if (!st || st === 'reviewed') return '';
@@ -731,7 +751,7 @@ async function showCardDetail(idOrNumber) {
   // --- Add to build ---
   const addBtn = builderState.missionCard
     ? `<button class="btn btn-primary btn-sm" id="add-to-build">+ ${esc(t('cd.add_to_build'))}</button>` : '';
-  const editTrBtn = currentUser?.is_admin && I18N.lang !== 'en'
+  const editTrBtn = isAdmin() && I18N.lang !== 'en'
     ? `<a href="#/translations/${encodeURIComponent(card.number)}" class="btn btn-ghost btn-sm">${esc(t('cd.edit_translation'))}</a>` : '';
 
   // --- Eyebrow subtype ---
@@ -1045,7 +1065,7 @@ async function renderSquadList(containerEl) {
     <button class="quick-filter ${f.myModules ? 'active-blue' : ''}" id="my-modules-filter">${esc(t('squads.my_modules'))}</button>` : '';
 
   const rows = items.map(s => {
-    const own = currentUser && s.owner && s.owner.id === currentUser.id;
+    const own = s.owner && canManage(s.owner.id);
     const draft = s.status === 'draft'
       ? ` <span class="badge badge-draft">${esc(tv('squad_status', s.status))}</span>` : '';
     return `
@@ -1187,7 +1207,7 @@ async function showSquadDetail(squadId) {
   }
 
   setPageTitle(squad.name, t('nav.squads'));
-  const isOwner = currentUser && currentUser.id === squad.owner.id;
+  const isOwner = canManage(squad.owner.id);                // the owner, or the admin
   const isDraft = squad.status === 'draft';
   // One primary per view: Publish on an own draft, otherwise Edit on an own squad
   const editBtn = isOwner ? actionBtn({ id: 'edit-squad-btn', icon: 'edit', label: t('common.edit'), variant: isDraft ? 'ghost' : 'primary' }) : '';
@@ -1701,6 +1721,7 @@ function renderCardTable(containerEl, items, opts = {}) {
 let builderFromSquadList = false;
 
 register('builder', async function(squadId) {
+  if (!requireLogin()) return;
   const fromList = builderFromSquadList;
   builderFromSquadList = false;
   if (squadId) {
@@ -1709,6 +1730,7 @@ register('builder', async function(squadId) {
     try {
       const data = await API.get('/squads/' + squadId);
       const sq = data.squad;
+      if (!canManage(sq.owner.id)) { navigate('squads/' + sq.id); return; }       // only the owner (or the admin) edits
       builderState.squadId = sq.id;
       builderState.fromSquadList = fromList;
       builderState.parentSquadId = sq.parent?.id || null;
@@ -2559,7 +2581,7 @@ function renderValidation(v) {
 // VIEW: Profile
 // ---------------------------------------------------------------------------
 register('profile', async function() {
-  if (!currentUser) { navigate('login'); return; }
+  if (!requireLogin()) return;
   showSpinner();
   let profile;
   try {
@@ -2584,6 +2606,10 @@ register('profile', async function() {
       <div class="form-field">
         <label>${esc(t('auth.email'))}</label>
         <div>${esc(profile.user.email)}</div>
+      </div>
+      <div class="form-field">
+        <label>${esc(t('profile.role'))}</label>
+        <div><span class="role-chip role-${esc(profile.user.role || 'user')}">${esc(t('role.' + (profile.user.role || 'user')))}</span></div>
       </div>
       <div class="form-field">
         <label>${esc(t('auth.full_name'))}</label>
@@ -2676,7 +2702,7 @@ register('profile', async function() {
 });
 
 // ---------------------------------------------------------------------------
-// VIEW: Translations (owner only — users.is_admin). See spec/07_i18n.md §4.3
+// VIEW: Translations (admin only — app/roles.py). See spec/07_i18n.md §4.3
 // ---------------------------------------------------------------------------
 const trState = {
   lang: I18N.SUPPORTED.find(l => l !== 'en'),
@@ -2711,7 +2737,8 @@ function trStatusBadge(st) {
 }
 
 register('translations', async function(number) {
-  if (!currentUser?.is_admin) { setMain(`<div class="alert alert-warning">${esc(t('tr.admin_only'))}</div>`); return; }
+  if (!requireLogin()) return;
+  if (!isAdmin()) { setMain(`<div class="alert alert-warning">${esc(t('tr.admin_only'))}</div>`); return; }
   if (!allModules.length) {
     try { const r = await API.get('/modules'); allModules = r.modules || []; } catch (_) {}
   }
@@ -2976,7 +3003,9 @@ function onEnter(id, fn) {
 // VIEW: Login
 // ---------------------------------------------------------------------------
 register('login', function() {
+  const notice = loginNotice; loginNotice = false;          // set by requireLogin(): show why they landed here
   const msg = authForm(t('header.login'), `
+    ${notice ? `<div class="alert alert-warning">${esc(t('auth.login_required'))}</div>` : ''}
     <div class="form-field"><label>${esc(t('auth.login_id'))}</label><input type="text" id="login-user" autocomplete="username"></div>
     <div class="form-field"><label>${esc(t('auth.password'))}</label><input type="password" id="login-pw" autocomplete="current-password"></div>
     <label style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" id="login-remember"> ${esc(t('auth.remember'))}</label>
@@ -2996,7 +3025,8 @@ register('login', function() {
       await applyUserLanguage();
       renderHeader();
       updateProfileLink();
-      navigate('squads');
+      const back = loginReturn; loginReturn = null;
+      navigate(back ? back.replace(/^\//, '') : 'squads');
     } catch (e) {
       if (e.data?.code !== 'email_unverified') { msg.innerHTML = alertHtml(e.error || t('auth.login_failed')); return; }
       msg.innerHTML = `<div class="alert alert-warning">${esc(e.error)}

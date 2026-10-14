@@ -11,6 +11,7 @@ from app import db, limiter, mailer
 from app.i18n import _, get_lang, normalize_lang
 from app.models import AuthToken, User, now_utc
 from app import security
+from app.roles import is_reserved_username
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -130,6 +131,8 @@ def register():
 
     if not USERNAME_RE.match(username):
         return jsonify(error=_('Username must be 3–30 chars, letters/digits/underscore only.')), 400
+    if is_reserved_username(username):
+        return jsonify(error=_('This username is reserved.')), 400
     if len(email) > 254 or not EMAIL_RE.match(email):
         return jsonify(error=_('A valid email is required.')), 400
     problem = security.password_problem(password, username, email)

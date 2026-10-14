@@ -121,5 +121,6 @@
  "{where}: {ref} is a {type} card; expected a {expected} card.": "{where}: {ref} es una carta de tipo {type}; se esperaba {expected}.",
  "{where}: {type} card \"{ref}\" not found.": "{where}: carta {type} \"{ref}\" no encontrada.",
  "{where}: \"{ref}\" matches several cards; using {number}. Use the card number to choose.": "{where}: \"{ref}\" coincide con varias cartas; se usa {number}. Usa el número de carta para elegir.",
- "Unsupported language \"{lang}\"; left empty.": "Idioma no compatible \"{lang}\"; se deja vacío."
+ "Unsupported language \"{lang}\"; left empty.": "Idioma no compatible \"{lang}\"; se deja vacío.",
+ "This username is reserved.": "Este nombre de usuario está reservado."
 }

@@ -9,6 +9,7 @@ from app import db, limiter, i18n
 from app.i18n import _
 from app.models import Card, CardTranslation, CUSTOM_MODULE, now_utc
 from app import custom_missions
+from app import roles
 from app import smart_filter
 from app.utils import nation_filter_clause
 
@@ -213,7 +214,7 @@ def update_custom_mission(card_id):
     card = db.session.get(Card, card_id)
     if not card or card.module != CUSTOM_MODULE:
         return jsonify(error=_('Card not found.')), 404
-    if card.owner_user_id != current_user.id:
+    if not roles.can_manage(card.owner_user_id):          # owner or admin
         return jsonify(error=_('You can only edit your own custom missions.')), 403
     fields, err = _parse_custom_mission(request.get_json(silent=True) or {})
     if err:

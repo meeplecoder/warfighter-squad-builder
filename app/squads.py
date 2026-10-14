@@ -5,6 +5,7 @@ from flask_login import current_user, login_required
 from sqlalchemy import or_, and_, func
 from sqlalchemy.orm import aliased
 from app import db
+from app import roles
 from app.models import CardTranslation
 from app.models import Card, Squad, SquadSoldier, SquadGear, SquadLike, SquadComment, CardAssociation, SquadObjective
 from app.models import now_utc, CampaignMission
@@ -270,6 +271,8 @@ def list_squads():
         # Owner sees all their squads; honour optional status filter
         if status_filter in ('draft', 'published'):
             query = query.filter(Squad.status == status_filter)
+    elif roles.is_admin():
+        pass        # the admin sees every squad, drafts included
     elif current_user.is_authenticated:
         # Combined list: everyone's published squads plus the user's own drafts
         query = query.filter(or_(Squad.status == 'published', Squad.user_id == current_user.id))
@@ -348,7 +351,7 @@ def get_squad(squad_id):
 
 
 def _can_view(squad):
-    return squad.status == 'published' or (current_user.is_authenticated and current_user.id == squad.user_id)
+    return squad.status == 'published' or roles.can_manage(squad.user_id)     # owner and admin see drafts
 
 
 @squads_bp.route('/<int:squad_id>/export', methods=['GET'])
@@ -444,7 +447,7 @@ def update_squad(squad_id):
     squad = db.session.get(Squad, squad_id)
     if not squad:
         return jsonify(error=_('Squad not found.')), 404
-    if squad.user_id != current_user.id:
+    if not roles.can_manage(squad.user_id):          # owner or admin
         return jsonify(error=_('Not authorized.')), 403
 
     data = request.get_json(silent=True) or {}
@@ -486,7 +489,7 @@ def publish_squad(squad_id):
     squad = db.session.get(Squad, squad_id)
     if not squad:
         return jsonify(error=_('Squad not found.')), 404
-    if squad.user_id != current_user.id:
+    if not roles.can_manage(squad.user_id):          # owner or admin
         return jsonify(error=_('Not authorized.')), 403
 
     # Re-validate against current saved state
@@ -505,7 +508,7 @@ def publish_squad(squad_id):
         'nation': squad.nation,
         'soldiers': soldiers_payload,
     }
-    _, _, soldiers_data, validation, err = _parse_and_validate(squad_data)
+    _mission, _payload, soldiers_data, validation, err = _parse_and_validate(squad_data)   # never bind `_`: it is the translation function
     if err:
         return jsonify(error=err), 400
     if not validation['valid']:
@@ -524,7 +527,7 @@ def delete_squad(squad_id):
     squad = db.session.get(Squad, squad_id)
     if not squad:
         return jsonify(error=_('Squad not found.')), 404
-    if squad.user_id != current_user.id:
+    if not roles.can_manage(squad.user_id):          # owner or admin
         return jsonify(error=_('Not authorized.')), 403
     # SQLite FK enforcement is off: unlink copies by hand
     Squad.query.filter_by(parent_squad_id=squad.id).update({Squad.parent_squad_id: None})
