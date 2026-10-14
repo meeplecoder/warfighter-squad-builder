@@ -71,13 +71,18 @@ really need it reachable from other machines (never together with `DEBUG=true` o
 Use **Register** in the app. With `MAIL_BACKEND=console` (the default) the verification email is **printed in the
 terminal** where the server runs — open the link it shows to activate the account.
 
-### Make yourself an admin (optional)
+### The admin account (optional)
 
-The card-translation editor is admin-only:
+There are two roles: **User** and **Admin**. The Admin is the single account named **`admin`** (the name is reserved,
+so nobody can register it). The admin can edit, publish and delete **any** squad and campaign, sees every draft, and is
+the only one who can open the translation editor (and any future admin views). Everyone else manages only their own
+squads and campaigns. Create the account, or reset its password, from the command line:
 
 ```bash
-python scripts/make_admin.py YOUR_USERNAME
+python scripts/create_admin.py --email you@example.com      # asks for the password
 ```
+
+Then log in as `admin`. The role comes from the username alone — there is no flag to flip in the database.
 
 ### Choose the expansions you own
 

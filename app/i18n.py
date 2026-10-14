@@ -49,7 +49,8 @@ def get_lang():
 
 
 def is_admin():
-    return has_request_context() and current_user.is_authenticated and bool(current_user.is_admin)
+    from app.roles import is_admin as _is_admin
+    return has_request_context() and _is_admin(current_user)
 
 
 # ---------------------------------------------------------------------------

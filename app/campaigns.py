@@ -9,7 +9,7 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy import or_, func
 
-from app import db, i18n, mentions, campaign_yaml
+from app import db, i18n, mentions, campaign_yaml, roles
 from app.i18n import _
 from app.models import (Card, Squad, Campaign, CampaignMission, CampaignLink, now_utc,
                         CUSTOM_MODULE, CAMPAIGN_FLOW_TYPES, CAMPAIGN_LINK_CONDITIONS)
@@ -31,11 +31,11 @@ def _text(v, limit=TEXT_MAX):
 
 
 def _can_view(c):
-    return c.status == 'published' or (current_user.is_authenticated and current_user.id == c.user_id)
+    return c.status == 'published' or roles.can_manage(c.user_id)     # owner and admin see drafts
 
 
 def _squad_viewable(s):
-    return s and (s.status == 'published' or (current_user.is_authenticated and s.user_id == current_user.id))
+    return s and (s.status == 'published' or roles.can_manage(s.user_id))
 
 
 # ---------------------------------------------------------------------------
@@ -93,7 +93,7 @@ def _detail(c):
 # ---------------------------------------------------------------------------
 # Parsing & validation
 # ---------------------------------------------------------------------------
-def _parse(data):
+def _parse(data, owner_id=None):
     """Payload → (fields, settings, missions, links, errors). Errors block any save."""
     errors = []
     fields = {
@@ -141,7 +141,7 @@ def _parse(data):
         mc_id = m.get('mission_card_id')
         mc = db.session.get(Card, int(mc_id)) if mc_id else None
         if mc_id and (not mc or mc.card_type != 'Mission'
-                      or (mc.module == CUSTOM_MODULE and mc.owner_user_id != current_user.id)):
+                      or (mc.module == CUSTOM_MODULE and mc.owner_user_id != (owner_id or current_user.id))):
             errors.append(_('{mission}: invalid mission card.', mission=label))
             mc = None
         row['mission_card_id'] = mc.id if mc else None
@@ -257,6 +257,8 @@ def list_campaigns():
         query = query.filter(Campaign.user_id == user_id)
     if user_id and current_user.is_authenticated and current_user.id == user_id:
         pass
+    elif roles.is_admin():
+        pass        # the admin sees every campaign, drafts included
     elif current_user.is_authenticated:
         query = query.filter(or_(Campaign.status == 'published', Campaign.user_id == current_user.id))
     else:
@@ -288,7 +290,7 @@ def _write(c, data, is_new):
     target = data.get('status', 'draft' if is_new else c.status)
     if target not in ('draft', 'published'):
         target = 'draft'
-    fields, settings, missions, links, errors = _parse(data)
+    fields, settings, missions, links, errors = _parse(data, None if is_new else c.user_id)
     if errors:
         return jsonify(error=' '.join(errors), errors=errors), 400
     if target == 'published':
@@ -341,7 +343,7 @@ def update_campaign(campaign_id):
     c = db.session.get(Campaign, campaign_id)
     if not c:
         return jsonify(error=_('Campaign not found.')), 404
-    if c.user_id != current_user.id:
+    if not roles.can_manage(c.user_id):              # owner or admin
         return jsonify(error=_('Not authorized.')), 403
     old_cards = {m.mission_card_id for m in c.missions}
     resp = _write(c, request.get_json(silent=True) or {}, False)
@@ -358,7 +360,7 @@ def delete_campaign(campaign_id):
     c = db.session.get(Campaign, campaign_id)
     if not c:
         return jsonify(error=_('Campaign not found.')), 404
-    if c.user_id != current_user.id:
+    if not roles.can_manage(c.user_id):              # owner or admin
         return jsonify(error=_('Not authorized.')), 403
     old_cards = [m.mission_card_id for m in c.missions]
     db.session.delete(c)

@@ -6,7 +6,7 @@
 const expState = { items: [], filter: 'all', q: '', dirty: false };
 
 register('expansions', async function () {
-  if (!currentUser) { navigate('login'); return; }
+  if (!requireLogin()) return;
   showSpinner();
   try {
     const r = await API.get('/profile/expansions');

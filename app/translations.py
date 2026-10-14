@@ -1,6 +1,4 @@
-"""Owner-only translation editor API (users.is_admin). See spec/07_i18n.md §4.3."""
-from functools import wraps
-
+"""Admin-only translation editor API (role: app/roles.py). See spec/07_i18n.md §4.3."""
 from flask import Blueprint, request, jsonify
 from flask_login import current_user
 from sqlalchemy import or_, func
@@ -9,21 +7,11 @@ from app import db, i18n
 from app.i18n import _
 from app.models import Card, CardTranslation
 from app import translation_io
+from app.roles import admin_required
 
 translations_bp = Blueprint('translations', __name__)
 
 STATUS_FILTERS = ('missing', 'stale', 'draft', 'reviewed')
-
-
-def admin_required(fn):
-    @wraps(fn)
-    def wrapper(*args, **kwargs):
-        if not current_user.is_authenticated:
-            return jsonify(error=_('Not authenticated.')), 401
-        if not current_user.is_admin:
-            return jsonify(error=_('Admin only.')), 403
-        return fn(*args, **kwargs)
-    return wrapper
 
 
 def _target_lang():

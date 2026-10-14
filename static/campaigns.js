@@ -48,7 +48,7 @@ async function loadCampaignList() {
   try { data = await API.get('/campaigns?' + params); }
   catch (e) { box.innerHTML = alertHtml(e.error || t('common.failed')); return; }
   const rows = data.items.map(c => {
-    const own = currentUser && c.owner.id === currentUser.id;
+    const own = canManage(c.owner.id);
     const draft = c.status === 'draft'
       ? ` <span class="badge badge-draft">${esc(tv('squad_status', c.status))}</span>` : '';
     return `
@@ -264,7 +264,7 @@ async function showCampaignDetail(id) {
   try { c = (await API.get('/campaigns/' + id)).campaign; }
   catch (e) { setMain(alertHtml(e.error || t('common.failed'))); return; }
   setPageTitle(c.name, t('campaigns.title'));
-  const mine = currentUser && currentUser.id === c.owner.id;
+  const mine = canManage(c.owner.id);                    // the owner, or the admin
   const s = c.settings || {};
   const force = s.force || {};
   const byId = Object.fromEntries(c.missions.map((m, i) => [m.key, { m, i }]));
@@ -412,16 +412,16 @@ function emptyCampaignMission() {
 }
 
 async function openCampaignEditor(id) {
-  if (!currentUser) { navigate('campaigns'); return; }
+  if (!requireLogin()) return;
   showSpinner();
   let c = null;
   if (id) {
     try { c = (await API.get('/campaigns/' + id)).campaign; }
     catch (e) { setMain(alertHtml(e.error || t('common.failed'))); return; }
-    if (c.owner.id !== currentUser.id) { navigate('campaigns/' + id); return; }
+    if (!canManage(c.owner.id)) { navigate('campaigns/' + id); return; }       // the owner, or the admin
   }
   let mySquads = [];
-  try { mySquads = (await API.get(`/squads?user_id=${currentUser.id}&per_page=200&sort=name&order=asc`)).items; } catch (_) {}
+  try { mySquads = (await API.get(`/squads?user_id=${c ? c.owner.id : currentUser.id}&per_page=200&sort=name&order=asc`)).items; } catch (_) {}
   campaignState = campaignStateFrom(c, { id: c?.id || null, status: c?.status || 'draft', mySquads });
   renderCampaignEditor();
 }
