@@ -1,5 +1,6 @@
 # Manual one-time Fly.io tasks, run from the GitHub "Actions" tab (no local fly CLI needed).
-#   Repository secrets used: FLY_API_TOKEN (required), RESEND_API_KEY (optional), ADMIN_PASSWORD (for create-admin)
+#   Repository secrets used: FLY_API_TOKEN (required), RESEND_API_KEY (optional), ADMIN_EMAIL + ADMIN_PASSWORD (create-admin)
+#   Logs of a public repository are public: nothing sensitive is taken as an input or printed.
 #   Optional repository secret SECRET_KEY; if missing a random one is generated the first time.
 # Delete this file if you deploy another way.
 name: Fly.io setup
@@ -12,9 +13,9 @@ on:
         type: choice
         options: [setup, create-admin, status]
         default: setup
-      admin_email:
-        description: 'create-admin: email of the admin account'
-        required: false
+
+permissions:
+  contents: read
 
 env:
   FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -69,9 +70,10 @@ jobs:
       - name: create-admin
         if: inputs.task == 'create-admin'
         env:
-          ADMIN_EMAIL: ${{ inputs.admin_email }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
         run: |
-          test -n "$ADMIN_EMAIL" && test -n "$ADMIN_PASSWORD" || { echo "need admin_email input and ADMIN_PASSWORD secret"; exit 1; }
+          test -n "$ADMIN_EMAIL" && test -n "$ADMIN_PASSWORD" || { echo "need the ADMIN_EMAIL and ADMIN_PASSWORD secrets"; exit 1; }
+          printf '%s' "$ADMIN_EMAIL" | grep -Eq '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$' || { echo "ADMIN_EMAIL is not a plain email address"; exit 1; }
           B64=$(printf '%s' "$ADMIN_PASSWORD" | base64 -w0)
           flyctl ssh console -C "sh -c 'ADMIN_PASSWORD=\$(echo $B64 | base64 -d) python scripts/create_admin.py --email $ADMIN_EMAIL'"
