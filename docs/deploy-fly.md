@@ -29,3 +29,16 @@ one, so check that the build uses it.
 
 Fly snapshots the volume daily (a few days kept) — not a complete backup. Also copy the database out now and then:
 `fly ssh sftp get /data/warfighter.db`.
+
+## Without the fly CLI (GitHub Actions only)
+
+`.github/workflows/fly-setup.yml` runs the one-time tasks from the repository's **Actions** tab:
+
+1. Create a Fly access token in the Fly dashboard (account/organization **Tokens** page; an organization token is
+   needed to create volumes and open SSH) and save it as the repository secret `FLY_API_TOKEN`
+   (Settings → Secrets and variables → Actions). Optional secrets: `RESEND_API_KEY`, `SECRET_KEY`
+   (generated automatically if missing), `ADMIN_PASSWORD`.
+2. Actions → **Fly.io setup** → Run workflow → `setup`: creates the volume, secrets, IPs, and keeps one machine.
+3. Deploy (push to `main`, or Actions → **Deploy to Fly.io** → Run workflow).
+4. Actions → **Fly.io setup** → `create-admin` with your email (uses the `ADMIN_PASSWORD` secret). `status` lists
+   machines, volumes, IPs and secret names.
