@@ -752,5 +752,6 @@
  "exp.missions_other": "{n} misiones",
  "profile.expansions_intro": "Tienes {owned} de {total} expansiones. Deciden qué cartas usan el generador de escuadrones y los selectores.",
  "profile.manage_expansions": "Gestionar mis expansiones",
- "nav.expansions_short": "Expansiones"
+ "nav.expansions_short": "Expansiones",
+ "app.brand": "Warfighter WWII ★ Creador de Escuadras"
 }

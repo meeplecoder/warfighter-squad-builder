@@ -616,5 +616,6 @@
  "exp.missions_other": "{n} missions",
  "profile.expansions_intro": "You own {owned} of {total} expansions. They decide which cards the squad generator and the pickers use.",
  "profile.manage_expansions": "Manage my expansions",
- "nav.expansions_short": "Expansions"
+ "nav.expansions_short": "Expansions",
+ "app.brand": "Warfighter WWII ★ Squad Builder"
 }
