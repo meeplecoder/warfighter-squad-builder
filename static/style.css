@@ -1247,6 +1247,7 @@ h1.page-title, .squad-title, #app-main > h1, #app-main > .flex > h1, .auth-form-
   border-bottom: 3px solid var(--stripe);
   box-shadow: 0 2px 0 var(--kraft-dark), 0 4px 12px rgba(0, 0, 0, .5);
 }
+.header-brand .brand-link { color: inherit; text-decoration: none; }
 .header-brand { color: var(--paper); font-size: 1.15rem; text-shadow: 1px 1px 0 rgba(0, 0, 0, .55); }
 #header-auth .username { color: var(--paper-edge); }
 #app-header .btn-ghost, #app-header select { border-color: rgba(236, 226, 198, .35); background: rgba(0, 0, 0, .18); color: var(--paper); }

@@ -1,4 +1,4 @@
-# Manual one-time Fly.io tasks, run from the GitHub "Actions" tab (no local fly CLI needed).
+# Manual Fly.io tasks, run from the GitHub "Actions" tab (no local fly CLI needed).
 #   Repository secrets used: FLY_API_TOKEN (required), RESEND_API_KEY (optional), ADMIN_EMAIL + ADMIN_PASSWORD (create-admin)
 #   Logs of a public repository are public: nothing sensitive is taken as an input or printed.
 #   Optional repository secret SECRET_KEY; if missing a random one is generated the first time.
@@ -11,8 +11,12 @@ on:
       task:
         description: 'What to do'
         type: choice
-        options: [setup, create-admin, status]
+        options: [setup, create-admin, init-data, status]
         default: setup
+      confirm:
+        description: 'init-data only: type DELETE-ALL-DATA (it erases all squads, campaigns and non-admin users)'
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -77,4 +81,22 @@ jobs:
           printf '%s' "$ADMIN_EMAIL" | grep -Eq '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$' || { echo "ADMIN_EMAIL is not a plain email address"; exit 1; }
           B64=$(printf '%s' "$ADMIN_PASSWORD" | base64 -w0)
           # ssh sessions do not inherit the image's ENV: name the live database explicitly, and run as the app user
-          flyctl ssh console -C "sh -c 'ADMIN_PASSWORD=\$(echo $B64 | base64 -d) DATABASE_URL=sqlite:////data/warfighter.db setpriv --reuid=app --regid=app --init-groups python scripts/create_admin.py --email $ADMIN_EMAIL'"
+          APP=$(sed -n 's/^app *= *"\(.*\)"/\1/p' fly.toml)
+          flyctl machines list -a "$APP"
+          MID=$(flyctl machines list -a "$APP" --json | python3 -c 'import json,sys; m=json.load(sys.stdin); print(m[0]["id"] if m else "")')
+          test -n "$MID" || { echo "the app has no machine"; exit 1; }
+          flyctl machine start "$MID" -a "$APP" || true
+          flyctl machine status "$MID" -a "$APP" | grep -i state
+          sleep 15   # let gunicorn come up
+          flyctl ssh console -a "$APP" --machine "$MID" -C "sh -c 'ADMIN_PASSWORD=\$(echo $B64 | base64 -d) DATABASE_URL=sqlite:////data/warfighter.db setpriv --reuid=app --regid=app --init-groups python scripts/create_admin.py --email $ADMIN_EMAIL'"
+
+      - name: "init-data (DESTRUCTIVE - delete all squads, campaigns and non-admin users, reload the cards)"
+        if: inputs.task == 'init-data'
+        run: |
+          test "${{ inputs.confirm }}" = "DELETE-ALL-DATA" || { echo "init-data deletes every squad, campaign and non-admin account: type DELETE-ALL-DATA in the 'confirm' input"; exit 1; }
+          APP=$(sed -n 's/^app *= *"\(.*\)"/\1/p' fly.toml)
+          MID=$(flyctl machines list -a "$APP" --json | python3 -c 'import json,sys; m=json.load(sys.stdin); print(m[0]["id"] if m else "")')
+          test -n "$MID" || { echo "the app has no machine"; exit 1; }
+          flyctl machine start "$MID" -a "$APP" || true
+          sleep 15
+          flyctl ssh console -a "$APP" --machine "$MID" -C "sh -c 'DATABASE_URL=sqlite:////data/warfighter.db setpriv --reuid=app --regid=app --init-groups python scripts/reset_data.py --yes --csv cards/warfighter_cards.csv'"

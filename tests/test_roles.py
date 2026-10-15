@@ -108,3 +108,50 @@ def test_translation_editor_is_admin_only(app, client, login):
     admin = app.test_client()
     login(admin, 'admin')
     assert admin.get(rule.rule + '?lang=es').status_code not in (401, 403)
+
+
+# --- creating on behalf of another owner (`owner` field) -----------------------------------------------------
+def _squad_body(app, **extra):
+    from app.models import Card
+    with app.app_context():
+        mission = Card.query.filter_by(number='S-200').first().id
+        soldier = Card.query.filter_by(number='S-001').first().id
+    return {'name': 'On behalf', 'nation': 'US', 'mission_card_id': mission, 'status': 'draft',
+            'soldiers': [{'card_id': soldier, 'gear': []}], **extra}
+
+
+def _campaign_body(**extra):
+    return {'name': 'Camp on behalf', 'status': 'draft', 'missions': [], 'links': [], **extra}
+
+
+def test_only_admin_can_create_for_another_owner(app, client, login):
+    from app.models import User
+    other = app.test_client()
+    login(other, 'plainuser')
+    assert other.post('/api/squads', json=_squad_body(app, owner='someone_else')).status_code == 403
+    assert other.post('/api/campaigns', json=_campaign_body(owner='someone_else')).status_code == 403
+    with app.app_context():
+        assert User.query.filter_by(username_lower='someone_else').first() is None
+    # no owner / one's own name: the session user
+    r = other.post('/api/squads', json=_squad_body(app))
+    assert r.status_code == 201 and r.get_json()['squad']['owner']['username'] == 'plainuser'
+    r = other.post('/api/squads', json=_squad_body(app, owner='PlainUser'))
+    assert r.status_code == 201 and r.get_json()['squad']['owner']['username'] == 'plainuser'
+
+
+def test_admin_creates_for_existing_and_new_owners(app, client, login):
+    from app.models import User
+    admin = app.test_client()
+    login(admin, 'admin')
+    login(app.test_client(), 'author1')
+    r = admin.post('/api/squads', json=_squad_body(app, owner='author1'))
+    assert r.status_code == 201 and r.get_json()['squad']['owner']['username'] == 'author1'
+    r = admin.post('/api/squads', json=_squad_body(app, owner='Brand_New'))
+    assert r.status_code == 201 and r.get_json()['squad']['owner']['username'] == 'Brand_New'
+    with app.app_context():
+        assert User.query.filter_by(username_lower='brand_new').first().status == 'reserved'
+    r = admin.post('/api/campaigns', json=_campaign_body(owner='author1'))
+    assert r.status_code == 201 and r.get_json()['campaign']['owner']['username'] == 'author1'
+    assert admin.post('/api/squads', json=_squad_body(app, owner='bad name!')).status_code == 400
+    r = admin.post('/api/squads', json=_squad_body(app))              # default: the admin itself
+    assert r.get_json()['squad']['owner']['username'] == 'admin'
