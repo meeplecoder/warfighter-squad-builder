@@ -383,6 +383,7 @@ h3 { font-size: 1rem; font-weight: 600; }
   border-radius: var(--radius);
   padding: 16px;
 }
+.builder-bottom-actions { display: none; }
 .builder-section { margin-bottom: 16px; }
 .builder-section-title {
   font-size: 11px; font-weight: 700; text-transform: uppercase;
@@ -803,6 +804,8 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
   .card-detail-layout { grid-template-columns: 1fr; }
   .builder-layout { grid-template-columns: 1fr; height: auto; }
   .builder-right { order: -1; }
+  .builder-bottom-actions { display: flex; gap: 8px; margin-top: 8px; }
+  .builder-bottom-actions .btn { flex: 1; justify-content: center; }
   .data-table th:nth-child(n+4), .data-table td:nth-child(n+4) { display: none; }
   /* squads table has a leading edit column: keep name, nation, mission */
   .squads-table th:nth-child(4), .squads-table td:nth-child(4) { display: table-cell; }

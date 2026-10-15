@@ -2157,6 +2157,13 @@ function renderBuilder() {
           <div class="text-muted" style="font-size:12px;margin-bottom:6px">${esc(t('builder.notes_hint'))} ${t('mention.hint_html')}</div>
           <textarea id="squad-notes" style="width:100%;min-height:100px;resize:vertical">${esc(builderState.notes)}</textarea>
         </div>
+
+        <!-- phones only: the toolbar is far away at the top -->
+        <div class="builder-bottom-actions">
+          ${actionBtn({ icon: 'validate', label: t('builder.validate'), attrs: 'data-bact="validate"' })}
+          ${actionBtn({ icon: 'save', label: t('builder.save_draft'), attrs: 'data-bact="draft"' })}
+          ${actionBtn({ icon: 'publish', label: t('squad.publish'), variant: 'primary', attrs: 'data-bact="publish"' })}
+        </div>
       </div>
 
       <!-- RIGHT: Card Picker -->
@@ -2241,6 +2248,9 @@ function renderBuilder() {
   main.querySelector('#save-draft-btn')?.addEventListener('click', () => saveSquad('draft'));
   main.querySelector('#publish-squad-btn')?.addEventListener('click', () => saveSquad('published'));
   main.querySelector('#validate-btn')?.addEventListener('click', validateSquad);
+  main.querySelector('[data-bact="validate"]')?.addEventListener('click', validateSquad);
+  main.querySelector('[data-bact="draft"]')?.addEventListener('click', () => saveSquad('draft'));
+  main.querySelector('[data-bact="publish"]')?.addEventListener('click', () => saveSquad('published'));
   main.querySelector('#builder-import-btn')?.addEventListener('click', openImportDialog);
   wireSmartHelp(main);
 
@@ -2450,6 +2460,13 @@ async function loadPickerResults() {
             if (!builderState.objectiveCards.find(o => o.id === fullCard.id)) {
               builderState.objectiveCards.push(fullCard);
             }
+            if (isMobileView()) {        // phone: close the table and go back to the builder
+              builderState.pickerMode = null;
+              renderBuilder();
+              (document.getElementById('pick-obj-btn') || document.querySelector('.builder-left'))
+                ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+              return;
+            }
             renderBuilder();
             loadPickerResults();
             return;
@@ -2459,6 +2476,7 @@ async function loadPickerResults() {
             break;
           case 'soldier':
             if (addSoldierToBuilder(fullCard)) {
+              if (isMobileView()) builderState.pickerMode = null;     // phone: close the table, show the builder
               renderBuilder();
               const newIdx = builderState.soldiers.findIndex(s => s.card.id === fullCard.id);
               const slots = document.querySelectorAll('.soldier-slot');
@@ -2505,6 +2523,14 @@ async function loadPickerResults() {
   }
 }
 
+// Phone layout (matches the CSS breakpoint of the bottom tab bar)
+const isMobileView = () => window.matchMedia('(max-width: 767px)').matches;
+
+// On a phone the validation / save messages live at the top of the page: bring them into view
+function showBuilderMessages() {
+  if (isMobileView()) document.getElementById('builder-validation')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+}
+
 async function validateSquad() {
   const payload = buildSquadPayload();
   const div = document.getElementById('builder-validation');
@@ -2516,6 +2542,7 @@ async function validateSquad() {
   } catch (e) {
     div.innerHTML = alertHtml(e.error || t('builder.validation_error'));
   }
+  showBuilderMessages();
 }
 
 function resetBuilderState() {
@@ -2545,6 +2572,7 @@ async function saveSquad(status = 'draft') {
     if (div) {
       div.innerHTML = alertHtml(e.error || t('builder.save_failed'));
       if (e.data?.validation) div.innerHTML += renderValidation(e.data.validation);
+      showBuilderMessages();
     }
   }
 }
