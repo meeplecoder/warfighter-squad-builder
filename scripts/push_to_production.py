@@ -87,6 +87,9 @@ def main():
     ap.add_argument('--login', default='admin', help='username or e-mail to sign in with (default: admin)')
     ap.add_argument('--db', default='data/warfighter.db')
     ap.add_argument('--dry-run', action='store_true', help='only report what would be created or updated')
+    ap.add_argument('--fix-owner', action='store_true',
+                    help='an item that exists under a different owner is DELETED and created again under the right '
+                         'one (the API cannot change an owner); its likes and comments are lost')
     ap.add_argument('--owner-map', action='append', default=[], metavar='FROM=TO',
                     help='use owner TO for the items of local owner FROM (repeatable), e.g. admin=MeepleCoder')
     args = ap.parse_args()
@@ -184,11 +187,19 @@ def main():
 
     squad_map = {}   # local id -> server id
     counts = {'squads': [0, 0, 0], 'campaigns': [0, 0, 0]}      # created, updated, unchanged
-    downgraded, failed, notes = [], [], []
+    downgraded, failed, notes, wrong_owner = [], [], [], []
     for sq in local.squads():
         owner = owner_of(sq['owner'])
         label = f'squad "{sq["name"]}" ({owner})'
         found, other_owner = find_squad(sq, owner)
+        if found and other_owner and args.fix_owner:
+            if args.dry_run:
+                print(f'  would delete and recreate {label} (now owned by {found["owner"]["username"]})')
+            else:
+                api.call('DELETE', f'/api/squads/{found["id"]}')
+                remote_squads.remove(found)
+                print(f'  deleted {label} (was owned by {found["owner"]["username"]})')
+            found = None
         payload = {
             'owner': owner, 'name': sq['name'], 'nation': sq['nation'], 'notes': sq['notes'] or '',
             'status': sq['status'], 'mission_card_id': card_id(sq['mission']),
@@ -249,6 +260,8 @@ def main():
             continue
         squad_map[sq['id']] = body['squad']['id']
         counts['squads'][0] += 1
+        if body['squad']['owner']['username'].lower() != owner.lower():
+            wrong_owner.append(f'{label}: created under {body["squad"]["owner"]["username"]}')
         print(f'  created {label}')
     c_, u_, n_ = counts['squads']
     print(f'Squads: {c_} created, {u_} updated, {n_} unchanged, '
@@ -306,6 +319,14 @@ def main():
             found = next((r for r in remote_campaigns if r['id'] not in c_taken
                           and r['name'].strip().lower() == c['name'].strip().lower()), None)
             other_owner = bool(found)
+        if found and other_owner and args.fix_owner:
+            if args.dry_run:
+                print(f'  would delete and recreate {label} (now owned by {found["owner"]["username"]})')
+            else:
+                api.call('DELETE', f'/api/campaigns/{found["id"]}')
+                remote_campaigns.remove(found)
+                print(f'  deleted {label} (was owned by {found["owner"]["username"]})')
+            found = None
         if found:
             c_taken.add(found['id'])
             if other_owner:
@@ -357,11 +378,20 @@ def main():
             continue
         counts['campaigns'][0] += 1
         print(f'  created {label}')
+        if body['campaign']['owner']['username'].lower() != owner.lower():
+            wrong_owner.append(f'{label}: created under {body["campaign"]["owner"]["username"]}')
     c_, u_, n_ = counts['campaigns']
     print(f'Campaigns: {c_} created, {u_} updated, {n_} unchanged.')
 
     for line in notes:
         print(f'  note: {line}')
+    if wrong_owner:
+        print(f'\nWARNING: {len(wrong_owner)} items were created under the wrong owner. The server probably runs an '
+              f'older version that ignores the "owner" field: deploy the new version first.')
+        for line in wrong_owner[:5]:
+            print(f'  {line}')
+    if notes and not args.fix_owner:
+        print(f'\n{len(notes)} items exist under another owner than wanted; re-run with --fix-owner to recreate them.')
     for line in downgraded:
         print(f'  saved as draft (does not pass validation): {line}')
     for line in failed:
