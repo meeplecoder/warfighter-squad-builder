@@ -1,5 +1,6 @@
 {
  "Admin only.": "Solo para el administrador.",
+ "Only the admin can create content for another owner.": "Solo el administrador puede crear contenido para otro propietario.",
  "A valid email is required.": "Se necesita un correo válido.",
  "Card {id} not found.": "Carta {id} no encontrada.",
  "Card not found.": "Carta no encontrada.",
