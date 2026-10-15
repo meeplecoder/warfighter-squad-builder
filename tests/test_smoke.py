@@ -27,7 +27,8 @@ def test_validate_squad(app, client):
     over = client.post('/api/squads/validate', json={
         'nation': 'US', 'mission_card_id': raid,
         'soldiers': [{'card_id': i, 'gear': []} for i in (alder, birch, cedar)]}).get_json()
-    assert not over['valid'] and over['errors'][0]['code'] == 'OVER_BUDGET'
+    assert over['valid'] and not over['errors']       # over budget is a warning, it does not block
+    assert [w['code'] for w in over['warnings']] == ['OVER_BUDGET']
 
 
 def test_metrics_of_a_squad(app):
