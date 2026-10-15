@@ -806,6 +806,14 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
   .data-table th:nth-child(n+4), .data-table td:nth-child(n+4) { display: none; }
   /* squads table has a leading edit column: keep name, nation, mission */
   .squads-table th:nth-child(4), .squads-table td:nth-child(4) { display: table-cell; }
+  /* fit the phone width: fixed layout, names and missions wrap onto several rows instead of widening the table */
+  .squads-table { table-layout: fixed; width: 100%; }
+  .squads-table th, .squads-table td { padding: 8px 6px; font-size: 13px; overflow-wrap: anywhere; }
+  .squads-table th:nth-child(1), .squads-table td:nth-child(1) { width: 30px; }
+  .squads-table th:nth-child(2), .squads-table td:nth-child(2) { width: 42%; }
+  .squads-table th:nth-child(3), .squads-table td:nth-child(3) { width: 18%; }
+  .squads-table .squad-name-cell { white-space: normal; }
+  .squads-table .squad-name-cell .ellipsis { display: inline; max-width: none; white-space: normal; overflow: visible; }
 }
 
 /* ---- Sortable table headers ----------------------------------------- */
