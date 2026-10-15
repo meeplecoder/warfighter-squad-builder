@@ -10,8 +10,9 @@ be re-run safely (e.g. after a failure). Nothing is ever updated or deleted on t
   squad     = same name, same mission card and same soldiers + gear (cards compared by card number)
   campaign  = same name and the same mission titles
 
-Limits of the public API, by design: everything is created under the account you log in with (normally the admin),
-not under the original owner; created/updated times are the push time; likes and comments are not copied. A squad
+Each item is created under its original owner: logged in as the admin, the API accepts an `owner` username (a
+missing account is created 'reserved', without a password). Any other login gets a 403. Created/updated times are
+the push time; likes and comments are not copied. A squad
 that no longer passes validation is saved as a draft instead of published (reported at the end).
 Standard library only; run it on the machine that has the local database.
 """
@@ -161,7 +162,7 @@ def main():
             created += 1
             continue
         payload = {
-            'name': sq['name'], 'nation': sq['nation'], 'notes': sq['notes'] or '', 'status': sq['status'],
+            'owner': sq['owner'], 'name': sq['name'], 'nation': sq['nation'], 'notes': sq['notes'] or '', 'status': sq['status'],
             'mission_card_id': card_id(sq['mission']), 'situation_card_id': card_id(sq['situation']),
             'objective_card_ids': [card_id(n) for n in sq['objectives'] if card_id(n)],
             'parent_squad_id': squad_map.get(sq['parent']),
@@ -208,6 +209,7 @@ def main():
             continue
         key = {m['id']: str(i) for i, m in enumerate(missions)}
         payload = {
+            'owner': c['username'],
             **{k: c[k] for k in ('name', 'summary', 'intro', 'nation', 'theater', 'enemy', 'period', 'flow_type',
                                  'language', 'status')},
             'settings': json.loads(c['settings'] or '{}'),

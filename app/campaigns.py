@@ -290,7 +290,12 @@ def _write(c, data, is_new):
     target = data.get('status', 'draft' if is_new else c.status)
     if target not in ('draft', 'published'):
         target = 'draft'
-    fields, settings, missions, links, errors = _parse(data, None if is_new else c.user_id)
+    owner = None
+    if is_new:
+        owner, denied = roles.resolve_owner(data)
+        if denied:
+            return denied
+    fields, settings, missions, links, errors = _parse(data, owner.id if is_new else c.user_id)
     if errors:
         return jsonify(error=' '.join(errors), errors=errors), 400
     if target == 'published':
@@ -298,7 +303,7 @@ def _write(c, data, is_new):
         if perrs:
             return jsonify(error=_('Campaign cannot be published yet.'), errors=perrs), 422
     if is_new:
-        c = Campaign(user_id=current_user.id, name=fields['name'] or _('Unnamed campaign'))
+        c = Campaign(user_id=owner.id, name=fields['name'] or _('Unnamed campaign'))
         db.session.add(c)
         db.session.flush()
     c.status = target
