@@ -1591,6 +1591,8 @@ input:focus, select:focus, textarea:focus { outline-color: var(--kraft); }
 /* Phone tab bar: only Cards, Squads, Campaigns and Expansions (the builders and the admin views live on desktop) */
 @media (max-width: 767px) {
   #nav-builder, #nav-generator, #nav-translations, #nav-users { display: none !important; }
+  /* importing text / CSV / YAML files is a desktop task */
+  #import-squad-btn, #builder-import-btn, [data-act="import"] { display: none !important; }
 }
 @media (max-width: 767px) {
   #sidebar .nav-link, #sidebar .nav-link.nav-sub { letter-spacing: .03em; padding: 8px 2px; font-size: 10.5px; }
