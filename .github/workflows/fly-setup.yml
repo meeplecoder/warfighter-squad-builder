@@ -13,6 +13,10 @@ on:
         type: choice
         options: [setup, create-admin, init-data, status]
         default: setup
+      confirm:
+        description: 'init-data only: type DELETE-ALL-DATA (it erases all squads, campaigns and non-admin users)'
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -86,14 +90,13 @@ jobs:
           sleep 15   # let gunicorn come up
           flyctl ssh console -a "$APP" --machine "$MID" -C "sh -c 'ADMIN_PASSWORD=\$(echo $B64 | base64 -d) DATABASE_URL=sqlite:////data/warfighter.db setpriv --reuid=app --regid=app --init-groups python scripts/create_admin.py --email $ADMIN_EMAIL'"
 
-      - name: "init-data (starter content shipped in the image - community squads, then campaigns/*.yaml)"
+      - name: "init-data (DESTRUCTIVE - delete all squads, campaigns and non-admin users, reload the cards)"
         if: inputs.task == 'init-data'
         run: |
+          test "${{ inputs.confirm }}" = "DELETE-ALL-DATA" || { echo "init-data deletes every squad, campaign and non-admin account: type DELETE-ALL-DATA in the 'confirm' input"; exit 1; }
           APP=$(sed -n 's/^app *= *"\(.*\)"/\1/p' fly.toml)
           MID=$(flyctl machines list -a "$APP" --json | python3 -c 'import json,sys; m=json.load(sys.stdin); print(m[0]["id"] if m else "")')
           test -n "$MID" || { echo "the app has no machine"; exit 1; }
           flyctl machine start "$MID" -a "$APP" || true
-          sleep 15   # let gunicorn come up (also gives the card import time to finish)
-          # Additive: squads already there are skipped; a campaign with the same name and owner is replaced.
-          # Cards are loaded by the container start-up itself.
-          flyctl ssh console -a "$APP" --machine "$MID" -C "sh -c 'export DATABASE_URL=sqlite:////data/warfighter.db; setpriv --reuid=app --regid=app --init-groups python scripts/import_bgg_community_squads.py && setpriv --reuid=app --regid=app --init-groups python scripts/import_campaign_yaml.py campaigns/*.yaml'"
+          sleep 15
+          flyctl ssh console -a "$APP" --machine "$MID" -C "sh -c 'DATABASE_URL=sqlite:////data/warfighter.db setpriv --reuid=app --regid=app --init-groups python scripts/reset_data.py --yes --csv cards/warfighter_cards.csv'"
