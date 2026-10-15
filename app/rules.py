@@ -86,7 +86,7 @@ def validate_squad(payload, mission_card, soldiers_data):
                 rp_total += (g['card'].get('resource_cost') or 0) * g['quantity']
 
     if budget and rp_total > budget:
-        errors.append(_issue('OVER_BUDGET', rp_total=rp_total, budget=budget))
+        warnings.append(_issue('OVER_BUDGET', rp_total=rp_total, budget=budget))   # allowed: shown, never blocks
 
     # 4. Loadout per PS + duplicate skills
     soldier_computed = []
