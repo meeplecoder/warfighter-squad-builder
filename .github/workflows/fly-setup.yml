@@ -77,4 +77,8 @@ jobs:
           printf '%s' "$ADMIN_EMAIL" | grep -Eq '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$' || { echo "ADMIN_EMAIL is not a plain email address"; exit 1; }
           B64=$(printf '%s' "$ADMIN_PASSWORD" | base64 -w0)
           # ssh sessions do not inherit the image's ENV: name the live database explicitly, and run as the app user
-          flyctl ssh console -C "sh -c 'ADMIN_PASSWORD=\$(echo $B64 | base64 -d) DATABASE_URL=sqlite:////data/warfighter.db setpriv --reuid=app --regid=app --init-groups python scripts/create_admin.py --email $ADMIN_EMAIL'"
+          APP=$(sed -n 's/^app *= *"\(.*\)"/\1/p' fly.toml)
+          flyctl machines list -a "$APP"
+          MID=$(flyctl machines list -a "$APP" --json | python3 -c 'import json,sys; m=[x for x in json.load(sys.stdin) if x.get("state")=="started"]; print(m[0]["id"] if m else "")')
+          test -n "$MID" || { echo "no machine in state started (see the list above)"; exit 1; }
+          flyctl ssh console -a "$APP" --machine "$MID" -C "sh -c 'ADMIN_PASSWORD=\$(echo $B64 | base64 -d) DATABASE_URL=sqlite:////data/warfighter.db setpriv --reuid=app --regid=app --init-groups python scripts/create_admin.py --email $ADMIN_EMAIL'"
