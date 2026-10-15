@@ -207,9 +207,12 @@ class User(UserMixin, db.Model):
 
     @property
     def status(self):
-        """'disabled' (blocked by the admin) / 'pending' (email not confirmed yet) / 'enabled'."""
+        """'disabled' (blocked by the admin) / 'reserved' (no password: an imported squad/campaign owner whose name
+        is held, nobody can log in or sign up as it) / 'pending' (email not confirmed yet) / 'enabled'."""
         if self.disabled_at:
             return 'disabled'
+        if not self.password_hash:
+            return 'reserved'
         return 'enabled' if self.email_verified_at else 'pending'
 
     def get_id(self):
