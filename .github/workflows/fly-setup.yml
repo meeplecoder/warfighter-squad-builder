@@ -79,6 +79,9 @@ jobs:
           # ssh sessions do not inherit the image's ENV: name the live database explicitly, and run as the app user
           APP=$(sed -n 's/^app *= *"\(.*\)"/\1/p' fly.toml)
           flyctl machines list -a "$APP"
-          MID=$(flyctl machines list -a "$APP" --json | python3 -c 'import json,sys; m=[x for x in json.load(sys.stdin) if x.get("state")=="started"]; print(m[0]["id"] if m else "")')
-          test -n "$MID" || { echo "no machine in state started (see the list above)"; exit 1; }
+          MID=$(flyctl machines list -a "$APP" --json | python3 -c 'import json,sys; m=json.load(sys.stdin); print(m[0]["id"] if m else "")')
+          test -n "$MID" || { echo "the app has no machine"; exit 1; }
+          flyctl machine start "$MID" -a "$APP" || true
+          flyctl machine status "$MID" -a "$APP" | grep -i state
+          sleep 15   # let gunicorn come up
           flyctl ssh console -a "$APP" --machine "$MID" -C "sh -c 'ADMIN_PASSWORD=\$(echo $B64 | base64 -d) DATABASE_URL=sqlite:////data/warfighter.db setpriv --reuid=app --regid=app --init-groups python scripts/create_admin.py --email $ADMIN_EMAIL'"
