@@ -34,7 +34,7 @@ function renderUsers() {
       <div class="exp-summary" id="users-summary"></div>
       <input type="search" id="users-q" class="exp-search" placeholder="${esc(t('users.search'))}" value="${esc(usersState.q)}">
       <div class="gen-seg exp-filter" role="radiogroup">
-        ${[['all', 'users.f_all'], ['pending', 'users.f_pending'], ['enabled', 'users.f_enabled'], ['disabled', 'users.f_disabled']].map(([v, k]) =>
+        ${[['all', 'users.f_all'], ['pending', 'users.f_pending'], ['reserved', 'users.f_reserved'], ['enabled', 'users.f_enabled'], ['disabled', 'users.f_disabled']].map(([v, k]) =>
           `<label class="gen-seg-item"><input type="radio" name="users-f" value="${v}" ${usersState.status === v ? 'checked' : ''}><span>${esc(t(k))}</span></label>`).join('')}
       </div>
     </div>
@@ -119,7 +119,7 @@ async function showUserDetail(id) {
         <input type="email" id="ud-email" maxlength="254" value="${esc(u.email)}"></div>
       <div class="form-field"><label>${esc(t('col.status'))}</label>
         <select id="ud-status" ${isAdminAcc ? 'disabled' : ''}>
-          ${['pending', 'enabled', 'disabled'].map(s => `<option value="${s}" ${u.status === s ? 'selected' : ''}>${esc(t('users.status.' + s))}</option>`).join('')}
+          ${(u.status === 'reserved' ? ['reserved'] : []).concat(['pending', 'enabled', 'disabled']).map(s => `<option value="${s}" ${u.status === s ? 'selected' : ''}>${esc(t('users.status.' + s))}</option>`).join('')}
         </select></div>
       <div class="form-field"><label>${esc(t('header.language'))}</label>
         <select id="ud-lang">

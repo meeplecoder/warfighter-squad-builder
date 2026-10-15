@@ -126,3 +126,24 @@ def test_delete_removes_the_user_and_their_content(app, login):
         assert User.query.filter_by(username='doomed').first() is None
         assert Squad.query.filter_by(user_id=uid).count() == 0
     assert admin.delete(f'/api/admin/users/{uid}', json={}).status_code == 404
+
+
+def test_passwordless_owner_is_reserved(app, login):
+    """Imported squad/campaign owners have no password: shown as 'reserved', cannot log in or be registered again;
+    the admin giving them a password turns them into a normal account."""
+    from app import db
+    from app.models import User, now_utc
+    with app.app_context():
+        u = User(username='ImportedOwner', email='importedowner@community.local', password_hash=None,
+                 email_verified_at=now_utc())
+        db.session.add(u)
+        db.session.commit()
+        uid = u.id
+    admin = _admin(app, login)
+    assert admin.get(f'/api/admin/users/{uid}').get_json()['user']['status'] == 'reserved'
+    anon = app.test_client()
+    assert anon.post('/api/auth/login', json={'login': 'ImportedOwner', 'password': PW}).status_code == 401
+    r = anon.post('/api/auth/register', json={'username': 'importedowner', 'email': 'x@example.com', 'password': PW})
+    assert r.status_code == 409
+    r = admin.put(f'/api/admin/users/{uid}', json={'password': PW, 'email': 'real@example.com'})
+    assert r.get_json()['user']['status'] == 'enabled'
