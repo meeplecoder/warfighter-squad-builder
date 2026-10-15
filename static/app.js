@@ -1019,8 +1019,9 @@ register('squads', async function(subId) {
 
 function renderSquadsShell() {
   const newBtn = currentUser
-    ? `<span style="display:flex;gap:6px">
+    ? `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
         <button class="btn btn-ghost" id="import-squad-btn">${esc(t('io.import'))}</button>
+        <button class="btn btn-ghost" id="autogenerate-squad-btn">${esc(t('squads.autogenerate'))}</button>
         <button class="btn btn-primary" id="new-squad-btn">+ ${esc(t('squads.new'))}</button>
       </span>` : '';
 
@@ -1034,6 +1035,7 @@ function renderSquadsShell() {
 
   const main = document.getElementById('app-main');
   main.querySelector('#new-squad-btn')?.addEventListener('click', () => navigate('builder'));
+  main.querySelector('#autogenerate-squad-btn')?.addEventListener('click', () => navigate('generator'));
   main.querySelector('#import-squad-btn')?.addEventListener('click', openImportDialog);
   renderSquadList(document.getElementById('squads-list'));
 }
