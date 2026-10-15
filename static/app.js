@@ -1021,7 +1021,7 @@ function renderSquadsShell() {
   const newBtn = currentUser
     ? `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
         <button class="btn btn-ghost" id="import-squad-btn">${esc(t('io.import'))}</button>
-        <button class="btn btn-ghost" id="autogenerate-squad-btn">${esc(t('squads.autogenerate'))}</button>
+        <button class="btn btn-primary" id="autogenerate-squad-btn">${esc(t('squads.autogenerate'))}</button>
         <button class="btn btn-primary" id="new-squad-btn">+ ${esc(t('squads.new'))}</button>
       </span>` : '';
 
