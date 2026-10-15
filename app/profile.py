@@ -141,7 +141,7 @@ def change_email():
                 username=user.username, new_email=new_email, link=security.link('forgot')))
     db.session.commit()
     _info('email_change_requested', user)
-    return jsonify(ok=True, message=_('Check the new inbox to confirm the change.'))
+    return jsonify(ok=True, message=_('Check the new inbox (and your Spam folder) to confirm the change.'))
 
 
 @profile_bp.route('/email/confirm', methods=['POST'])
