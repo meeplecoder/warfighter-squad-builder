@@ -115,3 +115,19 @@ def test_expansions_order_core_first():
 def test_healthz(client):
     r = client.get('/healthz')
     assert r.status_code == 200 and r.get_json()['status'] == 'ok'
+
+
+def test_overloaded_soldier_is_a_warning(app, client, login):
+    from app.models import Card
+    c = app.test_client()
+    login(c, 'loader')
+    with app.app_context():
+        mission = Card.query.filter_by(number='S-200').first().id
+        soldier = Card.query.filter_by(number='S-001').first()
+        gear = Card.query.filter(Card.card_type == 'Weapon').first()
+        ids = (mission, soldier.id, gear.id)
+    mission, soldier, gear = ids
+    r = c.post('/api/squads/validate', json={'nation': 'US', 'mission_card_id': mission,
+        'soldiers': [{'card_id': soldier, 'gear': [{'card_id': gear, 'quantity': 40}]}]}).get_json()
+    assert 'OVER_LOADOUT' in [w['code'] for w in r['warnings']]
+    assert 'OVER_LOADOUT' not in [e['code'] for e in r['errors']]

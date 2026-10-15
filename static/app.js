@@ -1261,7 +1261,8 @@ async function showSquadDetail(squadId) {
     const loadoutBar = (() => {
       if (!isPS || ss.effective_loadout == null) return '';
       const lm = ss.effective_loadout - (c.loadout || 0);
-      const color = lm !== 0 ? ' color:var(--danger);' : '';
+      const over = ss.gear_loadout_used > ss.effective_loadout;      // overloaded: allowed, but shown in red
+      const color = over ? ' color:var(--danger);font-weight:700;' : lm !== 0 ? ' color:var(--danger);' : '';
       const tip = lm !== 0
         ? `data-tooltip="${esc(t('squad.loadout_tip', { base: c.loadout, mod: (lm >= 0 ? '+' : '') + lm }))}"`
         : '';
