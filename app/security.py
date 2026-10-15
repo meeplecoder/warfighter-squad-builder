@@ -20,7 +20,6 @@ TOKEN_TTL = {
 # and its method prefix ("scrypt:32768:8:1") tells whether a stored hash needs upgrading.
 _DUMMY_HASH = generate_password_hash(secrets.token_hex(16))
 _CURRENT_METHOD = _DUMMY_HASH.split('$', 1)[0]
-_CONTEXT_WORDS = ('warfighter',)
 
 
 # ---------------------------------------------------------------------------
@@ -36,8 +35,8 @@ def password_problem(password, username='', email=''):
         return _('Password must be at most {n} characters.', n=cfg['PASSWORD_MAX_LENGTH'])
     low = password.lower()
     personal = [w for w in (username.lower(), email.lower().split('@')[0]) if len(w) >= 4]
-    if any(w in low for w in personal + list(_CONTEXT_WORDS)):
-        return _('Password must not contain your username, email or the site name.')
+    if any(w in low for w in personal):
+        return _('Password must not contain your username or email.')
     return None
 
 

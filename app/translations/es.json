@@ -90,7 +90,7 @@
  "Please confirm your email address first. Check your inbox.": "Primero confirma tu correo electrónico. Revisa tu bandeja de entrada.",
  "Password must be at least {n} characters.": "La contraseña debe tener al menos {n} caracteres.",
  "Password must be at most {n} characters.": "La contraseña debe tener como máximo {n} caracteres.",
- "Password must not contain your username, email or the site name.": "La contraseña no puede contener tu usuario, tu correo ni el nombre del sitio.",
+ "Password must not contain your username or email.": "La contraseña no puede contener tu usuario ni tu correo.",
  "Check the new inbox to confirm the change.": "Revisa la bandeja del correo nuevo para confirmar el cambio.",
  "Your email was changed": "Tu correo ha cambiado",
  "Hi {username},\n\nThe email of your Warfighter WWII - Squad Builder account was changed to {new_email}.\n\nIf this was not you, contact the site administrator.": "Hola, {username}:\n\nEl correo de tu cuenta de Warfighter WWII - Squad Builder se ha cambiado a {new_email}.\n\nSi no has sido tú, contacta con el administrador del sitio.",
