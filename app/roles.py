@@ -47,6 +47,32 @@ def is_reserved_username(username):
     return (username or '').strip().lower() in RESERVED_USERNAMES
 
 
+def resolve_owner(data):
+    """Owner of a squad / campaign being created: (user, None) or (None, (json response, status)).
+
+    The request body may carry `owner` (a username). Without it, or naming the caller, the owner is the session
+    user. Naming anybody else is for the admin only (everyone else gets 403). The admin may name an account that
+    does not exist yet: it is created without a password ('reserved': nobody can log in as it, like the owners of
+    imported squads), so the name is held for its real author."""
+    from app import db
+    from app.auth import USERNAME_RE
+    from app.models import User
+    name = data.get('owner')
+    name = name.strip() if isinstance(name, str) else ''
+    if not name or name.lower() == (current_user.username_lower or '').lower():
+        return current_user._get_current_object(), None
+    if not is_admin():
+        return None, (jsonify(error=_('Only the admin can create content for another owner.')), 403)
+    user = User.query.filter_by(username_lower=name.lower()).first()
+    if not user:
+        if not USERNAME_RE.match(name):
+            return None, (jsonify(error=_('Username must be 3–30 chars, letters/digits/underscore only.')), 400)
+        user = User(username=name, email=f'{name.lower()}@community.local', password_hash=None, full_name=name)
+        db.session.add(user)
+        db.session.flush()
+    return user, None
+
+
 def admin_required(fn):
     """Route guard: 401 when not logged in, 403 for any non-admin account."""
     @wraps(fn)

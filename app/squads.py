@@ -405,6 +405,9 @@ def validate_squad():
 @login_required
 def create_squad():
     data = request.get_json(silent=True) or {}
+    owner, denied = roles.resolve_owner(data)
+    if denied:
+        return denied
     target_status = data.get('status', 'draft')
     if target_status not in ('draft', 'published'):
         target_status = 'draft'
@@ -418,7 +421,7 @@ def create_squad():
 
     objective_ids = [int(i) for i in (data.get('objective_card_ids') or []) if i]
     squad = Squad(
-        user_id=current_user.id,
+        user_id=owner.id,
         name=(data.get('name') or '').strip() or 'Unnamed Squad',
         mission_card_id=data['mission_card_id'],
         situation_card_id=data.get('situation_card_id'),

@@ -86,7 +86,7 @@ def validate_squad(payload, mission_card, soldiers_data):
                 rp_total += (g['card'].get('resource_cost') or 0) * g['quantity']
 
     if budget and rp_total > budget:
-        errors.append(_issue('OVER_BUDGET', rp_total=rp_total, budget=budget))
+        warnings.append(_issue('OVER_BUDGET', rp_total=rp_total, budget=budget))   # allowed: shown, never blocks
 
     # 4. Loadout per PS + duplicate skills
     soldier_computed = []
@@ -104,8 +104,8 @@ def validate_squad(payload, mission_card, soldiers_data):
             )
             loadout_remaining = effective_loadout - gear_loadout_used
             if gear_loadout_used > effective_loadout:
-                errors.append(_issue('OVER_LOADOUT', name=card['name'],
-                                     used=gear_loadout_used, max=effective_loadout))
+                warnings.append(_issue('OVER_LOADOUT', name=card['name'],       # allowed: shown, never blocks
+                                       used=gear_loadout_used, max=effective_loadout))
 
             # Duplicate skill names (compared on the canonical English name)
             skill_names = []
