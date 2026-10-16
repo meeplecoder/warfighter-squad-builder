@@ -329,8 +329,21 @@ function chipForCategory(cat) {
 // card_types where card_subtype is a real type label (not a theater name)
 const SUBTYPE_CATS = new Set(['Soldier','Weapon','Skill','Equipment','Objective','Mission']);
 
+// Mission / objective types get one hue each so the picker tables are easy to scan (unknown values: stable hue from the name)
+const TYPE_HUE = {
+  'Standard': 210, 'Raid': 25, 'Airborne': 245, 'Shore Invasion': 195, 'Holding Action': 135, 'Hold the Line': 95,
+  'Escape': 275, 'Eliminate Hostiles': 0, 'Destroy Target': 38, 'Keep Clear': 175, 'Kill Specified Hostile': 320,
+};
+function typeChip(subtype) {
+  let h = TYPE_HUE[subtype];
+  if (h == null) { h = 0; for (const ch of subtype) h = (h * 31 + ch.charCodeAt(0)) % 360; }
+  const style = `background:hsl(${h} 45% 20%);color:hsl(${h} 70% 78%);border-color:hsl(${h} 40% 36%)`;
+  return `<span class="chip" style="${style}">${esc(tv('card_subtype', subtype))}</span>`;
+}
+
 function chipForSubtype(subtype, category) {
   if (category && !SUBTYPE_CATS.has(category)) return '';
+  if ((category === 'Mission' || category === 'Objective') && subtype && subtype !== 'Player' && subtype !== 'NPS') return typeChip(subtype);
   if (subtype === 'Player') return `<span class="chip chip-ps" title="${esc(tv('card_subtype', 'Player'))}">${esc(t('chip.ps'))}</span>`;
   if (subtype === 'NPS') return `<span class="chip chip-nps" title="${esc(tv('card_subtype', 'NPS'))}">${esc(t('chip.nps'))}</span>`;
   return subtype ? `<span class="chip">${esc(tv('card_subtype', subtype))}</span>` : '';
