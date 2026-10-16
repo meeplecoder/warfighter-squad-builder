@@ -16,7 +16,9 @@ fly ssh console -C "python scripts/create_admin.py --email you@example.com"
 ```
 
 Always keep **one machine** (`fly scale count 1`): the database is a SQLite file on that machine's volume.
-Edit `APP_BASE_URL` / `MAIL_FROM` in `fly.toml` when you add a custom domain (`fly certs add your.domain`).
+Edit `APP_BASE_URL` / `MAIL_FROM` in `fly.toml` when you add a custom domain (`fly certs add your.domain`). Resend
+only sends to arbitrary recipients from a domain you verified there (a `*.fly.dev` name cannot be verified), so use
+e.g. `no-reply@mail.your.domain` after the domain shows as Verified in Resend.
 
 ## Deploying from GitHub
 

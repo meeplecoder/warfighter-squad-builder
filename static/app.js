@@ -53,6 +53,26 @@ function requireLogin() {
   return false;
 }
 
+// Anonymous visitors may build squads, generate squads and edit campaigns; only SAVING needs an account.
+// loginToSave() parks the work in sessionStorage and sends them to the login page; after logging in they return to
+// the same page and its handler restores the work (takeResume).
+const RESUME_KEY = 'wf.resume.v1';
+function loginToSave(kind, returnRoute, state) {
+  try { sessionStorage.setItem(RESUME_KEY, JSON.stringify({ kind, route: returnRoute, state })); } catch (_) {}
+  loginReturn = returnRoute;
+  loginNotice = 'save';
+  navigate('login');
+}
+function peekResume() {
+  try { return JSON.parse(sessionStorage.getItem(RESUME_KEY) || 'null'); } catch (_) { return null; }
+}
+function takeResume(kind) {
+  const r = currentUser ? peekResume() : null;          // only restored once the user is logged in
+  if (!r || r.kind !== kind) return null;
+  try { sessionStorage.removeItem(RESUME_KEY); } catch (_) {}
+  return r.state;
+}
+
 function route() {
   const hash = location.hash.slice(1) || '/cards';
   const parts = hash.split('/').filter(Boolean);
@@ -279,12 +299,22 @@ function actionBtn({ icon: ic, label, variant = 'ghost', id, href, title, attrs 
 
 // Page action bar shared by the four views:
 //   start: navigation (back / cancel, pager) · end: secondary actions | destructive · primary (rightmost)
-function pageToolbar(start, secondary = [], main = []) {
+function toolbarEnd(secondary = [], main = []) {
   const sec = secondary.filter(Boolean).join(''), mn = main.filter(Boolean).join('');
+  return `<div class="tb-end">${sec}${sec && mn ? '<span class="tb-sep" aria-hidden="true"></span>' : ''}${mn}</div>`;
+}
+
+function pageToolbar(start, secondary = [], main = [], pager = '') {
+  // With a pager: back left, prev/next right; the actions go in the page header (toolbarEnd)
+  if (pager) return `
+    <div class="page-toolbar has-pager">
+      <div class="tb-start">${start}</div>
+      <div class="tb-pager-slot">${pager}</div>
+    </div>`;
   return `
     <div class="page-toolbar">
       <div class="tb-start">${start}</div>
-      <div class="tb-end">${sec}${sec && mn ? '<span class="tb-sep" aria-hidden="true"></span>' : ''}${mn}</div>
+      ${toolbarEnd(secondary, main)}
     </div>`;
 }
 
@@ -743,13 +773,9 @@ async function showCardDetail(idOrNumber) {
   const nextId = navIdx >= 0 && navIdx < cardNavList.length - 1 ? cardNavList[navIdx + 1] : null;
   // Keep the browser on the page containing this card when returning to the list
   if (navIdx >= 0) cardFilters.page = Math.floor(navIdx / cardFilters.per_page) + 1;
-  const navPos = navIdx >= 0 ? `<span class="cd-nav-pos">${navIdx + 1} / ${cardNavList.length}</span>` : '';
-  const prevBtn = prevId
-    ? `<a href="#/cards/${prevId}" class="btn btn-ghost btn-sm">← ${esc(t('common.prev'))}</a>`
-    : `<span class="btn btn-ghost btn-sm" style="opacity:.35;pointer-events:none">← ${esc(t('common.prev'))}</span>`;
-  const nextBtn = nextId
-    ? `<a href="#/cards/${nextId}" class="btn btn-ghost btn-sm">${esc(t('common.next'))} →</a>`
-    : `<span class="btn btn-ghost btn-sm" style="opacity:.35;pointer-events:none">${esc(t('common.next'))} →</span>`;
+  const prevBtn = actionBtn({ icon: 'prev', label: t('common.prev'), iconOnly: true, href: prevId ? '#/cards/' + prevId : '', disabled: !prevId });
+  const nextBtn = actionBtn({ icon: 'next', label: t('common.next'), iconOnly: true, href: nextId ? '#/cards/' + nextId : '', disabled: !nextId });
+  const navPos = navIdx >= 0 ? `<span class="tb-pager">${prevBtn}<span class="tb-pager-pos">${navIdx + 1} / ${cardNavList.length}</span>${nextBtn}</span>` : '';
 
   // --- Add to build ---
   const addBtn = builderState.missionCard
@@ -919,8 +945,6 @@ async function showCardDetail(idOrNumber) {
       ${editTrBtn}
       <span style="flex:1"></span>
       ${navPos}
-      ${prevBtn}
-      ${nextBtn}
     </div>
 
     <div class="cd-wrap ${typeCls}">
@@ -1018,11 +1042,11 @@ register('squads', async function(subId) {
 });
 
 function renderSquadsShell() {
-  const newBtn = currentUser
-    ? `<span style="display:flex;gap:6px">
+  const newBtn = `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
         <button class="btn btn-ghost" id="import-squad-btn">${esc(t('io.import'))}</button>
+        <button class="btn btn-primary" id="autogenerate-squad-btn">+ ${esc(t('squads.autogenerate'))}</button>
         <button class="btn btn-primary" id="new-squad-btn">+ ${esc(t('squads.new'))}</button>
-      </span>` : '';
+      </span>`;
 
   setMain(`
     <div class="flex justify-between items-center" style="margin-bottom:12px">
@@ -1034,6 +1058,7 @@ function renderSquadsShell() {
 
   const main = document.getElementById('app-main');
   main.querySelector('#new-squad-btn')?.addEventListener('click', () => navigate('builder'));
+  main.querySelector('#autogenerate-squad-btn')?.addEventListener('click', () => navigate('generator'));
   main.querySelector('#import-squad-btn')?.addEventListener('click', openImportDialog);
   renderSquadList(document.getElementById('squads-list'));
 }
@@ -1064,8 +1089,8 @@ async function renderSquadList(containerEl) {
   const { items, total, page, pages } = data;
   const userBtns = currentUser ? `
     <button class="quick-filter ${f.liked ? 'active' : ''}" id="liked-filter">♥ ${esc(t('squads.liked_by_me'))}</button>
-    <button class="quick-filter ${f.mine ? 'active-purple' : ''}" id="mine-filter">${esc(t('squads.tab_my'))}</button>
-    <button class="quick-filter ${f.myModules ? 'active-blue' : ''}" id="my-modules-filter">${esc(t('squads.my_modules'))}</button>` : '';
+    <button class="quick-filter ${f.mine ? 'active-purple' : ''}" id="mine-filter"><span class="lbl-long">${esc(t('squads.tab_my'))}</span><span class="lbl-short">${esc(t('squads.tab_my_short'))}</span></button>
+    <button class="quick-filter ${f.myModules ? 'active-blue' : ''}" id="my-modules-filter"><span class="lbl-long">${esc(t('squads.my_modules'))}</span><span class="lbl-short">${esc(t('squads.my_modules_short'))}</span></button>` : '';
 
   const rows = items.map(s => {
     const own = s.owner && canManage(s.owner.id);
@@ -1362,17 +1387,19 @@ async function showSquadDetail(squadId) {
 
   setMain(`
     ${pageToolbar(
-      actionBtn({ icon: 'back', label: t('nav.squads'), href: '#/squads' }) +
-        (squadNavIdx >= 0 ? `<span class="tb-pager">${prevSqBtn}${squadNavPos}${nextSqBtn}</span>` : ''),
-      [likeBtn, copyBtn, exportBtns],
-      [deleteBtn, editBtn, publishBtn])}
+      actionBtn({ icon: 'back', label: t('nav.squads'), href: '#/squads' }),
+      [], [],
+      squadNavIdx >= 0 ? `<span class="tb-pager">${prevSqBtn}${squadNavPos}${nextSqBtn}</span>` : '<span></span>')}
 
-    <div class="squad-header">
-      <h1 class="squad-title">${draftBadge} ${esc(squad.name)}</h1>
-      <div class="squad-meta">
-        ${esc(t('squad.by', { user: squad.owner.username }))} · ${fmtDate(squad.created_at)} · ${esc(nationLabel(squad.nation))}${requiredModules}${copiesInfo}
+    <div class="squad-header squad-header-row">
+      <div class="squad-header-main">
+        <h1 class="squad-title">${draftBadge} ${esc(squad.name)}</h1>
+        <div class="squad-meta">
+          ${esc(t('squad.by', { user: squad.owner.username }))} · ${fmtDate(squad.created_at)} · ${esc(nationLabel(squad.nation))}${requiredModules}${copiesInfo}
+        </div>
+        ${basedOn}
       </div>
-      ${basedOn}
+      ${toolbarEnd([likeBtn, copyBtn, exportBtns], [deleteBtn, editBtn, publishBtn])}
     </div>
 
     <div class="squad-info-row">
@@ -1725,7 +1752,6 @@ function renderCardTable(containerEl, items, opts = {}) {
 let builderFromSquadList = false;
 
 register('builder', async function(squadId) {
-  if (!requireLogin()) return;
   const fromList = builderFromSquadList;
   builderFromSquadList = false;
   if (squadId) {
@@ -1757,6 +1783,8 @@ register('builder', async function(squadId) {
     // Fresh builder — always reset when navigating to #/builder without an ID,
     // unless an import / copy is waiting to be loaded
     resetBuilderState();
+    const resumed = takeResume('builder');                // work parked by saveSquad() before the login
+    if (resumed) Object.assign(builderState, resumed);
     if (pendingBuilderDraft) {
       const d = pendingBuilderDraft;
       pendingBuilderDraft = null;
@@ -1934,10 +1962,6 @@ function addGearToBuilder(card, soldierIdx) {
 }
 
 function renderBuilder() {
-  if (!currentUser) {
-    setMain(`<div class="alert alert-warning">${t('builder.login_required_html')}</div>`);
-    return;
-  }
   setPageTitle(t(builderState.squadId ? 'builder.edit_title' : 'builder.new_title'));
 
   const _savedScrollY = document.querySelector('.builder-left')?.scrollTop ?? 0;
@@ -2155,6 +2179,13 @@ function renderBuilder() {
           <div class="text-muted" style="font-size:12px;margin-bottom:6px">${esc(t('builder.notes_hint'))} ${t('mention.hint_html')}</div>
           <textarea id="squad-notes" style="width:100%;min-height:100px;resize:vertical">${esc(builderState.notes)}</textarea>
         </div>
+
+        <!-- phones only: the toolbar is far away at the top -->
+        <div class="builder-bottom-actions">
+          ${actionBtn({ icon: 'validate', label: t('builder.validate'), attrs: 'data-bact="validate"' })}
+          ${actionBtn({ icon: 'save', label: t('builder.save_draft'), attrs: 'data-bact="draft"' })}
+          ${actionBtn({ icon: 'publish', label: t('squad.publish'), variant: 'primary', attrs: 'data-bact="publish"' })}
+        </div>
       </div>
 
       <!-- RIGHT: Card Picker -->
@@ -2239,6 +2270,9 @@ function renderBuilder() {
   main.querySelector('#save-draft-btn')?.addEventListener('click', () => saveSquad('draft'));
   main.querySelector('#publish-squad-btn')?.addEventListener('click', () => saveSquad('published'));
   main.querySelector('#validate-btn')?.addEventListener('click', validateSquad);
+  main.querySelector('[data-bact="validate"]')?.addEventListener('click', validateSquad);
+  main.querySelector('[data-bact="draft"]')?.addEventListener('click', () => saveSquad('draft'));
+  main.querySelector('[data-bact="publish"]')?.addEventListener('click', () => saveSquad('published'));
   main.querySelector('#builder-import-btn')?.addEventListener('click', openImportDialog);
   wireSmartHelp(main);
 
@@ -2448,6 +2482,13 @@ async function loadPickerResults() {
             if (!builderState.objectiveCards.find(o => o.id === fullCard.id)) {
               builderState.objectiveCards.push(fullCard);
             }
+            if (isMobileView()) {        // phone: close the table and go back to the builder
+              builderState.pickerMode = null;
+              renderBuilder();
+              (document.getElementById('pick-obj-btn') || document.querySelector('.builder-left'))
+                ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+              return;
+            }
             renderBuilder();
             loadPickerResults();
             return;
@@ -2457,6 +2498,7 @@ async function loadPickerResults() {
             break;
           case 'soldier':
             if (addSoldierToBuilder(fullCard)) {
+              if (isMobileView()) builderState.pickerMode = null;     // phone: close the table, show the builder
               renderBuilder();
               const newIdx = builderState.soldiers.findIndex(s => s.card.id === fullCard.id);
               const slots = document.querySelectorAll('.soldier-slot');
@@ -2503,6 +2545,14 @@ async function loadPickerResults() {
   }
 }
 
+// Phone layout (matches the CSS breakpoint of the bottom tab bar)
+const isMobileView = () => window.matchMedia('(max-width: 767px)').matches;
+
+// On a phone the validation / save messages live at the top of the page: bring them into view
+function showBuilderMessages() {
+  if (isMobileView()) document.getElementById('builder-validation')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+}
+
 async function validateSquad() {
   const payload = buildSquadPayload();
   const div = document.getElementById('builder-validation');
@@ -2514,6 +2564,7 @@ async function validateSquad() {
   } catch (e) {
     div.innerHTML = alertHtml(e.error || t('builder.validation_error'));
   }
+  showBuilderMessages();
 }
 
 function resetBuilderState() {
@@ -2527,6 +2578,11 @@ function resetBuilderState() {
 }
 
 async function saveSquad(status = 'draft') {
+  if (!currentUser) {
+    const { pickerMode, pickerTarget, pickerGearCat, pickerSort, pickerOrder, pickerPage, pickerModule, pickerQ, ...work } = builderState;
+    loginToSave('builder', '/builder', work);
+    return;
+  }
   const payload = buildSquadPayload(status);
   const div = document.getElementById('builder-validation');
   try {
@@ -2543,6 +2599,7 @@ async function saveSquad(status = 'draft') {
     if (div) {
       div.innerHTML = alertHtml(e.error || t('builder.save_failed'));
       if (e.data?.validation) div.innerHTML += renderValidation(e.data.validation);
+      showBuilderMessages();
     }
   }
 }
@@ -3009,7 +3066,7 @@ function onEnter(id, fn) {
 register('login', function() {
   const notice = loginNotice; loginNotice = false;          // set by requireLogin(): show why they landed here
   const msg = authForm(t('header.login'), `
-    ${notice ? `<div class="alert alert-warning">${esc(t('auth.login_required'))}</div>` : ''}
+    ${notice ? `<div class="alert alert-warning">${esc(t(notice === 'save' ? 'auth.login_to_save' : 'auth.login_required'))}</div>` : ''}
     <div class="form-field"><label>${esc(t('auth.login_id'))}</label><input type="text" id="login-user" autocomplete="username"></div>
     <div class="form-field"><label>${esc(t('auth.password'))}</label><input type="password" id="login-pw" autocomplete="current-password"></div>
     <label style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" id="login-remember"> ${esc(t('auth.remember'))}</label>
@@ -3029,7 +3086,8 @@ register('login', function() {
       await applyUserLanguage();
       renderHeader();
       updateProfileLink();
-      const back = loginReturn; loginReturn = null;
+      let back = loginReturn; loginReturn = null;
+      if (!back) { const r = peekResume(); if (r) back = r.route; }     // page reloaded on the login screen
       navigate(back ? back.replace(/^\//, '') : 'squads');
     } catch (e) {
       if (e.data?.code !== 'email_unverified') { msg.innerHTML = alertHtml(e.error || t('auth.login_failed')); return; }

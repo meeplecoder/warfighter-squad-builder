@@ -155,3 +155,17 @@ def test_admin_creates_for_existing_and_new_owners(app, client, login):
     assert admin.post('/api/squads', json=_squad_body(app, owner='bad name!')).status_code == 400
     r = admin.post('/api/squads', json=_squad_body(app))              # default: the admin itself
     assert r.get_json()['squad']['owner']['username'] == 'admin'
+
+
+def test_new_account_owns_only_the_base_game(app):
+    from app import db
+    from app.models import User, DEFAULT_OWNED_MODULES, set_default_modules
+    from app.profile import _all_modules_with_owned
+    with app.app_context():
+        user = User(username='newbie', email='newbie@example.com')
+        db.session.add(user)
+        db.session.flush()
+        set_default_modules(user)
+        db.session.commit()
+        mods = _all_modules_with_owned(user)
+        assert mods and all(m['owned'] == (m['module'] in DEFAULT_OWNED_MODULES) for m in mods)

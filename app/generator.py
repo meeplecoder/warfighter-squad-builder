@@ -17,7 +17,7 @@ import re
 import secrets
 
 from flask import Blueprint, request, jsonify
-from flask_login import login_required, current_user
+from flask_login import current_user
 from sqlalchemy import or_
 
 from app import db, limiter
@@ -98,7 +98,14 @@ _SPECIAL_MISSIONS = ('Airborne', 'Shore Invasion')
 
 # ── owned modules ─────────────────────────────────────────────────────────────
 
+def _uid(user):
+    """Anonymous visitors have no id: -1 matches no owner, so they see no custom cards."""
+    return user.id if user.is_authenticated else -1
+
+
 def _excluded_modules(user):
+    if not user.is_authenticated:
+        return set()                      # anonymous: the whole catalogue
     return {r.module for r in UserModule.query.filter_by(user_id=user.id, owned=0).all()}
 
 
@@ -119,11 +126,10 @@ def _light_card(c):
 
 
 @generator_bp.route('/options', methods=['GET'])
-@login_required
 def options():
     excluded = _excluded_modules(current_user)
     mods = _all_modules()
-    base = Card.query.filter(or_(Card.module != CUSTOM_MODULE, Card.owner_user_id == current_user.id))
+    base = Card.query.filter(or_(Card.module != CUSTOM_MODULE, Card.owner_user_id == _uid(current_user)))
     base = _available(base, excluded)
 
     ps = _available(Card.catalog(), excluded).filter(Card.card_type == 'Soldier', Card.card_subtype == 'Player').all()
@@ -225,7 +231,7 @@ def _mission_ok_for_nation(m, nation):
 def _objective_pool(mission, excluded, user):
     """Objectives that fit the mission (theater + mission-type pairing rules)."""
     q = Card.query.filter(Card.card_type == 'Objective',
-                          or_(Card.module != CUSTOM_MODULE, Card.owner_user_id == user.id))
+                          or_(Card.module != CUSTOM_MODULE, Card.owner_user_id == _uid(user)))
     objs = _available(q, excluded).order_by(Card.id).all()
     mtype = mission.card_subtype or ''
     wanted = {'Holding Action': 'Fallback', 'Hold the Line': 'Right Flank'}.get(mtype)
@@ -261,7 +267,7 @@ def resolve(req, user, rng):
     if req['mission_card_id']:
         mission = db.session.get(Card, req['mission_card_id'])
         if not mission or mission.card_type != 'Mission' or mission.module in excluded or \
-                (mission.module == CUSTOM_MODULE and mission.owner_user_id != user.id):
+                (mission.module == CUSTOM_MODULE and mission.owner_user_id != _uid(user)):
             raise GenError('MISSION_NOT_PLAYABLE', 'That mission is not in your collection.')
 
     nation = req['nation']
@@ -275,7 +281,7 @@ def resolve(req, user, rng):
 
     if mission is None:
         q = Card.query.filter(Card.card_type == 'Mission', Card.resources.isnot(None),
-                              or_(Card.module != CUSTOM_MODULE, Card.owner_user_id == user.id))
+                              or_(Card.module != CUSTOM_MODULE, Card.owner_user_id == _uid(user)))
         pool = [m for m in _available(q, excluded).order_by(Card.id).all()
                 if _mission_ok_for_nation(m, nation) and (m.card_subtype or '') not in _SPECIAL_MISSIONS]
         fitting = [m for m in pool if _random_mission_fits(m, nation)]
@@ -861,8 +867,8 @@ def _alternatives(req, ctx, main_chosen, main_eval, weights, n):
 
 
 @generator_bp.route('/generate', methods=['POST'])
-@login_required
-@limiter.limit('20 per minute', key_func=lambda: f'gen:{current_user.id}')
+@limiter.limit('20 per minute', key_func=lambda: f'gen:{current_user.id}' if current_user.is_authenticated
+               else f'gen:ip:{request.remote_addr}')
 def generate():
     req = parse_request(request.get_json(silent=True) or {})
     rng = random.Random(f"{req['seed']}|{req['nation']}|{req['mission_card_id']}|{req['objective_card_id']}|{ENGINE_VERSION}")

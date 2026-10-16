@@ -9,7 +9,7 @@ from flask_login import current_user, login_required, login_user, logout_user
 
 from app import db, limiter, mailer
 from app.i18n import _, get_lang, normalize_lang
-from app.models import AuthToken, User, now_utc
+from app.models import AuthToken, User, now_utc, set_default_modules
 from app import security
 from app.roles import is_reserved_username
 
@@ -159,10 +159,11 @@ def register():
                     password_changed_at=now_utc(), full_name=full_name, language=language)
         db.session.add(user)
         db.session.flush()
+        set_default_modules(user)
         mail_verify(user)
         _info('register', user)
     db.session.commit()
-    return jsonify(ok=True, message=_('Check your email to confirm your address, then log in.')), 201
+    return jsonify(ok=True, message=_('Check your email to confirm your address, then log in. If you cannot find it, look in your Spam folder.')), 201
 
 
 @auth_bp.route('/verify', methods=['POST'])
@@ -188,7 +189,7 @@ def resend_verification():
     if user and user.password_hash and not user.email_verified_at:
         mail_verify(user)
         db.session.commit()
-    return jsonify(ok=True, message=_('If that account is waiting for confirmation, we sent a new link.'))
+    return jsonify(ok=True, message=_('If that account is waiting for confirmation, we sent a new link. Check your Spam folder too.'))
 
 
 # ---------------------------------------------------------------------------
@@ -212,13 +213,15 @@ def login():
         _info('login_disabled', user)
         return jsonify(error=_('This account has been disabled. Contact the administrator.'), code='account_disabled'), 403
     if not user.email_verified_at:
-        return jsonify(error=_('Please confirm your email address first. Check your inbox.'),
+        return jsonify(error=_('Please confirm your email address first. Check your inbox and your Spam folder.'),
                        code='email_unverified'), 403
 
     if security.needs_rehash(user):
         user.password_hash = security.hash_password(password)
         db.session.commit()
     session.clear()  # no pre-login session data survives (fixation)
+    user.logins_count = (user.logins_count or 0) + 1
+    db.session.commit()
     login_user(user, remember=bool(data.get('remember')))
     _info('login', user)
     return jsonify(user=user.to_dict()), 200
@@ -263,7 +266,7 @@ def forgot_password():
         mail_reset(user)
         db.session.commit()
         _info('reset_requested', user)
-    return jsonify(ok=True, message=_('If an account uses that address, we sent a reset link.'))
+    return jsonify(ok=True, message=_('If an account uses that address, we sent a reset link. Check your Spam folder too.'))
 
 
 @auth_bp.route('/password/reset', methods=['POST'])

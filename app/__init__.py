@@ -78,6 +78,28 @@ def create_app():
                 and request.mimetype != 'application/json'):
             return jsonify(error='Content-Type must be application/json.'), 415
 
+    @app.before_request
+    def track_user_access():
+        # Records last access + visit counter. A visit = first authenticated API request after 30 min of inactivity
+        # (so a remember-me return counts, page reloads and normal browsing do not).
+        from flask import request
+        from flask_login import current_user
+        from datetime import datetime, timezone, timedelta
+        if not request.path.startswith('/api/') or not current_user.is_authenticated:
+            return
+        try:
+            now = datetime.now(timezone.utc)
+            last = current_user.last_access_at
+            last_dt = datetime.strptime(last, '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc) if last else None
+            if last_dt and now - last_dt < timedelta(minutes=5):
+                return                      # avoid a DB write on every request
+            if not last_dt or now - last_dt >= timedelta(minutes=30):
+                current_user.visit_count = (current_user.visit_count or 0) + 1
+            current_user.last_access_at = now.strftime('%Y-%m-%dT%H:%M:%SZ')
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
     @app.errorhandler(429)
     def too_many_requests(e):
         from app.i18n import _
@@ -287,6 +309,9 @@ def create_app():
                 "ALTER TABLE users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 1",
                 "ALTER TABLE users ADD COLUMN password_changed_at TEXT",
                 "ALTER TABLE users ADD COLUMN disabled_at TEXT",
+                "ALTER TABLE users ADD COLUMN last_access_at TEXT",
+                "ALTER TABLE users ADD COLUMN visit_count INTEGER NOT NULL DEFAULT 0",
+                "ALTER TABLE users ADD COLUMN logins_count INTEGER NOT NULL DEFAULT 0",
             ):
                 try:
                     conn.execute(db.text(ddl))
