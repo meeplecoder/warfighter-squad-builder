@@ -281,11 +281,18 @@ function actionBtn({ icon: ic, label, variant = 'ghost', id, href, title, attrs 
 //   start: navigation (back / cancel, pager) · end: secondary actions | destructive · primary (rightmost)
 function pageToolbar(start, secondary = [], main = [], pager = '') {
   const sec = secondary.filter(Boolean).join(''), mn = main.filter(Boolean).join('');
-  return `
-    <div class="page-toolbar${pager ? ' has-pager' : ''}">
+  const end = `<div class="tb-end">${sec}${sec && mn ? '<span class="tb-sep" aria-hidden="true"></span>' : ''}${mn}</div>`;
+  // With a pager: back + prev/next above the line, the actions on their own right-aligned row below it
+  if (pager) return `
+    <div class="page-toolbar has-pager">
       <div class="tb-start">${start}</div>
-      <div class="tb-end">${sec}${sec && mn ? '<span class="tb-sep" aria-hidden="true"></span>' : ''}${mn}</div>
-      ${pager ? `<div class="tb-pager-slot">${pager}</div>` : ''}
+      <div class="tb-pager-slot">${pager}</div>
+    </div>
+    <div class="tb-actions">${end}</div>`;
+  return `
+    <div class="page-toolbar">
+      <div class="tb-start">${start}</div>
+      ${end}
     </div>`;
 }
 
