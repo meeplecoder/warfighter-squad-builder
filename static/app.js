@@ -53,6 +53,26 @@ function requireLogin() {
   return false;
 }
 
+// Anonymous visitors may build squads, generate squads and edit campaigns; only SAVING needs an account.
+// loginToSave() parks the work in sessionStorage and sends them to the login page; after logging in they return to
+// the same page and its handler restores the work (takeResume).
+const RESUME_KEY = 'wf.resume.v1';
+function loginToSave(kind, returnRoute, state) {
+  try { sessionStorage.setItem(RESUME_KEY, JSON.stringify({ kind, route: returnRoute, state })); } catch (_) {}
+  loginReturn = returnRoute;
+  loginNotice = 'save';
+  navigate('login');
+}
+function peekResume() {
+  try { return JSON.parse(sessionStorage.getItem(RESUME_KEY) || 'null'); } catch (_) { return null; }
+}
+function takeResume(kind) {
+  const r = currentUser ? peekResume() : null;          // only restored once the user is logged in
+  if (!r || r.kind !== kind) return null;
+  try { sessionStorage.removeItem(RESUME_KEY); } catch (_) {}
+  return r.state;
+}
+
 function route() {
   const hash = location.hash.slice(1) || '/cards';
   const parts = hash.split('/').filter(Boolean);
@@ -1022,12 +1042,11 @@ register('squads', async function(subId) {
 });
 
 function renderSquadsShell() {
-  const newBtn = currentUser
-    ? `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+  const newBtn = `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
         <button class="btn btn-ghost" id="import-squad-btn">${esc(t('io.import'))}</button>
         <button class="btn btn-primary" id="autogenerate-squad-btn">+ ${esc(t('squads.autogenerate'))}</button>
         <button class="btn btn-primary" id="new-squad-btn">+ ${esc(t('squads.new'))}</button>
-      </span>` : '';
+      </span>`;
 
   setMain(`
     <div class="flex justify-between items-center" style="margin-bottom:12px">
@@ -1070,8 +1089,8 @@ async function renderSquadList(containerEl) {
   const { items, total, page, pages } = data;
   const userBtns = currentUser ? `
     <button class="quick-filter ${f.liked ? 'active' : ''}" id="liked-filter">♥ ${esc(t('squads.liked_by_me'))}</button>
-    <button class="quick-filter ${f.mine ? 'active-purple' : ''}" id="mine-filter">${esc(t('squads.tab_my'))}</button>
-    <button class="quick-filter ${f.myModules ? 'active-blue' : ''}" id="my-modules-filter">${esc(t('squads.my_modules'))}</button>` : '';
+    <button class="quick-filter ${f.mine ? 'active-purple' : ''}" id="mine-filter"><span class="lbl-long">${esc(t('squads.tab_my'))}</span><span class="lbl-short">${esc(t('squads.tab_my_short'))}</span></button>
+    <button class="quick-filter ${f.myModules ? 'active-blue' : ''}" id="my-modules-filter"><span class="lbl-long">${esc(t('squads.my_modules'))}</span><span class="lbl-short">${esc(t('squads.my_modules_short'))}</span></button>` : '';
 
   const rows = items.map(s => {
     const own = s.owner && canManage(s.owner.id);
@@ -1733,7 +1752,6 @@ function renderCardTable(containerEl, items, opts = {}) {
 let builderFromSquadList = false;
 
 register('builder', async function(squadId) {
-  if (!requireLogin()) return;
   const fromList = builderFromSquadList;
   builderFromSquadList = false;
   if (squadId) {
@@ -1765,6 +1783,8 @@ register('builder', async function(squadId) {
     // Fresh builder — always reset when navigating to #/builder without an ID,
     // unless an import / copy is waiting to be loaded
     resetBuilderState();
+    const resumed = takeResume('builder');                // work parked by saveSquad() before the login
+    if (resumed) Object.assign(builderState, resumed);
     if (pendingBuilderDraft) {
       const d = pendingBuilderDraft;
       pendingBuilderDraft = null;
@@ -1942,10 +1962,6 @@ function addGearToBuilder(card, soldierIdx) {
 }
 
 function renderBuilder() {
-  if (!currentUser) {
-    setMain(`<div class="alert alert-warning">${t('builder.login_required_html')}</div>`);
-    return;
-  }
   setPageTitle(t(builderState.squadId ? 'builder.edit_title' : 'builder.new_title'));
 
   const _savedScrollY = document.querySelector('.builder-left')?.scrollTop ?? 0;
@@ -2562,6 +2578,11 @@ function resetBuilderState() {
 }
 
 async function saveSquad(status = 'draft') {
+  if (!currentUser) {
+    const { pickerMode, pickerTarget, pickerGearCat, pickerSort, pickerOrder, pickerPage, pickerModule, pickerQ, ...work } = builderState;
+    loginToSave('builder', '/builder', work);
+    return;
+  }
   const payload = buildSquadPayload(status);
   const div = document.getElementById('builder-validation');
   try {
@@ -3045,7 +3066,7 @@ function onEnter(id, fn) {
 register('login', function() {
   const notice = loginNotice; loginNotice = false;          // set by requireLogin(): show why they landed here
   const msg = authForm(t('header.login'), `
-    ${notice ? `<div class="alert alert-warning">${esc(t('auth.login_required'))}</div>` : ''}
+    ${notice ? `<div class="alert alert-warning">${esc(t(notice === 'save' ? 'auth.login_to_save' : 'auth.login_required'))}</div>` : ''}
     <div class="form-field"><label>${esc(t('auth.login_id'))}</label><input type="text" id="login-user" autocomplete="username"></div>
     <div class="form-field"><label>${esc(t('auth.password'))}</label><input type="password" id="login-pw" autocomplete="current-password"></div>
     <label style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" id="login-remember"> ${esc(t('auth.remember'))}</label>
@@ -3065,7 +3086,8 @@ register('login', function() {
       await applyUserLanguage();
       renderHeader();
       updateProfileLink();
-      const back = loginReturn; loginReturn = null;
+      let back = loginReturn; loginReturn = null;
+      if (!back) { const r = peekResume(); if (r) back = r.route; }     // page reloaded on the login screen
       navigate(back ? back.replace(/^\//, '') : 'squads');
     } catch (e) {
       if (e.data?.code !== 'email_unverified') { msg.innerHTML = alertHtml(e.error || t('auth.login_failed')); return; }

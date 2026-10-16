@@ -141,7 +141,7 @@ def _parse(data, owner_id=None):
         mc_id = m.get('mission_card_id')
         mc = db.session.get(Card, int(mc_id)) if mc_id else None
         if mc_id and (not mc or mc.card_type != 'Mission'
-                      or (mc.module == CUSTOM_MODULE and mc.owner_user_id != (owner_id or current_user.id))):
+                      or (mc.module == CUSTOM_MODULE and mc.owner_user_id != (owner_id or (current_user.id if current_user.is_authenticated else -1)))):
             errors.append(_('{mission}: invalid mission card.', mission=label))
             mc = None
         row['mission_card_id'] = mc.id if mc else None
@@ -313,7 +313,6 @@ def _write(c, data, is_new):
 
 
 @campaigns_bp.route('/import', methods=['POST'])
-@login_required
 def import_campaign():
     """Campaign YAML file → unsaved campaign for the editor + warnings (spec 09 §6). Nothing is saved."""
     content = (request.get_json(silent=True) or {}).get('content') or ''
@@ -327,7 +326,6 @@ def import_campaign():
 
 
 @campaigns_bp.route('/validate', methods=['POST'])
-@login_required
 def validate_campaign():
     """Check the editor payload without saving: {valid, errors}."""
     fields, settings, missions, links, errors = _parse(request.get_json(silent=True) or {})

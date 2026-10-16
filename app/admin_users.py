@@ -29,14 +29,18 @@ def _row(user, squads=0, campaigns=0):
         'id': user.id, 'username': user.username, 'full_name': user.full_name, 'email': user.email,
         'status': user.status, 'role': user.role, 'created_at': user.created_at,
         'squads': squads, 'campaigns': campaigns,
+        'last_access_at': user.last_access_at, 'visit_count': user.visit_count or 0,
+        'logins_count': user.logins_count or 0,
     }
 
 
 def _detail(user):
+    from app.profile import _all_modules_with_owned
     d = _row(user, Squad.query.filter_by(user_id=user.id).count(), Campaign.query.filter_by(user_id=user.id).count())
     d.update(avatar_url=user.avatar_url, language=user.language, email_verified_at=user.email_verified_at,
              disabled_at=user.disabled_at, password_changed_at=user.password_changed_at,
-             has_password=bool(user.password_hash))           # never the hash itself
+             has_password=bool(user.password_hash),
+             expansions=sum(1 for m in _all_modules_with_owned(user) if m['owned']))           # never the hash itself
     return d
 
 

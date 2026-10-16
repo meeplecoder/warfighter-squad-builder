@@ -9,7 +9,7 @@ from flask_login import current_user, login_required, login_user, logout_user
 
 from app import db, limiter, mailer
 from app.i18n import _, get_lang, normalize_lang
-from app.models import AuthToken, User, now_utc
+from app.models import AuthToken, User, now_utc, set_default_modules
 from app import security
 from app.roles import is_reserved_username
 
@@ -159,6 +159,7 @@ def register():
                     password_changed_at=now_utc(), full_name=full_name, language=language)
         db.session.add(user)
         db.session.flush()
+        set_default_modules(user)
         mail_verify(user)
         _info('register', user)
     db.session.commit()
@@ -219,6 +220,8 @@ def login():
         user.password_hash = security.hash_password(password)
         db.session.commit()
     session.clear()  # no pre-login session data survives (fixation)
+    user.logins_count = (user.logins_count or 0) + 1
+    db.session.commit()
     login_user(user, remember=bool(data.get('remember')))
     _info('login', user)
     return jsonify(user=user.to_dict()), 200
