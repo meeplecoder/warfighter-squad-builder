@@ -279,12 +279,13 @@ function actionBtn({ icon: ic, label, variant = 'ghost', id, href, title, attrs 
 
 // Page action bar shared by the four views:
 //   start: navigation (back / cancel, pager) · end: secondary actions | destructive · primary (rightmost)
-function pageToolbar(start, secondary = [], main = []) {
+function pageToolbar(start, secondary = [], main = [], pager = '') {
   const sec = secondary.filter(Boolean).join(''), mn = main.filter(Boolean).join('');
   return `
-    <div class="page-toolbar">
+    <div class="page-toolbar${pager ? ' has-pager' : ''}">
       <div class="tb-start">${start}</div>
       <div class="tb-end">${sec}${sec && mn ? '<span class="tb-sep" aria-hidden="true"></span>' : ''}${mn}</div>
+      ${pager ? `<div class="tb-pager-slot">${pager}</div>` : ''}
     </div>`;
 }
 
@@ -1358,10 +1359,10 @@ async function showSquadDetail(squadId) {
 
   setMain(`
     ${pageToolbar(
-      actionBtn({ icon: 'back', label: t('nav.squads'), href: '#/squads' }) +
-        (squadNavIdx >= 0 ? `<span class="tb-pager">${prevSqBtn}${squadNavPos}${nextSqBtn}</span>` : ''),
+      actionBtn({ icon: 'back', label: t('nav.squads'), href: '#/squads' }),
       [likeBtn, copyBtn, exportBtns],
-      [deleteBtn, editBtn, publishBtn])}
+      [deleteBtn, editBtn, publishBtn],
+      squadNavIdx >= 0 ? `<span class="tb-pager">${prevSqBtn}${squadNavPos}${nextSqBtn}</span>` : '')}
 
     <div class="squad-header">
       <h1 class="squad-title">${draftBadge} ${esc(squad.name)}</h1>

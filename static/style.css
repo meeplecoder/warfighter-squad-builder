@@ -129,6 +129,11 @@ h3 { font-size: 1rem; font-weight: 600; }
 .tb-start, .tb-end { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 .tb-end { margin-left: auto; justify-content: flex-end; }
 .tb-sep { width: 1px; height: 22px; margin: 0 4px; background: var(--border); }
+/* With a pager: back left · actions centered · prev/next right */
+.has-pager .tb-start, .has-pager .tb-pager-slot { flex: 1 1 0; }
+.has-pager .tb-end { margin-left: 0; justify-content: center; }
+.tb-pager-slot { display: flex; justify-content: flex-end; }
+.tb-pager-slot .tb-pager { margin-left: 0; }
 .tb-pager { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; }
 /* Editor heading (squad + campaign builders), below the action bar */
 .page-title { margin-bottom: 12px; }
@@ -137,6 +142,8 @@ h3 { font-size: 1rem; font-weight: 600; }
   /* Secondary actions collapse to icons (title/aria-label keep the name); the primary keeps its label */
   .tb-end .btn:not(.btn-primary) .btn-label { display: none; }
   .tb-end .btn:not(.btn-primary) { padding: 6px 8px; }
+  .has-pager .tb-start, .has-pager .tb-pager-slot { flex: 0 0 auto; }
+  .has-pager .tb-end { flex: 1 1 auto; }
 }
 
 /* ---- Header -------------------------------------------------------- */
