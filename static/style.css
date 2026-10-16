@@ -132,7 +132,8 @@ h3 { font-size: 1rem; font-weight: 600; }
 /* With a pager: back left · prev/next right, actions on their own row below the line */
 .tb-pager-slot { margin-left: auto; display: flex; justify-content: flex-end; }
 .tb-pager-slot .tb-pager { margin-left: 0; }
-.tb-actions { display: flex; justify-content: flex-end; margin: -4px 0 14px; }
+.squad-header-row { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; }
+.squad-header-main { min-width: 0; flex: 1 1 260px; }
 .tb-pager { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; }
 /* Editor heading (squad + campaign builders), below the action bar */
 .page-title { margin-bottom: 12px; }
