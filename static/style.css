@@ -3,6 +3,14 @@
    Mobile-first, military theme
    ===================================================================== */
 
+/* Windows has no flag emoji: this font only supplies the regional-indicator glyphs (flags) */
+@font-face {
+  font-family: 'Twemoji Country Flags';
+  src: url('/static/fonts/TwemojiCountryFlags.woff2') format('woff2');
+  unicode-range: U+1F1E6-1F1FF, U+1F3F4, U+E0062-E007F;
+  font-display: swap;
+}
+
 :root {
   /* Warfighter palette. Neutral warm charcoal for the big areas; muted navy for actions and charts;
      card-art mustard / tan used sparingly (header stripe, title rules, Mission badge);
@@ -30,8 +38,8 @@
   --paper: #e8e0cc;
   --paper-edge: #c2b68c;
   --ink: #2a1f10;
-  --font-type: 'Special Elite', 'Courier New', monospace;
-  --font-body: 'Roboto Condensed', 'Arial Narrow', system-ui, sans-serif;
+  --font-type: 'Twemoji Country Flags', 'Special Elite', 'Courier New', monospace;
+  --font-body: 'Twemoji Country Flags', 'Roboto Condensed', 'Arial Narrow', system-ui, sans-serif;
   --radius: 3px;
   --header-h: 54px;
   --sidebar-w: 170px;
@@ -129,6 +137,11 @@ h3 { font-size: 1rem; font-weight: 600; }
 .tb-start, .tb-end { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 .tb-end { margin-left: auto; justify-content: flex-end; }
 .tb-sep { width: 1px; height: 22px; margin: 0 4px; background: var(--border); }
+/* With a pager: back left · prev/next right, actions on their own row below the line */
+.tb-pager-slot { margin-left: auto; display: flex; justify-content: flex-end; }
+.tb-pager-slot .tb-pager { margin-left: 0; }
+.squad-header-row { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; }
+.squad-header-main { min-width: 0; flex: 1 1 260px; }
 .tb-pager { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; }
 /* Editor heading (squad + campaign builders), below the action bar */
 .page-title { margin-bottom: 12px; }
@@ -383,6 +396,7 @@ h3 { font-size: 1rem; font-weight: 600; }
   border-radius: var(--radius);
   padding: 16px;
 }
+.builder-bottom-actions { display: none; }
 .builder-section { margin-bottom: 16px; }
 .builder-section-title {
   font-size: 11px; font-weight: 700; text-transform: uppercase;
@@ -803,9 +817,19 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
   .card-detail-layout { grid-template-columns: 1fr; }
   .builder-layout { grid-template-columns: 1fr; height: auto; }
   .builder-right { order: -1; }
+  .builder-bottom-actions { display: flex; gap: 8px; margin-top: 8px; }
+  .builder-bottom-actions .btn { flex: 1; justify-content: center; }
   .data-table th:nth-child(n+4), .data-table td:nth-child(n+4) { display: none; }
   /* squads table has a leading edit column: keep name, nation, mission */
   .squads-table th:nth-child(4), .squads-table td:nth-child(4) { display: table-cell; }
+  /* fit the phone width: fixed layout, names and missions wrap onto several rows instead of widening the table */
+  .squads-table { table-layout: fixed; width: 100%; }
+  .squads-table th, .squads-table td { padding: 8px 6px; font-size: 13px; overflow-wrap: anywhere; }
+  .squads-table th:nth-child(1), .squads-table td:nth-child(1) { width: 30px; }
+  .squads-table th:nth-child(2), .squads-table td:nth-child(2) { width: 42%; }
+  .squads-table th:nth-child(3), .squads-table td:nth-child(3) { width: 18%; }
+  .squads-table .squad-name-cell { white-space: normal; }
+  .squads-table .squad-name-cell .ellipsis { display: inline; max-width: none; white-space: normal; overflow: visible; }
 }
 
 /* ---- Sortable table headers ----------------------------------------- */
@@ -1359,7 +1383,9 @@ input:focus, select:focus, textarea:focus { outline-color: var(--kraft); }
 .chip-nps { background: #33200f; color: #eda05b; }
 
 @media (max-width: 600px) {
-  .header-brand { font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 48vw; }
+  /* full title; it only gets cut (…) when it would run into the language selector / user menu */
+  .header-brand { font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; min-width: 0; margin-right: 8px; }
+  #header-auth { flex: none; }
 }
 
 /* ---- Squad metrics (squad detail) ---------------------------------- */
@@ -1580,7 +1606,12 @@ input:focus, select:focus, textarea:focus { outline-color: var(--kraft); }
   .nav-short { display: inline; }
 }
 
-/* Phone tab bar: six items must fit on 360–390 px wide screens */
+/* Phone tab bar: only Cards, Squads, Campaigns and Expansions (the builders and the admin views live on desktop) */
+@media (max-width: 767px) {
+  #nav-builder, #nav-generator, #nav-translations, #nav-users { display: none !important; }
+  /* importing text / CSV / YAML files is a desktop task */
+  #import-squad-btn, #builder-import-btn, [data-act="import"] { display: none !important; }
+}
 @media (max-width: 767px) {
   #sidebar .nav-link, #sidebar .nav-link.nav-sub { letter-spacing: .03em; padding: 8px 2px; font-size: 10.5px; }
 }
@@ -1611,3 +1642,9 @@ input:focus, select:focus, textarea:focus { outline-color: var(--kraft); }
 .user-facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 18px 0 0; font-size: 13px; }
 .user-facts dt { color: var(--text-muted); }
 .user-facts dd { margin: 0; }
+
+.quick-filter .lbl-short { display: none; }
+@media (max-width: 640px) {
+  .quick-filter .lbl-long { display: none; }
+  .quick-filter .lbl-short { display: inline; }
+}

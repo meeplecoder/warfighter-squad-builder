@@ -38,7 +38,6 @@ function genLoadForm() {
 function genSaveForm() { try { localStorage.setItem(GEN_STORE, JSON.stringify(gen.form)); } catch (_) {} }
 
 register('generator', async function () {
-  if (!requireLogin()) return;
   showSpinner();
   try {
     gen.opts = await API.get('/generator/options');
@@ -47,7 +46,9 @@ register('generator', async function () {
     return;
   }
   genLoadForm();
-  gen.result = null; gen.error = null; gen.locks = new Set();
+  gen.result = null; gen.error = null; gen.locks = new Set(); gen.resumeName = null;
+  const resumed = takeResume('generator');              // work parked by the save button before the login
+  if (resumed) { gen.form = resumed.form; gen.result = resumed.result; gen.locks = new Set(resumed.locks || []); gen.resumeName = resumed.name; }
   // Drop remembered picks that are no longer offered (module unchecked in the profile, etc.)
   const nations = gen.opts.nations.map(n => n.code);
   if (gen.form.nation !== 'random' && !nations.includes(gen.form.nation)) gen.form.nation = 'random';
@@ -468,7 +469,7 @@ function renderGenResult() {
 
     <div class="gen-save">
       <div class="form-field gen-field" style="margin:0"><label for="gen-name">${esc(t('gen.squad_name'))}</label>
-        <input type="text" id="gen-name" maxlength="120" value="${esc(genName(res))}" style="max-width:none;width:100%"></div>
+        <input type="text" id="gen-name" maxlength="120" value="${esc(gen.resumeName || genName(res))}" style="max-width:none;width:100%"></div>
       <div class="gen-actions">
         <button type="button" class="btn btn-ghost" id="gen-again">${icon('refresh')}<span>${esc(t(optimal ? 'gen.different' : 'gen.regenerate'))}</span></button>
         <button type="button" class="btn btn-ghost" id="gen-open">${icon('edit')}<span>${esc(t('gen.open_builder'))}</span></button>
@@ -521,6 +522,10 @@ function wireGenResult(box, res) {
     navigate('builder');
   });
   box.querySelector('#gen-save').addEventListener('click', async () => {
+    if (!currentUser) {
+      loginToSave('generator', '/generator', { form: gen.form, result: gen.result, locks: [...gen.locks], name: box.querySelector('#gen-name').value });
+      return;
+    }
     const btn = box.querySelector('#gen-save'), msg = box.querySelector('#gen-save-msg');
     btn.disabled = true;
     try {
