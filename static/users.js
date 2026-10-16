@@ -140,7 +140,10 @@ async function showUserDetail(id) {
         <dt>${esc(t('users.registered'))}</dt><dd>${esc(fmtDate(u.created_at))}</dd>
         <dt>${esc(t('users.email_verified'))}</dt><dd>${u.email_verified_at ? esc(fmtDate(u.email_verified_at)) : '—'}</dd>
         <dt>${esc(t('users.password_changed'))}</dt><dd>${u.password_changed_at ? esc(fmtDate(u.password_changed_at)) : (u.has_password ? '—' : esc(t('users.no_password')))}</dd>
-        <dt>${esc(t('users.content'))}</dt><dd>${esc(tn('users.squads', u.squads))} · ${esc(tn('users.campaigns', u.campaigns))}</dd>
+        <dt>${esc(t('users.last_access'))}</dt><dd>${u.last_access_at ? esc(fmtDate(u.last_access_at)) : '—'}</dd>
+        <dt>${esc(t('users.visits'))}</dt><dd>${u.visit_count || 0}</dd>
+        <dt>${esc(t('users.logins'))}</dt><dd>${u.logins_count || 0}</dd>
+        <dt>${esc(t('users.content'))}</dt><dd>${esc(tn('users.squads', u.squads))} · ${esc(tn('users.campaigns', u.campaigns))} · ${esc(tn('users.expansions', u.expansions))}</dd>
       </dl>
 
       <div class="flex" style="gap:8px;margin-top:14px">

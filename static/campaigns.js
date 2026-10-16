@@ -27,7 +27,7 @@ function renderCampaignsShell() {
   setMain(`
     <div class="flex justify-between items-center" style="margin-bottom:12px">
       <h1>${esc(t('campaigns.title'))}</h1>
-      ${currentUser ? `<button class="btn btn-primary" id="new-campaign-btn">+ ${esc(t('campaigns.new'))}</button>` : ''}
+      <button class="btn btn-primary" id="new-campaign-btn">+ ${esc(t('campaigns.new'))}</button>
     </div>
     <div id="campaigns-list"></div>`);
   document.getElementById('new-campaign-btn')?.addEventListener('click', () => navigate('campaigns/new'));
@@ -411,8 +411,10 @@ function emptyCampaignMission() {
 }
 
 async function openCampaignEditor(id) {
-  if (!requireLogin()) return;
+  if (id && !requireLogin()) return;                    // editing a saved campaign needs its owner; a new one does not
   showSpinner();
+  const resumed = id ? null : takeResume('campaign');   // work parked by saveCampaign() before the login
+  if (resumed) { campaignState = resumed; renderCampaignEditor(); return; }
   let c = null;
   if (id) {
     try { c = (await API.get('/campaigns/' + id)).campaign; }
@@ -420,7 +422,10 @@ async function openCampaignEditor(id) {
     if (!canManage(c.owner.id)) { navigate('campaigns/' + id); return; }       // the owner, or the admin
   }
   let mySquads = [];
-  try { mySquads = (await API.get(`/squads?user_id=${c ? c.owner.id : currentUser.id}&per_page=200&sort=name&order=asc`)).items; } catch (_) {}
+  const squadsOwner = c ? c.owner.id : currentUser?.id;
+  if (squadsOwner) {
+    try { mySquads = (await API.get(`/squads?user_id=${squadsOwner}&per_page=200&sort=name&order=asc`)).items; } catch (_) {}
+  }
   campaignState = campaignStateFrom(c, { id: c?.id || null, status: c?.status || 'draft', mySquads });
   renderCampaignEditor();
 }
@@ -807,6 +812,7 @@ function campaignPayload(status) {
 }
 
 async function saveCampaign(status) {
+  if (!currentUser) { loginToSave('campaign', '/campaigns/new', campaignState); return; }
   const st = campaignState;
   const body = campaignPayload(status);
   try {

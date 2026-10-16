@@ -183,6 +183,9 @@ class User(UserMixin, db.Model):
     session_version = db.Column(db.Integer, nullable=False, default=1)  # bump to revoke every session/remember cookie
     password_changed_at = db.Column(db.Text)
     disabled_at = db.Column(db.Text)                               # set by the admin: login and sessions refused
+    last_access_at = db.Column(db.Text)                            # last authenticated request (UTC, refreshed every few minutes)
+    logins_count = db.Column(db.Integer, nullable=False, default=0)  # successful password logins
+    visit_count = db.Column(db.Integer, nullable=False, default=0)  # visits = first request after VISIT_GAP of inactivity
 
     modules = db.relationship('UserModule', backref='user', cascade='all, delete-orphan')
     squads = db.relationship('Squad', foreign_keys='Squad.user_id', backref='owner', cascade='all, delete-orphan')
@@ -259,6 +262,17 @@ class UserModule(db.Model):
     owned = db.Column(db.Integer, nullable=False, default=1)
 
     __table_args__ = (db.UniqueConstraint('user_id', 'module'),)
+
+
+# A new account owns only the base game; the user ticks the other expansions in My Expansions.
+DEFAULT_OWNED_MODULES = ('Core Europe',)
+
+
+def set_default_modules(user):
+    """Mark every catalogue module outside DEFAULT_OWNED_MODULES as not owned (a module with no row counts as owned)."""
+    for (module,) in Card.catalog().with_entities(Card.module).distinct().all():
+        if module and module not in DEFAULT_OWNED_MODULES:
+            db.session.add(UserModule(user_id=user.id, module=module, owned=0))
 
 
 class Squad(db.Model):

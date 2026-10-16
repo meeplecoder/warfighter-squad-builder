@@ -58,8 +58,13 @@ def test_skill_effects():
     assert skill_effects.bonuses(mods, {'ranged'}, 1) == (1, 0)
 
 
-def test_generator_requires_login(client):
-    assert client.post('/api/generator/generate', json={}).status_code == 401
+def test_builders_work_anonymously_but_saving_needs_login(client):
+    # The generator and the validators are open to visitors; only saving requires an account
+    assert client.get('/api/generator/options').status_code == 200
+    assert client.post('/api/generator/generate', json={}).status_code != 401
+    assert client.post('/api/campaigns/validate', json={}).status_code == 200
+    assert client.post('/api/squads/', json={}).status_code == 401
+    assert client.post('/api/campaigns', json={}).status_code == 401
 
 
 def test_generator_builds_a_valid_squad(app, client, login):
