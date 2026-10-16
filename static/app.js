@@ -279,20 +279,22 @@ function actionBtn({ icon: ic, label, variant = 'ghost', id, href, title, attrs 
 
 // Page action bar shared by the four views:
 //   start: navigation (back / cancel, pager) · end: secondary actions | destructive · primary (rightmost)
-function pageToolbar(start, secondary = [], main = [], pager = '') {
+function toolbarEnd(secondary = [], main = []) {
   const sec = secondary.filter(Boolean).join(''), mn = main.filter(Boolean).join('');
-  const end = `<div class="tb-end">${sec}${sec && mn ? '<span class="tb-sep" aria-hidden="true"></span>' : ''}${mn}</div>`;
-  // With a pager: back + prev/next above the line, the actions on their own right-aligned row below it
+  return `<div class="tb-end">${sec}${sec && mn ? '<span class="tb-sep" aria-hidden="true"></span>' : ''}${mn}</div>`;
+}
+
+function pageToolbar(start, secondary = [], main = [], pager = '') {
+  // With a pager: back left, prev/next right; the actions go in the page header (toolbarEnd)
   if (pager) return `
     <div class="page-toolbar has-pager">
       <div class="tb-start">${start}</div>
       <div class="tb-pager-slot">${pager}</div>
-    </div>
-    <div class="tb-actions">${end}</div>`;
+    </div>`;
   return `
     <div class="page-toolbar">
       <div class="tb-start">${start}</div>
-      ${end}
+      ${toolbarEnd(secondary, main)}
     </div>`;
 }
 
@@ -1367,16 +1369,18 @@ async function showSquadDetail(squadId) {
   setMain(`
     ${pageToolbar(
       actionBtn({ icon: 'back', label: t('nav.squads'), href: '#/squads' }),
-      [likeBtn, copyBtn, exportBtns],
-      [deleteBtn, editBtn, publishBtn],
+      [], [],
       squadNavIdx >= 0 ? `<span class="tb-pager">${prevSqBtn}${squadNavPos}${nextSqBtn}</span>` : '<span></span>')}
 
-    <div class="squad-header">
-      <h1 class="squad-title">${draftBadge} ${esc(squad.name)}</h1>
-      <div class="squad-meta">
-        ${esc(t('squad.by', { user: squad.owner.username }))} · ${fmtDate(squad.created_at)} · ${esc(nationLabel(squad.nation))}${requiredModules}${copiesInfo}
+    <div class="squad-header squad-header-row">
+      <div class="squad-header-main">
+        <h1 class="squad-title">${draftBadge} ${esc(squad.name)}</h1>
+        <div class="squad-meta">
+          ${esc(t('squad.by', { user: squad.owner.username }))} · ${fmtDate(squad.created_at)} · ${esc(nationLabel(squad.nation))}${requiredModules}${copiesInfo}
+        </div>
+        ${basedOn}
       </div>
-      ${basedOn}
+      ${toolbarEnd([likeBtn, copyBtn, exportBtns], [deleteBtn, editBtn, publishBtn])}
     </div>
 
     <div class="squad-info-row">
