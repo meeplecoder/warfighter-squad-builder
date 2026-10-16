@@ -743,13 +743,9 @@ async function showCardDetail(idOrNumber) {
   const nextId = navIdx >= 0 && navIdx < cardNavList.length - 1 ? cardNavList[navIdx + 1] : null;
   // Keep the browser on the page containing this card when returning to the list
   if (navIdx >= 0) cardFilters.page = Math.floor(navIdx / cardFilters.per_page) + 1;
-  const navPos = navIdx >= 0 ? `<span class="cd-nav-pos">${navIdx + 1} / ${cardNavList.length}</span>` : '';
-  const prevBtn = prevId
-    ? `<a href="#/cards/${prevId}" class="btn btn-ghost btn-sm">← ${esc(t('common.prev'))}</a>`
-    : `<span class="btn btn-ghost btn-sm" style="opacity:.35;pointer-events:none">← ${esc(t('common.prev'))}</span>`;
-  const nextBtn = nextId
-    ? `<a href="#/cards/${nextId}" class="btn btn-ghost btn-sm">${esc(t('common.next'))} →</a>`
-    : `<span class="btn btn-ghost btn-sm" style="opacity:.35;pointer-events:none">${esc(t('common.next'))} →</span>`;
+  const prevBtn = actionBtn({ icon: 'prev', label: t('common.prev'), iconOnly: true, href: prevId ? '#/cards/' + prevId : '', disabled: !prevId });
+  const nextBtn = actionBtn({ icon: 'next', label: t('common.next'), iconOnly: true, href: nextId ? '#/cards/' + nextId : '', disabled: !nextId });
+  const navPos = navIdx >= 0 ? `<span class="tb-pager">${prevBtn}<span class="tb-pager-pos">${navIdx + 1} / ${cardNavList.length}</span>${nextBtn}</span>` : '';
 
   // --- Add to build ---
   const addBtn = builderState.missionCard
@@ -919,8 +915,6 @@ async function showCardDetail(idOrNumber) {
       ${editTrBtn}
       <span style="flex:1"></span>
       ${navPos}
-      ${prevBtn}
-      ${nextBtn}
     </div>
 
     <div class="cd-wrap ${typeCls}">
