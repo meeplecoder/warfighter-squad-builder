@@ -1362,7 +1362,7 @@ async function showSquadDetail(squadId) {
       actionBtn({ icon: 'back', label: t('nav.squads'), href: '#/squads' }),
       [likeBtn, copyBtn, exportBtns],
       [deleteBtn, editBtn, publishBtn],
-      squadNavIdx >= 0 ? `<span class="tb-pager">${prevSqBtn}${squadNavPos}${nextSqBtn}</span>` : '')}
+      squadNavIdx >= 0 ? `<span class="tb-pager">${prevSqBtn}${squadNavPos}${nextSqBtn}</span>` : '<span></span>')}
 
     <div class="squad-header">
       <h1 class="squad-title">${draftBadge} ${esc(squad.name)}</h1>
