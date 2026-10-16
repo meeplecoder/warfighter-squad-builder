@@ -29,7 +29,6 @@ function renderCampaignsShell() {
       <h1>${esc(t('campaigns.title'))}</h1>
       ${currentUser ? `<button class="btn btn-primary" id="new-campaign-btn">+ ${esc(t('campaigns.new'))}</button>` : ''}
     </div>
-    <p class="text-muted" style="margin:-4px 0 12px;font-size:13px">${esc(t('campaigns.lead'))}</p>
     <div id="campaigns-list"></div>`);
   document.getElementById('new-campaign-btn')?.addEventListener('click', () => navigate('campaigns/new'));
   loadCampaignList();
