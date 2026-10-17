@@ -533,6 +533,11 @@ function openLightbox(url) {
 // ---------------------------------------------------------------------------
 const MY_MODULES = '__mine__';   // module-select value: only expansions the user owns
 
+// Builder pickers start on the user's own expansions (logged-in users only; an empty collection means all owned)
+function defaultPickerModule() {
+  return currentUser ? MY_MODULES : '';
+}
+
 function moduleSelectOptions(selected) {
   const mine = currentUser ? [MY_MODULES] : [];
   return ['', ...mine, ...allModules].map(m => {
@@ -992,7 +997,7 @@ async function showCardDetail(idOrNumber) {
 
   setMain(`
     <div class="cd-nav">
-      <a href="#/cards" class="btn btn-ghost btn-sm">↩ ${esc(t('nav.cards'))}</a>
+      ${actionBtn({ icon: 'back', label: t('nav.cards'), href: '#/cards' })}
       ${addBtn}
       ${editTrBtn}
       <span style="flex:1"></span>
@@ -1362,7 +1367,7 @@ async function showSquadDetail(squadId) {
           <td><span ${cardImageAttr(g.card)}>${esc(g.card.name)}</span></td>
           <td class="text-muted">${esc(tv('card_type', g.card.card_type))}</td>
           ${showCost ? `<td class="text-muted">${g.card.resource_cost != null ? g.card.resource_cost + ' ' + esc(t('stat.rp')) : ''}</td>
-          <td class="text-muted">${g.loadout_weight != null ? esc(t('stat.loadout_abbr')) + g.loadout_weight : ''}</td>
+          <td class="text-muted">${g.loadout_weight ? esc(t('stat.loadout_abbr')) + g.loadout_weight : ''}</td>
           ${g.quantity > 1 ? `<td>×${g.quantity}</td>` : '<td></td>'}` : ''}
         </tr>`;
       let out = '';
@@ -2037,7 +2042,7 @@ function renderBuilder() {
     const effectiveLoadout = isPS ? (c.loadout || 0) + lm : null;
     const gearLoadout = isPS ? s.gear.reduce((acc, g) => {
       if (['Weapon', 'Equipment'].includes(g.card.card_type)) {
-        return acc + (g.card.loadout != null ? g.card.loadout : (g.card.resource_cost || 0)) * g.quantity;
+        return acc + (g.card.loadout || 0) * g.quantity;
       }
       return acc;
     }, 0) : 0;
@@ -2467,7 +2472,7 @@ function setPickerMode(mode, target = null, gearCat = null) {
   builderState.pickerSort = 'module';
   builderState.pickerOrder = 'asc';
   builderState.pickerPage = 1;
-  builderState.pickerModule = '';
+  builderState.pickerModule = defaultPickerModule();
   builderState.pickerQ = '';
 }
 
@@ -2643,7 +2648,7 @@ function resetBuilderState() {
     situationCard: null, nation: '', notes: '', soldiers: [],
     pickerMode: null, pickerTarget: null, pickerGearCat: null,
     pickerSort: 'module', pickerOrder: 'asc', pickerPage: 1,
-    pickerModule: '', pickerQ: '',
+    pickerModule: defaultPickerModule(), pickerQ: '',
   });
 }
 

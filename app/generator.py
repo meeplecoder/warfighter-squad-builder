@@ -333,9 +333,7 @@ def _light_weapon(c):
 
 def _gear_weight(c):
     """Loadout weight of a Weapon/Equipment card (same rule as rules.gear_loadout_weight)."""
-    if c.loadout is not None:
-        return c.loadout
-    return c.resource_cost or 0
+    return c.loadout or 0
 
 
 def _weapon_value(card, hostile, alpha, w):
