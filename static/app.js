@@ -354,11 +354,16 @@ const TYPE_HUE = {
   'Standard': 210, 'Raid': 25, 'Airborne': 245, 'Shore Invasion': 195, 'Holding Action': 135, 'Hold the Line': 95,
   'Escape': 275, 'Eliminate Hostiles': 0, 'Destroy Target': 38, 'Keep Clear': 175, 'Kill Specified Hostile': 320,
 };
+// Long mission types get an abbreviation so the badge stays on one line
+const SHORT_TYPE_KEY = { 'Holding Action': 'chip.holding_action' };
+
 function typeChip(subtype) {
   let h = TYPE_HUE[subtype];
   if (h == null) { h = 0; for (const ch of subtype) h = (h * 31 + ch.charCodeAt(0)) % 360; }
   const style = `background:hsl(${h} 45% 20%);color:hsl(${h} 70% 78%);border-color:hsl(${h} 40% 36%)`;
-  return `<span class="chip" style="${style}">${esc(tv('card_subtype', subtype))}</span>`;
+  const full = tv('card_subtype', subtype);
+  const short = SHORT_TYPE_KEY[subtype] ? t(SHORT_TYPE_KEY[subtype]) : full;
+  return `<span class="chip chip-nowrap" style="${style}"${short !== full ? ` title="${esc(full)}"` : ''}>${esc(short)}</span>`;
 }
 
 function chipForSubtype(subtype, category) {
