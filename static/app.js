@@ -2056,7 +2056,6 @@ function renderBuilder() {
         <span ${cardImageAttr(g.card)} style="flex:1">${esc(g.card.name)}</span>
         <span class="text-muted" style="white-space:nowrap">${unitRp} ${esc(t('stat.rp'))}</span>
         ${g.quantity > 1 ? `<span class="gear-qty">×${g.quantity}</span>` : '<span></span>'}
-        ${g.card.card_subtype === 'Ammunition' ? `<button class="btn btn-icon add-ammo-btn" data-sidx="${idx}" data-gidx="${gi}" title="${esc(t('builder.add_rocket'))}" aria-label="${esc(t('builder.add_rocket'))}">${icon('plus')}</button>` : ''}
         <button class="btn btn-icon remove-gear-btn" data-sidx="${idx}" data-gidx="${gi}" title="${esc(t('common.remove'))}" aria-label="${esc(t('common.remove'))}">${icon('close')}</button>
       </div>`;
     }).join('');
@@ -2325,14 +2324,7 @@ function renderBuilder() {
   // Remove gear
   main.querySelectorAll('.remove-gear-btn').forEach(btn => btn.addEventListener('click', () => {
     const si = parseInt(btn.dataset.sidx), gi = parseInt(btn.dataset.gidx);
-    const row = builderState.soldiers[si].gear[gi];
-    if (row.card.card_subtype === 'Ammunition' && row.quantity > 1) row.quantity -= 1;    // rockets: one at a time
-    else builderState.soldiers[si].gear.splice(gi, 1);
-    renderBuilder();
-  }));
-  // One more rocket
-  main.querySelectorAll('.add-ammo-btn').forEach(btn => btn.addEventListener('click', () => {
-    builderState.soldiers[parseInt(btn.dataset.sidx)].gear[parseInt(btn.dataset.gidx)].quantity += 1;
+    builderState.soldiers[si].gear.splice(gi, 1);
     renderBuilder();
   }));
 
