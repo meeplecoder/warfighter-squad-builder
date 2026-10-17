@@ -2553,7 +2553,7 @@ async function loadPickerResults() {
       onRowClick: async (card) => {
         // For mission/objective/situation/soldier we need the full detail object
         let fullCard = card;
-        if (['mission', 'objective', 'situation', 'soldier'].includes(builderState.pickerMode)) {
+        if (['mission', 'objective', 'situation', 'soldier'].includes(builderState.pickerMode) || card.ammo_number) {   // gear that brings ammo: detail carries ammo_card
           try { fullCard = (await API.get('/cards/' + card.id)).card; } catch (_) {}
         }
         switch (builderState.pickerMode) {
