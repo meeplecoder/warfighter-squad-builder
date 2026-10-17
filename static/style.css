@@ -297,12 +297,13 @@ h3 { font-size: 1rem; font-weight: 600; }
 .filter-bar input[type=text] { min-width: 200px; flex: 1; }
 .filter-bar select { min-width: 120px; }
 .fb-break { display: none; }
+.cards-filter-bar #reset-filters { order: 1; } /* desktop: reset stays last */
 @media (max-width: 640px) {
-  /* Cards list, two rows: search · ? · category / nation · expansion · reset */
+  /* Cards list, two rows: search · ? · reset / category · nation · expansion */
+  .cards-filter-bar #reset-filters { order: 0; }
   .cards-filter-bar .fb-break { display: block; flex-basis: 100%; height: 0; }
   .cards-filter-bar input[type=text] { min-width: 0; }
   .cards-filter-bar select { min-width: 0; flex: 1 1 0; }
-  .cards-filter-bar #cat-select { flex: 0 0 38%; }
 }
 
 /* ---- Pagination ---------------------------------------------------- */

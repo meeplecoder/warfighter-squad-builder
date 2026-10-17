@@ -601,11 +601,11 @@ function renderCardsShell() {
     <div class="filter-bar cards-filter-bar" style="flex-wrap:wrap;gap:6px">
       <input type="text" class="search-input" id="q-input" placeholder="${esc(t('cards.search_placeholder'))}" value="${esc(cardFilters.q)}" style="min-width:200px;flex:1">
       ${smartHelpButton('cards-smart-help')}
-      <select id="cat-select">${catOptions}</select>
+      <button class="btn btn-ghost btn-sm" id="reset-filters">${esc(t('common.reset'))}</button>
       <span class="fb-break" aria-hidden="true"></span>
+      <select id="cat-select">${catOptions}</select>
       <select id="nation-select">${nationOptions}</select>
       <select id="module-select">${moduleOptions}</select>
-      <button class="btn btn-ghost btn-sm" id="reset-filters">${esc(t('common.reset'))}</button>
     </div>
     ${smartHelpBox('cards-smart-help')}
     <div id="cards-count" style="font-size:12px;color:var(--text-muted);margin-bottom:8px"></div>
