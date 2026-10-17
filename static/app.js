@@ -533,6 +533,11 @@ function openLightbox(url) {
 // ---------------------------------------------------------------------------
 const MY_MODULES = '__mine__';   // module-select value: only expansions the user owns
 
+// Builder pickers start on the user's own expansions (logged-in users only; an empty collection means all owned)
+function defaultPickerModule() {
+  return currentUser ? MY_MODULES : '';
+}
+
 function moduleSelectOptions(selected) {
   const mine = currentUser ? [MY_MODULES] : [];
   return ['', ...mine, ...allModules].map(m => {
@@ -2454,7 +2459,7 @@ function setPickerMode(mode, target = null, gearCat = null) {
   builderState.pickerSort = 'module';
   builderState.pickerOrder = 'asc';
   builderState.pickerPage = 1;
-  builderState.pickerModule = '';
+  builderState.pickerModule = defaultPickerModule();
   builderState.pickerQ = '';
 }
 
@@ -2623,7 +2628,7 @@ function resetBuilderState() {
     situationCard: null, nation: '', notes: '', soldiers: [],
     pickerMode: null, pickerTarget: null, pickerGearCat: null,
     pickerSort: 'module', pickerOrder: 'asc', pickerPage: 1,
-    pickerModule: '', pickerQ: '',
+    pickerModule: defaultPickerModule(), pickerQ: '',
   });
 }
 
