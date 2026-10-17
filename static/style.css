@@ -1662,3 +1662,15 @@ input:focus, select:focus, textarea:focus { outline-color: var(--kraft); }
   .quick-filter .lbl-long { display: none; }
   .quick-filter .lbl-short { display: inline; }
 }
+
+/* ---- Statistics (admin) -------------------------------------------- */
+.stats-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.stats-kpi { background: var(--surface, transparent); border: 1px solid var(--border); border-radius: 4px; padding: 10px 12px; }
+.stats-kpi-v { font-size: 1.6rem; font-weight: 700; line-height: 1.1; }
+.stats-kpi-l { font-size: .8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
+.stats-kpi-s { font-size: .8rem; color: var(--text-muted); margin-top: 2px; }
+.stats-chart { width: 100%; height: auto; max-height: 220px; }
+.stats-legend { display: flex; gap: 16px; font-size: .8rem; color: var(--text-muted); }
+.stats-legend i { display: inline-block; width: 10px; height: 10px; margin-right: 5px; border-radius: 2px; }
+.stats-bar-cell { width: 55%; }
+.stats-bar { display: block; height: 10px; background: var(--accent); border-radius: 2px; }

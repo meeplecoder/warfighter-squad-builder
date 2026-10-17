@@ -526,3 +526,21 @@ class CampaignLink(db.Model):
     to_mission_id = db.Column(db.Integer, db.ForeignKey('campaign_missions.id', ondelete='CASCADE'), nullable=False)
     condition = db.Column(db.Text, nullable=False, default='success')
     label = db.Column(db.Text)
+
+
+class StatHit(db.Model):
+    """Own, cookieless usage stats: page views per day and app section (no personal data)."""
+    __tablename__ = 'stat_hits'
+
+    day = db.Column(db.Text, primary_key=True)                   # UTC YYYY-MM-DD
+    route = db.Column(db.Text, primary_key=True)                 # whitelisted top-level section, see app/stats.py
+    hits = db.Column(db.Integer, nullable=False, default=0)
+
+
+class StatVisitor(db.Model):
+    """One row per anonymous visitor and day: sha256(secret, day, IP, user agent). Old days are purged, so a
+    visitor cannot be recognised across days and the IP is never stored."""
+    __tablename__ = 'stat_visitors'
+
+    day = db.Column(db.Text, primary_key=True)
+    vhash = db.Column(db.Text, primary_key=True)
