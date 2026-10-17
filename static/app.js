@@ -2037,7 +2037,7 @@ function renderBuilder() {
     const effectiveLoadout = isPS ? (c.loadout || 0) + lm : null;
     const gearLoadout = isPS ? s.gear.reduce((acc, g) => {
       if (['Weapon', 'Equipment'].includes(g.card.card_type)) {
-        return acc + (g.card.loadout != null ? g.card.loadout : (g.card.resource_cost || 0)) * g.quantity;
+        return acc + (g.card.loadout || 0) * g.quantity;
       }
       return acc;
     }, 0) : 0;
