@@ -146,6 +146,9 @@ function renderHeader() {
           <hr>
           <a role="menuitem" href="#/expansions">${icon('layers')}<span>${esc(t('nav.expansions'))}</span></a>
           <a role="menuitem" href="#/profile">${icon('user')}<span>${esc(t('nav.profile'))}</span></a>
+          ${isAdmin() ? `<hr>
+          <a role="menuitem" href="#/users">${icon('users')}<span>${esc(t('nav.users'))}</span></a>
+          <a role="menuitem" href="#/translations">${icon('language')}<span>${esc(t('nav.translations'))}</span></a>` : ''}
           <hr>
           <button type="button" role="menuitem" id="logout-btn">${icon('logout')}<span>${esc(t('header.logout'))}</span></button>
         </div>
@@ -281,6 +284,8 @@ const ICON_PATHS = {
   plus:     '<path d="M12 5v14"/><path d="M5 12h14"/>',
   user:     '<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/>',
   layers:   '<path d="m12 3 9 5-9 5-9-5Z"/><path d="m3 13 9 5 9-5"/><path d="m3 17.500 9 5 9-5"/>',
+  users:    '<circle cx="9" cy="8" r="4"/><path d="M2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1"/><path d="M16 4.100a4 4 0 0 1 0 7.800"/><path d="M22 21v-1a6 6 0 0 0-4-5.600"/>',
+  language: '<path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/>',
   logout:   '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
 };
 function icon(name) {
