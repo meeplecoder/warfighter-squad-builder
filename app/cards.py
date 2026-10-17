@@ -73,6 +73,11 @@ def list_cards():
                 query = query.filter(clause)
     if modules:
         query = query.filter(Card.module.in_(modules))
+    # Only cards from expansions the user owns (modules with no row count as owned)
+    if request.args.get('my_modules', 'false').lower() == 'true' and current_user.is_authenticated:
+        excluded = [um.module for um in current_user.modules if not um.owned]
+        if excluded:
+            query = query.filter(Card.module.notin_(excluded))
 
     sort_col = SORT_COLS.get(sort, Card.module)
     if sort == 'name':

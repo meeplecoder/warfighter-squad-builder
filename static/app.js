@@ -526,6 +526,21 @@ function openLightbox(url) {
 // ---------------------------------------------------------------------------
 // VIEW: Cards Browser
 // ---------------------------------------------------------------------------
+const MY_MODULES = '__mine__';   // module-select value: only expansions the user owns
+
+function moduleSelectOptions(selected) {
+  const mine = currentUser ? [MY_MODULES] : [];
+  return ['', ...mine, ...allModules].map(m => {
+    const label = !m ? t('cards.all_modules') : m === MY_MODULES ? t('cards.my_modules') : tv('module', m);
+    return `<option value="${esc(m)}" ${selected === m ? 'selected' : ''}>${esc(label)}</option>`;
+  }).join('');
+}
+
+function setModuleParams(params, value) {
+  if (value === MY_MODULES) params.set('my_modules', 'true');
+  else if (value) params.set('module', value);
+}
+
 let cardFilters = { q: '', category: '', subtype: '', nation: '', module: '', sort: 'module', order: 'asc', page: 1, per_page: 50 };
 // IDs of all cards matching the browser filters/sort, across pages (for prev/next navigation)
 let cardNavList = [];
@@ -612,9 +627,7 @@ function renderCardsShell() {
   const nationOptions = ['', ...sortedNations(allNations)].map(n =>
     `<option value="${esc(n)}" ${cardFilters.nation === n ? 'selected' : ''}>${esc(n ? nationLabel(n) : t('cards.all_nations'))}</option>`
   ).join('');
-  const moduleOptions = ['', ...allModules].map(m =>
-    `<option value="${esc(m)}" ${cardFilters.module === m ? 'selected' : ''}>${esc(m ? tv('module', m) : t('cards.all_modules'))}</option>`
-  ).join('');
+  const moduleOptions = moduleSelectOptions(cardFilters.module);
 
   setMain(`
     <h1 style="margin-bottom:16px">${esc(t('cards.title'))}</h1>
@@ -683,7 +696,7 @@ async function refreshCardsTable() {
   if (cardFilters.q) params.set('q', cardFilters.q);
   if (cardFilters.category) params.set('category', cardFilters.category);
   if (cardFilters.nation) params.set('nation', cardFilters.nation);
-  if (cardFilters.module) params.set('module', cardFilters.module);
+  setModuleParams(params, cardFilters.module);
   params.set('page', cardFilters.page);
   params.set('per_page', cardFilters.per_page);
   params.set('sort', cardFilters.sort);
@@ -2441,9 +2454,7 @@ function setPickerMode(mode, target = null, gearCat = null) {
 }
 
 function renderPickerSearch() {
-  const moduleOptions = ['', ...allModules].map(m =>
-    `<option value="${esc(m)}" ${builderState.pickerModule === m ? 'selected' : ''}>${esc(m ? tv('module', m) : t('cards.all_modules'))}</option>`
-  ).join('');
+  const moduleOptions = moduleSelectOptions(builderState.pickerModule);
   return `
     <div class="filter-bar mb-2" style="flex-wrap:wrap;gap:6px">
       <input type="text" class="search-input" id="picker-q" placeholder="${esc(t('cards.search_placeholder'))}" value="${esc(builderState.pickerQ)}" style="flex:1;min-width:120px">
@@ -2475,7 +2486,7 @@ async function loadPickerResults() {
     params.set('nation_strict', 'true');
   }
   if (builderState.pickerQ) params.set('q', builderState.pickerQ);
-  if (builderState.pickerModule) params.set('module', builderState.pickerModule);
+  setModuleParams(params, builderState.pickerModule);
 
   const resultsDiv = document.getElementById('picker-results');
   if (!resultsDiv) return;
