@@ -129,10 +129,26 @@ def test_overloaded_soldier_is_a_warning(app, client, login):
     with app.app_context():
         mission = Card.query.filter_by(number='S-200').first().id
         soldier = Card.query.filter_by(number='S-001').first()
-        gear = Card.query.filter(Card.card_type == 'Weapon').first()
+        gear = Card.query.filter(Card.card_type == 'Weapon', Card.loadout.isnot(None)).first()
         ids = (mission, soldier.id, gear.id)
     mission, soldier, gear = ids
     r = c.post('/api/squads/validate', json={'nation': 'US', 'mission_card_id': mission,
         'soldiers': [{'card_id': soldier, 'gear': [{'card_id': gear, 'quantity': 40}]}]}).get_json()
     assert 'OVER_LOADOUT' in [w['code'] for w in r['warnings']]
     assert 'OVER_LOADOUT' not in [e['code'] for e in r['errors']]
+
+
+def test_gear_without_load_cost_adds_no_loadout(app, client, login):
+    from app.models import Card
+    c = app.test_client()
+    login(c, 'noload')
+    with app.app_context():
+        mission = Card.query.filter_by(number='S-200').first().id
+        soldier = Card.query.filter_by(number='S-001').first().id
+        gear = Card.query.filter(Card.card_type == 'Weapon', Card.loadout.is_(None)).first()
+        gear = gear.id if gear else None
+    if gear is None:
+        return
+    r = c.post('/api/squads/validate', json={'nation': 'US', 'mission_card_id': mission,
+        'soldiers': [{'card_id': soldier, 'gear': [{'card_id': gear, 'quantity': 3}]}]}).get_json()
+    assert 'OVER_LOADOUT' not in [w['code'] for w in r['warnings']]
