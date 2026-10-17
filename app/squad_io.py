@@ -168,7 +168,7 @@ QTY_RE = re.compile(r'^\s*(\d+)\s*[×xX]\s*')
 class _Resolver:
     def __init__(self):
         # Printed cards + the importing user's own custom missions
-        query = Card.catalog()
+        query = Card.catalog(hidden=True)
         if current_user.is_authenticated:
             query = Card.query.filter(or_(Card.module != CUSTOM_MODULE, Card.owner_user_id == current_user.id))
         self.by_number = {c.number: c for c in query.all()}

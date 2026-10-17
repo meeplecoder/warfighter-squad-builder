@@ -138,6 +138,10 @@ def get_card(id_or_number):
         ]
     else:
         detail['associations'] = []
+    ammo_number = card.ammo_number
+    if ammo_number:
+        ammo = Card.query.filter_by(number=ammo_number).first()
+        detail['ammo_card'] = ammo.to_card_detail() if ammo else None
     return jsonify(card=detail)
 
 

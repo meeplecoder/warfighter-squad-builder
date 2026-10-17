@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from flask_login import UserMixin
 from app import db
 import json
+import re
 from app.utils import classify_objective_type, classify_objective_family, theater_from_raw_type
 from app import i18n, card_images
 from flask import current_app
@@ -13,6 +14,11 @@ def now_utc():
 
 
 CUSTOM_MODULE = 'Custom'
+# Hidden helper cards (e.g. W-152z "M1A1 Rockets"): not in the card list or pickers, only added by the builder
+HIDDEN_SUBTYPE = 'Ammunition'
+AMMO_CARD_NUMBER = 'W-152z'
+# Launchers whose notes read "Each Rocket: costs 1. Loadout 2." start with 0 rockets; each one is this card
+_ROCKET_RE = re.compile(r'Each Rocket: costs 1\. Loadout 2', re.IGNORECASE)
 
 
 class Card(db.Model):
@@ -63,9 +69,18 @@ class Card(db.Model):
     created_at = db.Column(db.Text)  # custom cards only — grace period for orphan cleanup
 
     @classmethod
-    def catalog(cls):
-        """Printed cards only — every list/search/resolver uses this instead of Card.query."""
-        return cls.query.filter(cls.module != CUSTOM_MODULE)
+    def catalog(cls, hidden=False):
+        """Printed cards only — every list/search/resolver uses this instead of Card.query.
+        Hidden helper cards (HIDDEN_SUBTYPE) are left out unless hidden=True."""
+        query = cls.query.filter(cls.module != CUSTOM_MODULE)
+        if not hidden:
+            query = query.filter(db.or_(cls.card_subtype.is_(None), cls.card_subtype != HIDDEN_SUBTYPE))
+        return query
+
+    @property
+    def ammo_number(self):
+        """Number of the hidden ammo card this weapon starts with one of (None for most cards)."""
+        return AMMO_CARD_NUMBER if self.card_type == 'Weapon' and _ROCKET_RE.search(self.notes or '') else None
 
     def _objective_mechanic(self) -> str:
         """Extract mechanic from combined card_subtype, e.g. 'Shore / Eliminate Hostiles' → 'Eliminate Hostiles'."""

@@ -2007,12 +2007,14 @@ function addGearToBuilder(card, soldierIdx) {
     alert(t('builder.skill_already', { name: card.name, soldier: soldier.card.name }));
     return false;
   }
-  const existing = soldier.gear.find(g => g.card.id === card.id);
-  if (existing) {
-    existing.quantity += 1;
-  } else {
-    soldier.gear.push({ card, quantity: 1 });
-  }
+  const addCopy = c => {
+    const row = soldier.gear.find(g => g.card.id === c.id);
+    if (row) row.quantity += 1;
+    else soldier.gear.push({ card: c, quantity: 1 });
+  };
+  addCopy(card);
+  // Launchers start with 0 rockets: each one added brings a rocket along (hidden card, adds its RP and Load)
+  if (card.ammo_card) addCopy(card.ammo_card);
   return true;
 }
 

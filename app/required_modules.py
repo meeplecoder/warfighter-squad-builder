@@ -20,7 +20,7 @@ from collections import defaultdict
 from functools import lru_cache
 
 from app import db
-from app.models import Card, Squad, SquadGear, SquadObjective, SquadSoldier
+from app.models import HIDDEN_SUBTYPE, Card, Squad, SquadGear, SquadObjective, SquadSoldier
 
 _STAT_COLS = ('resource_cost', 'movement', 'cover', 'health', 'loadout', 'hth', 'actions',
               'entrance_cost', 'resources', 'time', 'objective_position', 'loadout_modifier',
@@ -44,7 +44,8 @@ def _index():
     t = Card.__table__
     cols = [t.c.id, t.c.name, t.c.card_type, t.c.nation, t.c.module] + [t.c[c] for c in _STAT_COLS]
     group_of, supply = {}, defaultdict(set)
-    for row in db.session.execute(db.select(*cols)):
+    hidden = db.or_(t.c.card_subtype.is_(None), t.c.card_subtype != HIDDEN_SUBTYPE)     # helper cards need no module
+    for row in db.session.execute(db.select(*cols).where(hidden)):
         cid, name, ctype, nation, module, *stats = row
         key = (name.strip().lower(), ctype, nation or '', tuple(0 if v is None else v for v in stats))
         group_of[cid] = key
