@@ -82,11 +82,24 @@ function route() {
   updateActiveNav(key === 'campaigns' && (rest[0] === 'new' || rest[1] === 'edit') ? 'campaigns/new' : key);
   // Tab title: section by default; detail / editor views refine it with setPageTitle
   const section = { cards: 'nav.cards', squads: 'nav.squads', builder: 'nav.builder', generator: 'nav.generator', campaigns: 'nav.campaigns',
-                    expansions: 'nav.expansions', profile: 'nav.profile', translations: 'nav.translations', users: 'nav.users' }[key];
+                    expansions: 'nav.expansions', profile: 'nav.profile', translations: 'nav.translations', users: 'nav.users', stats: 'nav.stats' }[key];
   setPageTitle(section ? t(section) : null);
   if (key !== 'login') loginReturn = null;             // a pending "return to" only lives while the login page is shown
+  trackHit(key);
   const handler = routes[key] || routes['404'];
   if (handler) handler(...rest);
+}
+
+// Own anonymous usage stats (app/stats.py): one fire-and-forget ping per section change; the server ignores
+// bots and admins and only keeps counters
+let lastHitKey = null;
+function trackHit(key) {
+  if (key === lastHitKey) return;                    // sub-view changes inside a section are not new page views
+  lastHitKey = key;
+  try {
+    fetch('/api/stats/hit', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ route: key }), credentials: 'same-origin', keepalive: true }).catch(() => {});
+  } catch (_) {}
 }
 
 // Browser tab title: "<parts> · <app>"
@@ -148,7 +161,8 @@ function renderHeader() {
           <a role="menuitem" href="#/profile">${icon('user')}<span>${esc(t('nav.profile'))}</span></a>
           ${isAdmin() ? `<hr>
           <a role="menuitem" href="#/users">${icon('users')}<span>${esc(t('nav.users'))}</span></a>
-          <a role="menuitem" href="#/translations">${icon('language')}<span>${esc(t('nav.translations'))}</span></a>` : ''}
+          <a role="menuitem" href="#/translations">${icon('language')}<span>${esc(t('nav.translations'))}</span></a>
+          <a role="menuitem" href="#/stats">${icon('chart')}<span>${esc(t('nav.stats'))}</span></a>` : ''}
           <hr>
           <button type="button" role="menuitem" id="logout-btn">${icon('logout')}<span>${esc(t('header.logout'))}</span></button>
         </div>
@@ -286,6 +300,7 @@ const ICON_PATHS = {
   layers:   '<path d="m12 3 9 5-9 5-9-5Z"/><path d="m3 13 9 5 9-5"/><path d="m3 17.500 9 5 9-5"/>',
   users:    '<circle cx="9" cy="8" r="4"/><path d="M2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1"/><path d="M16 4.100a4 4 0 0 1 0 7.800"/><path d="M22 21v-1a6 6 0 0 0-4-5.600"/>',
   language: '<path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/>',
+  chart:    '<path d="M3 3v18h18"/><path d="M7 16v-4"/><path d="M12 16V8"/><path d="M17 16v-6"/>',
   logout:   '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
 };
 function icon(name) {
