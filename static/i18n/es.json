@@ -30,6 +30,7 @@
  "budget.over": "{n} por encima del presupuesto",
  "budget.over_caps": "{n} DE MÁS",
  "budget.remaining": "quedan {n}",
+ "builder.add_ammo": "Añadir uno más",
  "builder.add_another": "Añadir otro…",
  "builder.add_objective": "Añadir un objetivo…",
  "builder.add_soldier": "Añadir soldado",

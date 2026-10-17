@@ -48,8 +48,7 @@ def list_cards():
     sort = request.args.get('sort', 'module')
     order = request.args.get('order', 'asc')
 
-    # The builder's gear picker also offers the hidden helper cards (rockets)
-    query = Card.catalog(hidden=request.args.get('include_hidden', 'false').lower() == 'true')
+    query = Card.catalog()
     # Mission picker: also offer the user's own custom missions
     if request.args.get('include_mine', 'false').lower() == 'true' and current_user.is_authenticated:
         query = Card.query.filter(or_(Card.module != CUSTOM_MODULE, Card.owner_user_id == current_user.id))

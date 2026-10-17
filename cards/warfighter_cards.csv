@@ -754,8 +754,16 @@ Each Rocket: costs 1. Loadout 2.
 Expended.
 Penetration 4.
 Rockets (0).",Core Europe,Core Europe
-152,W-152*,M1A1 Rockets,Weapon Ammunition,US,"RC:01
-L:02","Rocket for a Rocket Launcher (not shown in the card list). Costs 1. Loadout 2.",Core Europe,Core Europe
+1,AM-R1L2,Rocket (RP1 L2),Weapon Ammunition,,"RC:01
+L:02","Ammo added automatically with the weapon that needs it (not shown in the card list).",Core Europe,Core Europe
+2,AM-R2,Rocket (RP2),Weapon Ammunition,,"RC:02
+L:00","Ammo added automatically with the weapon that needs it (not shown in the card list).",Core Europe,Core Europe
+3,AM-S1,Shell (RP1),Weapon Ammunition,,"RC:01
+L:00","Ammo added automatically with the weapon that needs it (not shown in the card list).",Core Europe,Core Europe
+4,AM-S2,Shell (RP2),Weapon Ammunition,,"RC:02
+L:00","Ammo added automatically with the weapon that needs it (not shown in the card list).",Core Europe,Core Europe
+5,AM-G1,Grenade (RP1),Weapon Ammunition,,"RC:01
+L:00","Ammo added automatically with the weapon that needs it (not shown in the card list).",Core Europe,Core Europe
 153,W-153,M1A1 Flamethrower,Weapon Ranged,US,"RC:09
 L:11
 1941+","Range    Hit
@@ -2835,8 +2843,6 @@ Each Rocket: costs 1. Loadout 2.
 Expended.
 Penetration 4.
 Rockets (0).",Extension#03 - German #1,German
-425,03-033*,Panzerschreck Rockets,Weapon Ammunition,German,"RC:01
-L:02","Rocket for a Panzerschreck (not shown in the card list). Costs 1. Loadout 2.",Extension#03 - German #1,German
 426,03-034,Panzerfaust Rocket Launcher,Weapon Ranged,German,"RC:02
 L:04
 1943+","Range    Hit

@@ -15,11 +15,19 @@ def now_utc():
 
 
 CUSTOM_MODULE = 'Custom'
-# Hidden helper cards (e.g. W-152* "M1A1 Rockets"): not in the card list or pickers, only added by the builder
+# Hidden helper cards (ammo, AM-…): not in the card list or pickers, only added by the builder
 HIDDEN_SUBTYPE = 'Ammunition'
-AMMO_CARDS = {'US': 'W-152*', 'German': '03-033*'}     # launcher nation -> its rocket card
-# Launchers (US M1A1, German Panzerschreck) whose notes read "Each Rocket: costs 1. Loadout 2." start with 0 rockets; each one is the nation's rocket card
-_ROCKET_RE = re.compile(r'Each Rocket: costs 1\. Loadout 2', re.IGNORECASE)
+# Weapons whose notes read "Each Rocket: costs 1. Loadout 2." (also Shell / Grenade) start with no ammo; the builder adds
+# one copy of the hidden ammo card AM-<kind><RP>[L<load>] (one per kind/RP/Load combination in the card data)
+_AMMO_RE = re.compile(r'Each (Rocket|Shell|Grenade): costs (\d+)\.(?: Loadout (\d+)\.)?', re.IGNORECASE)
+
+
+def ammo_number_for(notes):
+    """Number of the hidden ammo card a weapon's notes call for, or None."""
+    m = _AMMO_RE.search(notes or '')
+    if not m:
+        return None
+    return f'AM-{m.group(1)[0].upper()}{int(m.group(2))}' + (f'L{int(m.group(3))}' if m.group(3) else '')
 
 
 class Card(db.Model):
@@ -81,7 +89,7 @@ class Card(db.Model):
     @property
     def ammo_number(self):
         """Number of the hidden ammo card this weapon starts with one of (None for most cards)."""
-        return AMMO_CARDS.get(self.nation) if self.card_type == 'Weapon' and _ROCKET_RE.search(self.notes or '') else None
+        return ammo_number_for(self.notes) if self.card_type == 'Weapon' else None
 
     def _objective_mechanic(self) -> str:
         """Extract mechanic from combined card_subtype, e.g. 'Shore / Eliminate Hostiles' → 'Eliminate Hostiles'."""
@@ -137,6 +145,8 @@ class Card(db.Model):
         }
         if self.module == CUSTOM_MODULE:
             d['owner_user_id'] = self.owner_user_id
+        if self.ammo_number:
+            d['ammo_number'] = self.ammo_number
         tr_status = i18n.card_status_for_admin(self.number)
         if tr_status is not None:
             d['translation_status'] = tr_status

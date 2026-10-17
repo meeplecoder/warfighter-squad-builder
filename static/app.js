@@ -2056,7 +2056,8 @@ function renderBuilder() {
         <span ${cardImageAttr(g.card)} style="flex:1">${esc(g.card.name)}</span>
         <span class="text-muted" style="white-space:nowrap">${unitRp} ${esc(t('stat.rp'))}</span>
         ${g.quantity > 1 ? `<span class="gear-qty">×${g.quantity}</span>` : '<span></span>'}
-        <button class="btn btn-icon remove-gear-btn" data-sidx="${idx}" data-gidx="${gi}" title="${esc(t('common.remove'))}" aria-label="${esc(t('common.remove'))}">${icon('close')}</button>
+        ${g.card.card_subtype === 'Ammunition' ? `<button class="btn btn-icon add-ammo-btn" data-sidx="${idx}" data-gidx="${gi}" title="${esc(t('builder.add_ammo'))}" aria-label="${esc(t('builder.add_ammo'))}">${icon('plus')}</button>` : ''}
+        ${g.card.card_subtype === 'Ammunition' && g.quantity <= 1 ? '' : `<button class="btn btn-icon remove-gear-btn" data-sidx="${idx}" data-gidx="${gi}" title="${esc(t('common.remove'))}" aria-label="${esc(t('common.remove'))}">${icon('close')}</button>`}
       </div>`;
     }).join('');
 
@@ -2324,7 +2325,23 @@ function renderBuilder() {
   // Remove gear
   main.querySelectorAll('.remove-gear-btn').forEach(btn => btn.addEventListener('click', () => {
     const si = parseInt(btn.dataset.sidx), gi = parseInt(btn.dataset.gidx);
-    builderState.soldiers[si].gear.splice(gi, 1);
+    const gear = builderState.soldiers[si].gear;
+    const row = gear[gi];
+    if (row.card.card_subtype === 'Ammunition') {            // ammo: one at a time, never below 1
+      if (row.quantity > 1) row.quantity -= 1;
+    } else {
+      gear.splice(gi, 1);
+      // Taking out the last weapon that needs an ammo card takes that ammo with it
+      const ammo = row.card.ammo_number;
+      if (ammo && !gear.some(g => g.card.ammo_number === ammo)) {
+        builderState.soldiers[si].gear = gear.filter(g => g.card.number !== ammo);
+      }
+    }
+    renderBuilder();
+  }));
+  // One more ammo
+  main.querySelectorAll('.add-ammo-btn').forEach(btn => btn.addEventListener('click', () => {
+    builderState.soldiers[parseInt(btn.dataset.sidx)].gear[parseInt(btn.dataset.gidx)].quantity += 1;
     renderBuilder();
   }));
 
@@ -2493,7 +2510,6 @@ async function loadPickerResults() {
     case 'soldier':   params.set('category', 'Soldier'); break;
     case 'gear':
       if (builderState.pickerGearCat) params.set('category', builderState.pickerGearCat);
-      params.set('include_hidden', 'true');
       break;
   }
 

@@ -152,3 +152,12 @@ def test_gear_without_load_cost_adds_no_loadout(app, client, login):
     r = c.post('/api/squads/validate', json={'nation': 'US', 'mission_card_id': mission,
         'soldiers': [{'card_id': soldier, 'gear': [{'card_id': gear, 'quantity': 3}]}]}).get_json()
     assert 'OVER_LOADOUT' not in [w['code'] for w in r['warnings']]
+
+
+def test_ammo_card_numbers_from_weapon_notes():
+    from app.models import ammo_number_for
+    assert ammo_number_for('Single Shot.\nEach Rocket: costs 1. Loadout 2.\nRockets (0).') == 'AM-R1L2'
+    assert ammo_number_for('Each Rocket: costs 2.\nExpended.') == 'AM-R2'
+    assert ammo_number_for('Each shell: costs 2.') == 'AM-S2'
+    assert ammo_number_for('Each Grenade: costs 1.') == 'AM-G1'
+    assert ammo_number_for('Rockets (8).') is None and ammo_number_for(None) is None
