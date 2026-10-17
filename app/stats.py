@@ -71,9 +71,13 @@ def hit():
 
 
 def _per_day(model, column, since):
-    """Rows created per UTC day since `since` (the created_at columns are 'YYYY-MM-DDTHH:MM:SSZ' text)."""
+    """Rows created per UTC day since `since` (the created_at columns are 'YYYY-MM-DDTHH:MM:SSZ' text),
+    leaving out the admin account's own activity."""
     day = func.substr(column, 1, 10)
-    return dict(db.session.query(day, func.count(model.id)).filter(day >= since).group_by(day).all())
+    q = db.session.query(day, func.count(model.id)).filter(day >= since)
+    q = q.filter(model.username_lower != roles.ADMIN_USERNAME) if model is User else \
+        q.filter(~model.user_id.in_(db.session.query(User.id).filter(User.username_lower == roles.ADMIN_USERNAME)))
+    return dict(q.group_by(day).all())
 
 
 @stats_bp.route('/report', methods=['GET'])
@@ -101,4 +105,7 @@ def report():
               .filter(StatHit.day >= since, StatHit.route != VISITORS).group_by(StatHit.route)
               .order_by(func.sum(StatHit.hits).desc()).all()]
     return jsonify(days=days, series=series, routes=routes, totals={
-        'users': User.query.count(), 'squads': Squad.query.count(), 'campaigns': Campaign.query.count()})
+        'users': User.query.filter(User.username_lower != roles.ADMIN_USERNAME).count(),
+        'squads': sum(_per_day(Squad, Squad.created_at, '0000').values()),
+        'campaigns': Campaign.query.filter(~Campaign.user_id.in_(
+            db.session.query(User.id).filter(User.username_lower == roles.ADMIN_USERNAME))).count()})
