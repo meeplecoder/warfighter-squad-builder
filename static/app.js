@@ -1755,7 +1755,7 @@ function getModeColKeys() {
 }
 
 function renderCardTable(containerEl, items, opts = {}) {
-  const { cols = ['number', 'name', 'rp'], onRowClick, sortKey, sortOrder = 'asc', onSort } = opts;
+  const { cols = ['number', 'name', 'rp'], onRowClick, sortKey, sortOrder = 'asc', onSort, rpOver } = opts;
   const colDefs = cols.map(k => ({ key: k, ...(CARD_TABLE_COLS[k] || { header: k, render: () => '' }) }));
 
   const headCells = colDefs.map(col => {
@@ -1768,7 +1768,10 @@ function renderCardTable(containerEl, items, opts = {}) {
 
   const bodyRows = items.length
     ? items.map(c => {
-        const cells = colDefs.map(col => `<td>${col.render ? col.render(c) : ''}</td>`).join('');
+        const cells = colDefs.map(col => {
+          const html = col.render ? col.render(c) : '';
+          return col.key === 'rp' && html && rpOver?.(c) ? `<td><span class="text-danger">${html}</span></td>` : `<td>${html}</td>`;
+        }).join('');
         return `<tr class="clickable" data-cid="${c.id}">${cells}</tr>`;
       }).join('')
     : `<tr><td colspan="${cols.length}" class="text-muted" style="text-align:center;padding:16px">${esc(t('cards.none'))}</td></tr>`;
@@ -2504,8 +2507,14 @@ async function loadPickerResults() {
     const errDiv = document.getElementById('picker-errors');
     if (errDiv) errDiv.innerHTML = smartErrorsHtml(data.filter_errors);
 
+    // Soldier / gear cards whose RP would push the squad past the mission budget are shown in red
+    const budget = builderState.missionCard?.resources || 0;
+    const rpLeft = budget - builderRpTotal();
+    const rpOver = ['soldier', 'gear'].includes(builderState.pickerMode) && budget > 0
+      ? c => (c.resource_cost || 0) > rpLeft : null;
     renderCardTable(resultsDiv, items, {
       cols,
+      rpOver,
       sortKey: builderState.pickerSort === 'module' ? 'module' : builderState.pickerSort,
       sortOrder: builderState.pickerOrder,
       onSort: (key) => {
