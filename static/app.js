@@ -997,7 +997,7 @@ async function showCardDetail(idOrNumber) {
 
   setMain(`
     <div class="cd-nav">
-      <a href="#/cards" class="btn btn-ghost btn-sm">↩ ${esc(t('nav.cards'))}</a>
+      ${actionBtn({ icon: 'back', label: t('nav.cards'), href: '#/cards' })}
       ${addBtn}
       ${editTrBtn}
       <span style="flex:1"></span>
@@ -1367,7 +1367,7 @@ async function showSquadDetail(squadId) {
           <td><span ${cardImageAttr(g.card)}>${esc(g.card.name)}</span></td>
           <td class="text-muted">${esc(tv('card_type', g.card.card_type))}</td>
           ${showCost ? `<td class="text-muted">${g.card.resource_cost != null ? g.card.resource_cost + ' ' + esc(t('stat.rp')) : ''}</td>
-          <td class="text-muted">${g.loadout_weight != null ? esc(t('stat.loadout_abbr')) + g.loadout_weight : ''}</td>
+          <td class="text-muted">${g.loadout_weight ? esc(t('stat.loadout_abbr')) + g.loadout_weight : ''}</td>
           ${g.quantity > 1 ? `<td>×${g.quantity}</td>` : '<td></td>'}` : ''}
         </tr>`;
       let out = '';
