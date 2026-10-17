@@ -7,7 +7,8 @@ squad's own relationships, read by `squad_metrics(squad)`.
 Everything here is a G0 *estimate* (see spec/12_squad_metrics.md): expected values computed analytically
 from card tables and a Hostile / Location reference (app/metric_reference.json, built by
 scripts/build_metric_reference.py from the cards CSV). Card text is parsed with small regexes on the fly
-(no card_tags table yet); skill effects (Spotter, Marksman, …) are NOT applied yet.
+(no card_tags table yet). A curated set of skill and equipment effects (Marksman, Spotter, Veteran, Body
+Armor, …) is applied through app/skill_effects.py; skills outside that list are ignored.
 """
 
 import json
