@@ -279,6 +279,7 @@ h3 { font-size: 1rem; font-weight: 600; }
   background: var(--surface2); color: var(--text-muted);
   border: 1px solid var(--border);
 }
+.chip-nowrap { white-space: nowrap; }
 .chip-soldier { background: #1b2a3a; color: #7fb0d8; border-color: #2f4d6b; }
 .chip-weapon  { background: #3a1e1e; color: #bf6d6d; border-color: #5c2e2e; }
 .chip-equipment { background: #1e2e3a; color: #6d9bbf; border-color: #2e4a5c; }
