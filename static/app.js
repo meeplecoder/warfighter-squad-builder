@@ -2496,6 +2496,7 @@ async function loadPickerResults() {
     case 'soldier':   params.set('category', 'Soldier'); break;
     case 'gear':
       if (builderState.pickerGearCat) params.set('category', builderState.pickerGearCat);
+      params.set('include_hidden', 'true');
       break;
   }
 
