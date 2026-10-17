@@ -14,10 +14,10 @@ def now_utc():
 
 
 CUSTOM_MODULE = 'Custom'
-# Hidden helper cards (e.g. W-152z "M1A1 Rockets"): not in the card list or pickers, only added by the builder
+# Hidden helper cards (e.g. W-152* "M1A1 Rockets"): not in the card list or pickers, only added by the builder
 HIDDEN_SUBTYPE = 'Ammunition'
-AMMO_CARD_NUMBER = 'W-152z'
-# Launchers whose notes read "Each Rocket: costs 1. Loadout 2." start with 0 rockets; each one is this card
+AMMO_CARD_NUMBER = 'W-152*'
+# US launchers whose notes read "Each Rocket: costs 1. Loadout 2." start with 0 rockets; each one is this card
 _ROCKET_RE = re.compile(r'Each Rocket: costs 1\. Loadout 2', re.IGNORECASE)
 
 
@@ -80,7 +80,7 @@ class Card(db.Model):
     @property
     def ammo_number(self):
         """Number of the hidden ammo card this weapon starts with one of (None for most cards)."""
-        return AMMO_CARD_NUMBER if self.card_type == 'Weapon' and _ROCKET_RE.search(self.notes or '') else None
+        return AMMO_CARD_NUMBER if self.card_type == 'Weapon' and self.nation == 'US' and _ROCKET_RE.search(self.notes or '') else None
 
     def _objective_mechanic(self) -> str:
         """Extract mechanic from combined card_subtype, e.g. 'Shore / Eliminate Hostiles' → 'Eliminate Hostiles'."""
