@@ -161,3 +161,14 @@ def test_ammo_card_numbers_from_weapon_notes():
     assert ammo_number_for('Each shell: costs 2.') == 'AM-S2'
     assert ammo_number_for('Each Grenade: costs 1.') == 'AM-G1'
     assert ammo_number_for('Rockets (8).') is None and ammo_number_for(None) is None
+
+
+def test_text_import_reads_strategy_notes(app):
+    from app import squad_io
+    with app.test_request_context('/'):
+        text = ("Squad: Imported\nNation: US\n\nAlder [S-001] — 12 RP\n\n"
+                "Strategy Notes:\nSource video: https://www.youtube.com/watch?v=XXXX\nSecond line\n\n— Warfighter WWII - Squad Builder\n")
+        draft, _warnings = squad_io.import_text(text)
+        assert draft['notes'] == 'Source video: https://www.youtube.com/watch?v=XXXX\nSecond line'
+        assert [s['card'].number for s in draft['soldiers']] == ['S-001']
+        assert squad_io.draft_to_json(draft, [])['notes'] == draft['notes']
