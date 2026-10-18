@@ -36,7 +36,9 @@ def gear_loadout_weight(gear_card):
     """Loadout weight of a single gear card."""
     if gear_card['card_type'] in NO_LOADOUT_CATEGORIES:
         return 0
-    return gear_card.get('loadout') or 0
+    if gear_card.get('loadout') is not None:
+        return gear_card['loadout']
+    return gear_card.get('resource_cost') or 0
 
 
 def validate_squad(payload, mission_card, soldiers_data):

@@ -366,7 +366,7 @@ function genSoldierCard(s) {
   const c = s.card, isPS = c.card_subtype === 'Player';
   const lm = gen.result.mission.loadout_modifier || 0;
   const used = isPS ? s.gear.reduce((a, g) => a + (['Weapon', 'Equipment'].includes(g.card.card_type)
-    ? (g.card.loadout || 0) * g.quantity : 0), 0) : 0;
+    ? (g.card.loadout != null ? g.card.loadout : (g.card.resource_cost || 0)) * g.quantity : 0), 0) : 0;
   const eff = isPS ? (c.loadout || 0) + lm : null;
   const gear = s.gear.map(g => `<tr>
       <td><span ${cardImageAttr(g.card)}>${esc(g.card.name)}</span></td>

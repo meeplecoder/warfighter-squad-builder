@@ -116,7 +116,7 @@ def _squad_detail(squad, liked_by_me=False):
             counts = is_ps
             lw = None
             if counts and gc.card_type in ('Weapon', 'Equipment'):
-                w = gc.loadout or 0
+                w = gc.loadout if gc.loadout is not None else (gc.resource_cost or 0)
                 gear_loadout_used += w * sg.quantity
                 lw = w
             gear_out.append({
