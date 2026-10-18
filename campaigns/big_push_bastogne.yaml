@@ -1,0 +1,109 @@
+# Source: pasted campaign description (German players vs US hostiles, "Big Push").
+# Format: docs/campaign_yaml.md
+# Notes:
+#  - "Big Push" is not a printed card: Hard Slog (W-020) is used as the mission card and the 210 RP is set with `rp`.
+#  - Only one objective card can be given: Hold the Crossroads (46-043) stands for the Road Hub (Bastogne);
+#    the second objective (Large City) and the location list are described in `setup`.
+#  - Hostiles: use the US Elite (Bastogne) cards from Extension#50.
+format: warfighter-campaign/1
+author: ""
+language: en
+
+name: Big Push - Bastogne
+summary: >-
+  German players push toward Bastogne against US hostiles through a 6-location mission with two objectives,
+  broken supply lines and constant environmental pressure.
+intro: >-
+  A German offensive drives toward the Road Hub of Bastogne. Supply is unreliable, air power is denied, and
+  only artillery can move freely on the board. The US defenders are caught by surprise, but the Road Hub
+  keeps feeding them reinforcements.
+nation: German
+theater: Europe - Bastogne
+enemy: US
+period: Winter 1944
+flow: linear
+
+persistence:
+  xp: true
+  wounds: true
+  skills: true
+  soldiers: true
+  casualties: true
+  gear: false
+
+rules:
+  - title: Environmental check
+    body: |-
+      Environmental 6+ for the whole game.
+
+      - No environmental check on the first turn.
+      - The check also applies to the US hostiles, treated like the Vietnam "Deadly" keyword: roll once; for each fail, place a pin.
+
+  - title: Artillery
+    body: |-
+      - Only Artillery with a base Move can move on the board.
+      - Off-board artillery can only be used out to range 2.
+      - Non-mobile artillery can be bought at half cost but cannot move out of its mission location.
+
+  - title: Supply problems
+    body: |-
+      When an army generates supply, roll a D10 per supply point. If the roll is less than the location number of the furthest army, that point is not gained.
+
+      - If the weather has broken (8 turns or less left), the point is also lost on a roll equal to the location number.
+      - Example: Road Hub is location 4. If a Supply Dump with 3 points is played, roll 3D10; each 1-3 loses that supply point.
+      - Supply gained from activating a location is rolled the same way.
+      - Players cannot buy the 7-point Supply Dump.
+
+  - title: Air power
+    body: Germans cannot use air power. The US can only use it when 8 turns are left.
+
+  - title: Surprise
+    body: On the first location activation, all US hostiles start pinned.
+
+  - title: Road Hub (Bastogne)
+    body: >-
+      The Road Hub represents Bastogne. Once activated it keeps reinforcing 1-2 hostiles every turn. Players treat it
+      as a special location and do not have to clear it.
+
+  - title: "Optional rule: Overkill"
+    body: |-
+      When drawing hostiles you may go over the hostile value, as long as the total is not two times the value.
+
+      Example: hostile value 4 and 3 points drawn. A draw of 1-4 (total 4-7) is fine; on a draw of 5+, discard it and draw again.
+
+  - title: "Optional rule: Fantasy-style activation"
+    body: |-
+      Players and hostiles alternate one activation at a time, by type.
+
+      Example: hostiles have a First and a Last, the player has one of each. Activate one player First action, then one hostile First, then another player First (not necessarily the same soldier). Repeat until all Firsts are done. Then the player activates the normal two actions plus one Last, then one hostile Last. Repeat until everyone has gone.
+
+scoring: Complete the mission by taking the objectives before time runs out.
+
+outcomes:
+  - label: Victory
+    condition: Complete the mission objectives.
+    epilogue: The German push breaks through and the road to Bastogne is open.
+  - label: Defeat
+    condition: The squad is wiped out or time runs out.
+    epilogue: The offensive stalls in the snow and the US line holds.
+
+missions:
+  - code: "1"
+    title: Big Push
+    mission: W-020      # Hard Slog (stand-in for the custom "Big Push" mission)
+    objective: 46-043   # Hold the Crossroads (stands for the Road Hub objective)
+    rp: 210
+    briefing: |-
+      Players are German; hostiles are US (use the US Elite cards from Extension#50 - Bastogne).
+    setup: |-
+      Locations, in order:
+
+      1. Light Forest (Light Woods, W-050)
+      2. Forest (Woods, W-042)
+      3. Road Hub - objective, Bastogne (Traffic Hub, W-046)
+      4. Dense Forest (01-001)
+      5. Impassable River
+      6. Large City - objective
+
+      Note: the Road Hub is described as location 4 in the supply rule example; the location order above follows the description and may be adjusted when building the mission.
+    victory: Take both objectives (Road Hub and Large City).
