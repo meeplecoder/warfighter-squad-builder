@@ -28,7 +28,7 @@ from app.utils import normalize_nation, nation_filter_clause, theater_from_raw_t
 
 generator_bp = Blueprint('generator', __name__)
 
-ENGINE_VERSION = 0
+ENGINE_VERSION = 2
 MAX_ALTERNATIVES = 2
 ALT_CANDIDATES = 4            # builds tried (each pushes one weak metric) to find the alternatives
 ALT_MIN_FITNESS = 0.85        # of the main squad's fitness
@@ -36,6 +36,18 @@ ALT_MAX_SIMILARITY = 0.8      # Jaccard similarity of the card sets vs the main 
 DEFAULT_MAX_SOLDIERS = 8      # table space / card burden; the form can raise or lower it
 MAX_SUSTAINED_PER_PS = 1      # one real gun per Player Soldier; the rest is one-shot / thrown
 MAX_ONESHOT_TYPES = 3
+# Community heuristics (ytb_squadbuilding_tips.md): soft priors, not rules
+FIREPOWER_FLOOR = 2.0         # "firepower first": no objective weighs ranged fire / close assault below this
+PS_MIN_SHARE = 0.55           # "play the Player Soldier as the star": share of the spend in PS + their gear
+PS_MIN_MOVEMENT = 2           # PS movement >= 2 (3-4 ideal)
+CANTEEN_NAME = 'Canteen'      # "spare discard resource": expend to draw 3 cards (Limit 2 per Soldier)
+CANTEEN_SECOND_BUDGET = 60    # a second Canteen (on another PS) from this budget up
+BUNDLE_GRENADES = 3           # "thrower + Close Combat": grenades carried by the bundle soldier
+BUNDLE_SKILLS = ('Close Combat', 'Pitcher')
+FODDER_MAX_COST = 3           # cheap bodies that soak shots, bought with leftover RP
+CLASSIC_CHECKS = ('ps_movement', 'ps_share', 'medic', 'canteen', 'bundle', 'sniper', 'anti_armour')
+MEDIC_MIN_BUDGET = 30         # "always bring a medic" — only worth the slot above this budget
+_ANTI_NEED = re.compile(r'\b(Vehicle|Tank|Armou?r)', re.I)
 QUALITIES = ('optimal', 'good_enough')
 TWISTS = ('interesting', 'challenge', 'one_hero', 'all_squad', 'no_mg', 'light_spender')
 SOLDIER_TYPES = ('NPS', 'Squad', 'Vehicle', 'Team')
@@ -210,6 +222,7 @@ def parse_request(data):
     sp = data.get('spend') or {}
     r['spend'] = {'type': sp.get('type') if sp.get('type') in ('auto', 'full', 'cap') else 'auto',
                   'max_rp': _int(sp.get('max_rp'), 1, 500)}
+    r['classic'] = data.get('classic', True) not in (False, 'false', 'off', 0, '0')     # community-balance preset
     r['include'] = _ids(data.get('include'))
     r['exclude'] = _ids(data.get('exclude'))
     types = data.get('soldier_types')
@@ -313,7 +326,13 @@ def resolve(req, user, rng):
 
 # ── card values ───────────────────────────────────────────────────────────────
 
-def _profile(objective, mission, emphasis):
+def _needs_anti_armour(objective):
+    """The objective names a vehicle / armoured target, or asks to kill a specified Hostile."""
+    return bool(objective and (objective.card_subtype == 'Kill Specified Hostile'
+                               or _ANTI_NEED.search(objective.notes or '')))
+
+
+def _profile(objective, mission, emphasis, classic=True):
     col = _MISSION_COL.get(mission.card_subtype or '')
     if col is None and objective is not None:
         col = _KIND_COL.get(objective.card_subtype or '', _KIND_COL.get(objective.objective_family or ''))
@@ -321,6 +340,11 @@ def _profile(objective, mission, emphasis):
             col = _KIND_COL[objective.objective_family]
     col = 0 if col is None else col
     w = {k: float(v[col]) for k, v in _GRID.items()}
+    if classic:
+        w['ranged_fire'] = max(w['ranged_fire'], FIREPOWER_FLOOR)
+        w['close_assault'] = max(w['close_assault'], FIREPOWER_FLOOR)
+    if classic and _needs_anti_armour(objective):
+        w['anti_armour'] = max(w['anti_armour'], 3.0)
     for k, d in emphasis.items():
         w[k] = max(0.5, w[k] + 1.5 * d)
     return w
@@ -413,15 +437,84 @@ def _dedupe_by_name(cards):
     return out
 
 
-def _ps_score(c, lm):
+def _ps_score(c, lm, classic=True):
     cost = max(c.resource_cost or 1, 1)
     base = (c.health or 0) + 0.5 * max(0, (c.loadout or 0) + lm) + 1.2 * (c.movement or 0) \
         + 0.8 * (c.cx or 0) + 0.3 * (c.xp or 0) + 0.6 * (c.cover or 0)
+    if classic and (c.movement or 0) < PS_MIN_MOVEMENT:
+        base *= 0.6
     return base / (cost ** 0.5)
 
 
+def _wants_bundle(weights, objective, budget):
+    """The scenario rewards Range 0 / explosive work: close-assault or demolition weighted High, or the objective
+    speaks of Range 0 / Explosion attacks."""
+    if budget < MEDIC_MIN_BUDGET:
+        return False
+    notes = (objective.notes or '') if objective else ''
+    return (weights['close_assault'] >= 3 or weights['demolition'] >= 3
+            or bool(re.search(r'Range 0|Explosion Attacks only', notes)))
+
+
+def _raw_score(ctx, chosen, weights):
+    mission, objective = ctx['mission'], ctx['objective']
+    objs = [{'objective_family': objective.objective_family, 'mechanic': objective._objective_mechanic(),
+             'notes_en': objective.notes}] if objective else []
+    mdict = {'time': mission.time, 'objective_position': mission.objective_position, 'mission_type': mission.card_subtype}
+    inputs = [metrics.soldier_input(s['card'], [(g, q) for g, q in s['gear']]) for s in chosen]
+    return _squad_score(metrics.analyse({'soldiers': inputs}, mdict, objs, hostile=ctx['hostile']), weights, _scales())
+
+
+def _wants_sniper(objective):
+    """Kill Specified Hostile whose target is screened (Officer, Sniper, VIP, gun crew…): it must be reached over the
+    screen, so a long-range shot pays. Vehicles are the anti-armour case, not this one."""
+    if not objective or objective.card_subtype != 'Kill Specified Hostile':
+        return False
+    notes = objective.notes or ''
+    return 'Screen' in notes and not _ANTI_NEED.search(notes)
+
+
 def build(req, ctx, rng, weights_override=None):
+    """Greedy build plus optional variants, each kept only when it scores higher on the objective-weighted metrics
+    (ties: without):  bundle (grenades + Close Combat, Range 0 / explosive scenarios) · sniper (long-range rifle +
+    Marksman for a screened specified target) · offload (an NPS/Squad Soldier with a printed machine gun instead of
+    the Player Soldier carrying one).  The winning flags are left in ctx['variant'] for the alternatives."""
+    state = rng.getstate()
+    plain = _build(req, ctx, rng, weights_override)
+    ctx['variant'] = {}
+    if not req['classic']:
+        return plain
+    wanted = []
+    if _wants_bundle(plain[2], ctx['objective'], plain[1]):
+        wanted.append('bundle')
+    if _wants_sniper(ctx['objective']) and plain[1] >= MEDIC_MIN_BUDGET:
+        wanted.append('sniper')
+    if plain[1] >= MEDIC_MIN_BUDGET:
+        wanted.append('offload')
+    if not wanted:
+        return plain
+    best, best_score = plain, _raw_score(ctx, plain[0], plain[2]) + 1e-9
+    good = []
+    for flag in wanted:
+        rng.setstate(state)
+        cand = _build(req, ctx, rng, weights_override, **{flag: True})
+        sc = _raw_score(ctx, cand[0], cand[2])
+        if sc > _raw_score(ctx, plain[0], plain[2]) + 1e-9:
+            good.append(flag)
+            if sc > best_score:
+                best, best_score, ctx['variant'] = cand, sc, {flag: True}
+    if len(good) > 1:
+        rng.setstate(state)
+        cand = _build(req, ctx, rng, weights_override, **{f: True for f in good})
+        sc = _raw_score(ctx, cand[0], cand[2])
+        if sc > best_score:
+            best, ctx['variant'] = cand, {f: True for f in good}
+    return best
+
+
+def _build(req, ctx, rng, weights_override=None, bundle=False, sniper=False, offload=False):
     nation, mission, objective, excluded = ctx['nation'], ctx['mission'], ctx['objective'], ctx['excluded']
+    classic = req['classic']
     lm = mission.loadout_modifier or 0
     budget = mission.resources
     if req['spend']['type'] == 'cap' and req['spend']['max_rp']:
@@ -430,7 +523,7 @@ def build(req, ctx, rng, weights_override=None):
         budget = int(budget * 0.7)
     elif req['twist'] == 'challenge':
         budget = int(budget * 0.8)
-    weights = dict(weights_override) if weights_override else _profile(objective, mission, req['emphasis'])
+    weights = dict(weights_override) if weights_override else _profile(objective, mission, req['emphasis'], req['classic'])
     objs = [{'objective_family': objective.objective_family, 'mechanic': objective._objective_mechanic(),
              'notes_en': objective.notes}] if objective else []
     alpha = metrics.alpha_for(objs, mission.card_subtype)
@@ -488,6 +581,8 @@ def build(req, ctx, rng, weights_override=None):
     # players target
     rec = 1 if budget < 40 else 2 if budget < 80 else 3 if budget < 120 else 4
     n_ps = req['players'] or rec
+    if classic and not support_pool and not req['players']:      # no NPS / Squad Soldiers to lean on (e.g. Germans): PS carry the squad
+        n_ps = min(rec + 1, 4)
     if req['twist'] == 'one_hero':
         n_ps = 1
 
@@ -506,7 +601,7 @@ def build(req, ctx, rng, weights_override=None):
             add_soldier(c)
             names_in.add(c.name)
 
-    ranked_ps = sorted(ps_pool, key=lambda c: (-_ps_score(c, lm) * noise(), c.id))
+    ranked_ps = sorted(ps_pool, key=lambda c: (-_ps_score(c, lm, classic) * noise(), c.id))
     have_ps = lambda: sum(1 for s in chosen if s['card'].card_subtype == 'Player')
     for c in ranked_ps:
         if have_ps() >= n_ps or len(chosen) >= max_soldiers:
@@ -542,6 +637,8 @@ def build(req, ctx, rng, weights_override=None):
             if wt > s['left'] or spent + c.resource_cost > cap:
                 continue
             v, wp = wvals[c.id]
+            if offload and wp.spray and not wp.expended:
+                continue          # the machine gun is carried by the NPS
             cur = have.get(c.id)
             if wp.expended:
                 if not sustained and any(not wvals[x.id][1].expended and _gear_weight(x) <= s['left']
@@ -592,6 +689,117 @@ def build(req, ctx, rng, weights_override=None):
                     s['left'] -= _gear_weight(c)
                     spent += c.resource_cost
                     break
+
+    def place_bundle():
+        """Grenades (the best owned Thrown one) + Close Combat + Pitcher on the Player Soldier with the most room."""
+        nonlocal spent
+        nades = [c for c in weapons if c.card_subtype == 'Thrown' and c.id in wvals and wvals[c.id][1].expended]
+        pss = [x for x in chosen if x['card'].card_subtype == 'Player']
+        skills = {c.name: c for c in _dedupe_by_name(
+            [c for c in cat.filter(Card.card_type == 'Skill', Card.name.in_(BUNDLE_SKILLS)).order_by(Card.id).all()
+             if _nation_ok(c, nation) and allowed(c) and c.resource_cost is not None])}
+        if not nades or not pss or 'Close Combat' not in skills:
+            return
+        x = max(pss, key=lambda x: (x['left'], x['card'].movement or 0, -x['card'].id))
+        nade = max(nades, key=lambda c: (wvals[c.id][0] / max(_gear_weight(c), 1), -c.id))
+        lim = re.search(r'Limit (\d+) per Soldier', nade.notes or '')
+        qty = BUNDLE_GRENADES
+        if lim:
+            qty = min(qty, int(lim.group(1)))
+        cc = skills['Close Combat']
+        while qty and (_gear_weight(nade) * qty > x['left'] or spent + nade.resource_cost * qty + cc.resource_cost > budget):
+            qty -= 1
+        if not qty:
+            return
+        x['gear'].append([nade, qty])
+        x['left'] -= _gear_weight(nade) * qty
+        spent += nade.resource_cost * qty
+        for name in BUNDLE_SKILLS:
+            sk = skills.get(name)
+            if sk and spent + sk.resource_cost <= budget and not any(g[0].name == name for g in x['gear']):
+                x['gear'].append([sk, 1])
+                spent += sk.resource_cost
+
+    def place_sniper():
+        """The weapon with the best fire at Range 2+ plus Marksman (and Rifleman for a rifle) on the Player Soldier
+        with the most room: the shot that reaches a screened Officer / Sniper / gun crew."""
+        nonlocal spent
+        pss = [x for x in chosen if x['card'].card_subtype == 'Player']
+        if not pss:
+            return
+        x = max(pss, key=lambda x: (x['left'], x['card'].movement or 0, -x['card'].id))
+        cover, per_card = hostile['cover'], hostile['per_card']
+        cands = []
+        for c in weapons:
+            wp = wvals[c.id][1]
+            if wp.expended or wp.spray or _gear_weight(c) > x['left'] or spent + c.resource_cost > budget:
+                continue
+            cands.append((metrics.best_fire(wp, None, cover, alpha, per_card, rng_min=2) / max(c.resource_cost, 1) ** 0.3,
+                          -c.id, c, wp))
+        if not cands:
+            return
+        _, _, gun, wp = max(cands)
+        x['gear'].append([gun, 1])
+        x['left'] -= _gear_weight(gun)
+        spent += gun.resource_cost
+        skills = {c.name: c for c in _dedupe_by_name(
+            [c for c in cat.filter(Card.card_type == 'Skill', Card.name.in_(('Marksman', 'Rifleman'))).order_by(Card.id).all()
+             if _nation_ok(c, nation) and allowed(c) and c.resource_cost is not None])}
+        for name in ('Marksman', 'Rifleman'):
+            sk = skills.get(name)
+            if sk and (name != 'Rifleman' or 'rifle' in skill_effects.weapon_tags(wp)) \
+                    and spent + sk.resource_cost <= budget and not any(g[0].name == name for g in x['gear']):
+                x['gear'].append([sk, 1])
+                spent += sk.resource_cost
+
+    def place_offload():
+        """An NPS / Squad Soldier whose printed gear is a machine gun (value per RP), so no Player Soldier has to buy
+        one: the Player Soldiers then keep to rifles, SMGs and grenades (pick_for skips Spray weapons)."""
+        mg = []
+        for c in support_pool:
+            if c.name in names_in or c.card_subtype not in ('NPS', 'Squad') or c.resource_cost > budget - spent:
+                continue
+            printed = metrics.soldier_input(c, [])['default_gear']
+            if any(g.get('card_type') == 'Weapon' and metrics.weapon_of(g).spray for g in printed):
+                mg.append(c)
+        if not mg or len(chosen) >= max_soldiers:
+            return
+        best = max(mg, key=lambda c: ((c.health or 1) + 2 * (c.actions or 0)) / c.resource_cost - 0 * c.id)
+        add_soldier(best)
+        names_in.add(best.name)
+
+    # a medic first (before weapons use up the Loadout): First Aid Kit on the Player Soldier with the most room left
+    aid = next(iter(_dedupe_by_name([c for c in cat.filter(Card.card_type == 'Equipment', Card.name == 'First Aid Kit')
+                                     .order_by(Card.id).all() if allowed(c) and _nation_ok(c, nation)])), None)
+    if classic and aid and budget >= MEDIC_MIN_BUDGET and not _has_medic(chosen):
+        pss = [x for x in chosen if x['card'].card_subtype == 'Player' and x['left'] >= _gear_weight(aid)]
+        if pss and spent + aid.resource_cost <= budget:
+            x = max(pss, key=lambda x: (x['left'], -x['card'].id))
+            x['gear'].append([aid, 1])
+            x['left'] -= _gear_weight(aid)
+            spent += aid.resource_cost
+
+    # a Canteen (card refill when the hand is empty or useless), same reason to come before the weapons
+    canteen = next(iter(_dedupe_by_name([c for c in cat.filter(Card.card_type == 'Equipment', Card.name == CANTEEN_NAME)
+                                         .order_by(Card.id).all() if allowed(c) and _nation_ok(c, nation)])), None)
+    if classic and canteen and budget >= MEDIC_MIN_BUDGET:
+        want = 2 if budget >= CANTEEN_SECOND_BUDGET else 1
+        for _ in range(want - _count_gear(chosen, CANTEEN_NAME)):
+            pss = [x for x in chosen if x['card'].card_subtype == 'Player' and x['left'] >= _gear_weight(canteen)
+                   and not any(g[0].name == CANTEEN_NAME for g in x['gear'])]
+            if not pss or spent + canteen.resource_cost > budget:
+                break
+            x = max(pss, key=lambda x: (x['left'], -x['card'].id))
+            x['gear'].append([canteen, 1])
+            x['left'] -= _gear_weight(canteen)
+            spent += canteen.resource_cost
+
+    if offload:
+        place_offload()
+    if bundle:
+        place_bundle()
+    if sniper:
+        place_sniper()
 
     equip(spent + (budget - spent) * 0.55)
 
@@ -678,8 +886,38 @@ def build(req, ctx, rng, weights_override=None):
     cands = [c for c in support_pool if c.name not in names_in and c.resource_cost <= budget - spent]
     cands = sorted(cands, key=lambda c: -((c.health or 1) + 2 * (c.actions or 0)) / max(c.resource_cost, 1))[:30]
     svals = {c.id: support_value(c) for c in cands}
+    def fill_leftover(spent_now):
+        """Leftover RP: a Lucky Helmet on a Player Soldier with room, then cheap (<= FODDER_MAX_COST) bodies ranked by
+        Actions per RP — never across a threat-band edge (more Hostiles), and only below the soldier cap."""
+        nonlocal spent
+        spent = spent_now
+        band = lambda rp: (_band(objective, rp) or {}).get('hostiles')
+        helmet = equip_cards.get('Lucky Helmet')
+        if helmet:
+            for x in chosen:
+                if x['card'].card_subtype == 'Player' and x['left'] >= _gear_weight(helmet) \
+                        and not any(g[0].name == helmet.name for g in x['gear']) \
+                        and spent + helmet.resource_cost <= budget and band(spent + helmet.resource_cost) == band(spent):
+                    x['gear'].append([helmet, 1])
+                    x['left'] -= _gear_weight(helmet)
+                    spent += helmet.resource_cost
+                    break
+        cheap = sorted((c for c in support_pool if c.name not in names_in and 0 < c.resource_cost <= FODDER_MAX_COST
+                        and (c.actions or 0) >= 1),
+                       key=lambda c: (c.resource_cost / (c.actions or 1), -(c.health or 0), c.id))
+        for c in cheap:
+            if len(chosen) >= max_soldiers or spent + c.resource_cost > budget:
+                continue
+            if band(spent + c.resource_cost) != band(spent):
+                continue
+            add_soldier(c)
+            names_in.add(c.name)
+        return spent
+
+    support_cap = budget * (1 - (PS_MIN_SHARE if classic else 0))        # the PS keep at least PS_MIN_SHARE of the spend
     while len(chosen) < max_soldiers:
-        room = budget - spent
+        support_spent = sum(s['card'].resource_cost or 0 for s in chosen if s['card'].card_subtype != 'Player')
+        room = min(budget - spent, support_cap - support_spent)
         opts = [c for c in cands if c.name not in names_in and c.resource_cost <= room]
         if not opts:
             break
@@ -691,6 +929,8 @@ def build(req, ctx, rng, weights_override=None):
 
     equip(budget)
     add_extras(budget)
+    if classic:
+        spent = fill_leftover(spent)
     return chosen, budget, weights, spent
 
 
@@ -740,7 +980,20 @@ def _fitness(rank_metrics, weights, checks):
     return {'score': round(score, 3), 'label': label}
 
 
-def _checks(req, ctx, chosen, raw, mission):
+def _count_gear(chosen, name):
+    return sum(q for s in chosen for g, q in s['gear'] if g.name == name)
+
+
+def _has_medic(chosen):
+    for s in chosen:
+        if re.search(r'medic|corpsman', s['card'].name, re.I):
+            return True
+        if any(re.search(r'First Aid|Corpsman|Medic', g.name, re.I) for g, _q in s['gear']):
+            return True
+    return False
+
+
+def _checks(req, ctx, chosen, raw, mission, rank_scored=None, weights=None):
     checks = []
     ps = sum(1 for s in chosen if s['card'].card_subtype == 'Player')
     want = req['players'] or (1 if mission.resources < 40 else 2 if mission.resources < 80 else 3 if mission.resources < 120 else 4)
@@ -755,6 +1008,34 @@ def _checks(req, ctx, chosen, raw, mission):
         checks.append({'key': 'route', 'status': st, 'params': {'moves': moves, 'time': mission.time}})
     o = ctx['objective']
     notes = (o.notes or '') if o else ''
+    # community heuristics (ytb_squadbuilding_tips.md)
+    pss = [s['card'] for s in chosen if s['card'].card_subtype == 'Player']
+    low = min((c.movement or 0 for c in pss), default=0)
+    checks.append({'key': 'ps_movement', 'status': 'ok' if low >= PS_MIN_MOVEMENT else 'weak',
+                   'params': {'min': low, 'want': PS_MIN_MOVEMENT}})
+    total = sum(s['card'].resource_cost or 0 for s in chosen) + sum((g.resource_cost or 0) * q for s in chosen for g, q in s['gear'])
+    ps_rp = sum((s['card'].resource_cost or 0) + sum((g.resource_cost or 0) * q for g, q in s['gear'])
+                for s in chosen if s['card'].card_subtype == 'Player')
+    if len(chosen) > len(pss) and total:
+        share = ps_rp / total
+        checks.append({'key': 'ps_share', 'status': 'ok' if share >= PS_MIN_SHARE else 'weak',
+                       'params': {'share': round(100 * share), 'want': round(100 * PS_MIN_SHARE)}})
+    if mission.resources >= MEDIC_MIN_BUDGET:
+        checks.append({'key': 'medic', 'status': 'ok' if _has_medic(chosen) else 'weak', 'params': {}})
+    if mission.resources >= MEDIC_MIN_BUDGET:
+        checks.append({'key': 'canteen', 'status': 'ok' if _count_gear(chosen, CANTEEN_NAME) else 'weak', 'params': {}})
+    if weights is not None and _wants_bundle(weights, o, mission.resources):
+        ok = any(g.name == 'Close Combat' for s in chosen for g, _q in s['gear']) and \
+            any(g.card_subtype == 'Thrown' and q >= 2 for s in chosen for g, q in s['gear'])
+        if ok:      # informational: when the engine found the bundle no better, it is simply not shown
+            checks.append({'key': 'bundle', 'status': 'ok', 'params': {}})
+    if _wants_sniper(o) and any(g.name == 'Marksman' for s in chosen for g, _q in s['gear']):
+        checks.append({'key': 'sniper', 'status': 'ok', 'params': {}})      # informational, like the bundle
+    if _needs_anti_armour(o):
+        sc = rank_scored['anti_armour']['score'] if rank_scored else None
+        if sc is not None:
+            checks.append({'key': 'anti_armour', 'status': 'ok' if sc >= 0.5 else 'weak' if sc >= 0.25 else 'missing',
+                           'params': {}})
     if 'Explosion Attacks only' in notes:
         hits = re.search(r'(\d+) Hits', notes)
         count = re.search(r'Destroy (\d+)', notes)
@@ -762,6 +1043,8 @@ def _checks(req, ctx, chosen, raw, mission):
         have = raw['demolition']['raw']
         st = 'ok' if have >= need else 'weak' if have >= need * 0.5 else 'missing'
         checks.append({'key': 'explosive', 'status': st, 'params': {'have': round(have, 1), 'need': need}})
+    if not req.get('classic', True):
+        checks = [c for c in checks if c['key'] not in CLASSIC_CHECKS]
     return checks
 
 
@@ -793,7 +1076,7 @@ def _evaluate(req, ctx, chosen, weights):
              'mission_type': mission.card_subtype, 'budget': mission.resources}
     raw = metrics.analyse({'soldiers': inputs}, mdict, objs, hostile=ctx['hostile'])
     scored = metrics.score_metrics(raw, mission.resources)
-    checks = _checks(req, ctx, chosen, raw, mission)
+    checks = _checks(req, ctx, chosen, raw, mission, scored['metrics'], weights)
     return {'raw': raw, 'scored': scored, 'checks': checks, 'fitness': _fitness(scored['metrics'], weights, checks)}
 
 
@@ -847,7 +1130,7 @@ def _alternatives(req, ctx, main_chosen, main_eval, weights, n):
         w = dict(weights)
         w[k] += 2.5
         try:
-            chosen, budget, _w, spent = build(req, ctx, random.Random(f"{req['seed']}|alt|{k}"), weights_override=w)
+            chosen, budget, _w, spent = _build(req, ctx, random.Random(f"{req['seed']}|alt|{k}"), weights_override=w, **ctx.get('variant', {}))
         except GenError:
             continue
         pool.append((chosen, budget, spent, _evaluate(req, ctx, chosen, weights), k))
@@ -893,7 +1176,7 @@ def generate():
         resolved={'nation': ctx['nation'], 'mission_card_id': mission.id,
                   'objective_card_id': objective.id if objective else None,
                   'enemy_nation': ctx['enemy'], 'theater': ctx['theater'], 'players': req['players'],
-                  'hostile_level': req['hostile_level'], 'quality': req['quality'], 'twist': req['twist'],
+                  'hostile_level': req['hostile_level'], 'classic': req['classic'], 'quality': req['quality'], 'twist': req['twist'],
                   'seed': req['seed'], 'engine_version': ENGINE_VERSION},
         mission=mission.to_card_object(), objective=objective.to_card_object() if objective else None,
         collection={'owned_modules': len(mods) - len(excluded & set(mods)), 'total_modules': len(mods)},

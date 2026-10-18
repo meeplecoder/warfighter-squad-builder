@@ -20,7 +20,7 @@ function genDefaultForm() {
   return {
     nation: 'random', mission: 'random', objective: 'random',
     players: '', enemy: 'auto', level: 'frontline',
-    quality: 'optimal', variety: 50, twist: '', more: '', less: '',
+    quality: 'optimal', classic: 'on', variety: 50, twist: '', more: '', less: '',
     spend: 'auto', maxRp: '',
     types: { NPS: true, Squad: true, Vehicle: false, Team: true },
     maxSoldiers: '', include: [], exclude: [], seed: '',
@@ -169,7 +169,7 @@ function renderGenForm() {
   const f = gen.form;
   const nSet = (...keys) => keys.filter(k => k).length;
   const scenarioSet = nSet(f.players !== '', f.enemy !== 'auto', f.level !== 'frontline', f.objective !== 'random');
-  const styleSet = nSet(f.quality !== 'optimal', f.more, f.less, f.spend !== 'auto');
+  const styleSet = nSet(f.quality !== 'optimal', f.classic === 'off', f.more, f.less, f.spend !== 'auto');
   const consSet = nSet(f.include.length, f.exclude.length, f.maxSoldiers !== '', f.seed !== '',
     JSON.stringify(f.types) !== JSON.stringify(genDefaultForm().types));
   const good = f.quality === 'good_enough';
@@ -195,6 +195,7 @@ function renderGenForm() {
       genSelect('twist', t('gen.twist'), `<option value="">${esc(t('gen.twist.none'))}</option>` +
         GEN_TWISTS.map(k => `<option value="${k}" ${f.twist === k ? 'selected' : ''}>${esc(t('gen.twist.' + k))}</option>`).join(''),
         f.twist ? t('gen.twist.' + f.twist + '_hint') : '') : '') +
+    genSeg('classic', t('gen.classic'), [['on', t('gen.classic_on')], ['off', t('gen.classic_off')]], f.classic || 'on', t('gen.classic_hint')) +
     `<div class="gen-pair">
        <div class="form-field gen-field"><label for="gf-more">${esc(t('gen.more'))}</label><select id="gf-more" data-f="more">${genMetricOptions(f.more)}</select></div>
        <div class="form-field gen-field"><label for="gf-less">${esc(t('gen.less'))}</label><select id="gf-less" data-f="less">${genMetricOptions(f.less)}</select></div>
@@ -314,6 +315,7 @@ function genBody(extra = {}) {
     enemy_nation: f.enemy === 'auto' ? null : f.enemy,
     hostile_level: f.level,
     quality: f.quality,
+    classic: f.classic !== 'off',
     variety: f.variety / 100,
     twist: f.twist || null,
     emphasis,
