@@ -188,7 +188,7 @@ class _Resolver:
 
 
 def _empty_draft():
-    return {'name': '', 'nation': '', 'mission': None, 'objectives': [], 'situation': None, 'soldiers': []}
+    return {'name': '', 'nation': '', 'mission': None, 'objectives': [], 'situation': None, 'soldiers': [], 'notes': ''}
 
 
 def _place(draft, card, qty, indented, warnings, line_no):
@@ -213,9 +213,20 @@ def _place(draft, card, qty, indented, warnings, line_no):
         warnings.append(_('Line {n}: {name} has no soldier to attach to.', n=line_no, name=card.display_name()))
 
 
+NOTES_HEADERS = {'strategy notes', 'notas de estrategia'}      # the export header, English or Spanish
+FOOTER_PREFIX = '— Warfighter'
+
+
 def import_text(content):
     res, draft, warnings = _Resolver(), _empty_draft(), []
-    for line_no, raw in enumerate(content.splitlines(), 1):
+    lines = content.splitlines()
+    notes_at = next((i for i, raw in enumerate(lines)
+                     if raw.strip().rstrip(':').strip().lower() in NOTES_HEADERS | {_('Strategy Notes').lower()}), None)
+    if notes_at is not None:             # everything after the header (minus the export footer) is the squad's notes
+        body = [l for l in lines[notes_at + 1:] if not l.startswith(FOOTER_PREFIX)]
+        draft['notes'] = '\n'.join(body).strip()
+        lines = lines[:notes_at]
+    for line_no, raw in enumerate(lines, 1):
         line = raw.rstrip()
         if not line.strip():
             continue
@@ -314,4 +325,5 @@ def draft_to_json(draft, warnings):
         'objectives': [c.to_card_detail() for c in draft['objectives']],
         'situation': draft['situation'].to_card_detail() if draft['situation'] else None,
         'soldiers': [soldier_json(s) for s in draft['soldiers']],
+        'notes': draft.get('notes', ''),
     }
