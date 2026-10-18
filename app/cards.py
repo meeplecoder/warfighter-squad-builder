@@ -26,7 +26,7 @@ cards_bp = Blueprint('cards', __name__)
 
 SORT_COLS = {
     'name': Card.name,
-    'resource_cost': Card.resource_cost,
+    'resource_cost': db.func.coalesce(Card.resource_cost, Card.resources),
     'number': Card.number,
     'module': Card.module,
     'card_type': Card.card_type,
