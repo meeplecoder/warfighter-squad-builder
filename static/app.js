@@ -742,7 +742,7 @@ async function refreshCardsTable() {
       <td>${SUBTYPE_CATS.has(c.card_type) ? esc(tv('card_subtype', c.card_subtype || '')) : ''}</td>
       <td>${esc(c.nation ? tv('nation', c.nation) : '—')}</td>
       <td>${esc(tv('module', c.module))}</td>
-      <td style="text-align:right">${c.resource_cost != null ? c.resource_cost : ''}</td>
+      <td style="text-align:right">${c.resource_cost != null ? c.resource_cost : (c.resources != null ? c.resources : '')}</td>
     </tr>`).join('');
 
   resultsDiv.innerHTML = `
