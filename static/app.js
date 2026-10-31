@@ -615,6 +615,7 @@ register('cards', async function(subId) {
   if (!allNations.length) {
     try { const r = await API.get('/nations'); allNations = r.nations || []; } catch (_) {}
   }
+  if (!cardFilters.touchedModule) cardFilters.module = defaultPickerModule();
   renderCardsShell();
 });
 
@@ -683,17 +684,19 @@ function renderCardsShell() {
 
   main.querySelector('#module-select').addEventListener('change', e => {
     cardFilters.module = e.target.value;
+    cardFilters.touchedModule = true;
     cardFilters.page = 1;
     refreshCardsTable();
   });
 
   main.querySelector('#reset-filters').addEventListener('click', () => {
     cardFilters = { q: '', category: '', subtype: '', nation: '', module: '', sort: 'module', order: 'asc', page: 1, per_page: 50 };
+    cardFilters.module = defaultPickerModule();
     // Reset dropdowns to match cleared filters
     main.querySelector('#q-input').value = '';
     main.querySelector('#cat-select').value = '';
     main.querySelector('#nation-select').value = '';
-    main.querySelector('#module-select').value = '';
+    main.querySelector('#module-select').value = cardFilters.module;
     refreshCardsTable();
   });
 
