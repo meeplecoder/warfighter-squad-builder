@@ -825,7 +825,10 @@ async function saveCampaign(status) {
 }
 
 // Small searchable card picker (modal) — any catalog card of a type; missions include your custom ones
-function openCampaignCardPicker(category, onPick) {
+async function openCampaignCardPicker(category, onPick) {
+  if (!allModules.length) {   // the module list may not be loaded yet if Cards was never opened
+    try { allModules = (await API.get('/modules')).modules || []; } catch (_) {}
+  }
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
