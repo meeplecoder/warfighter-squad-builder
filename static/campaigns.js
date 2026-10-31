@@ -825,17 +825,13 @@ async function saveCampaign(status) {
 }
 
 // Small searchable card picker (modal) — any catalog card of a type; missions include your custom ones
-async function openCampaignCardPicker(category, onPick) {
-  if (!allModules.length) {   // the module list may not be loaded yet if Cards was never opened
-    try { allModules = (await API.get('/modules')).modules || []; } catch (_) {}
-  }
+function openCampaignCardPicker(category, onPick) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
     <div class="modal">
       <h2>${esc(t('campaign.pick.' + category))}</h2>
       <input type="text" class="search-input" id="cp-q" placeholder="${esc(t('campaign.pick_search'))}" style="width:100%">
-      <select id="cp-module" style="width:100%;margin-top:6px">${moduleSelectOptions(defaultPickerModule())}</select>
       <div id="cp-results" class="cp-results"><div class="spinner" style="margin:16px auto"></div></div>
       <div style="display:flex;justify-content:flex-end;margin-top:8px">
         <button class="btn btn-ghost btn-sm" id="cp-cancel">${esc(t('common.cancel'))}</button>
@@ -846,14 +842,12 @@ async function openCampaignCardPicker(category, onPick) {
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
   overlay.querySelector('#cp-cancel').addEventListener('click', close);
   const q = overlay.querySelector('#cp-q');
-  const modSel = overlay.querySelector('#cp-module');
   const results = overlay.querySelector('#cp-results');
   let items = [], req = 0;
   const load = async () => {
     const my = ++req;
     const params = new URLSearchParams({ category, q: q.value, per_page: 30, sort: 'name' });
     if (category === 'Mission') params.set('include_mine', 'true');
-    setModuleParams(params, modSel.value);
     try {
       const data = await API.get('/cards?' + params);
       if (my !== req) return;
@@ -872,7 +866,6 @@ async function openCampaignCardPicker(category, onPick) {
     } catch (e) { results.innerHTML = alertHtml(e.error || t('common.failed')); }
   };
   q.addEventListener('input', () => { clearTimeout(q._t); q._t = setTimeout(load, 250); });
-  modSel.addEventListener('change', load);
   q.focus();
   load();
 }
