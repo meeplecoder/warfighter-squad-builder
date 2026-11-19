@@ -53,7 +53,7 @@ async function loadCampaignList() {
     return `
     <tr class="clickable" data-id="${c.id}">
       <td class="squad-edit-cell">${own ? `<button class="squad-edit-btn" data-edit="${c.id}" title="${esc(t('common.edit'))}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>` : ''}</td>
-      <td><strong>${esc(c.name)}</strong>${c.language ? ` <span class="badge badge-lang">${esc(c.language.toUpperCase())}</span>` : ''}${draft}${c.summary ? `<div class="text-muted" style="font-size:12px">${esc(c.summary)}</div>` : ''}</td>
+      <td><strong>${esc(c.name)}</strong>${c.language ? ` <span class="badge badge-lang">${esc(c.language.toUpperCase())}</span>` : ''}${draft}${c.summary ? `<div class="text-muted" style="font-size:0.75rem">${esc(c.summary)}</div>` : ''}</td>
       <td>${c.nation ? esc(nationLabel(c.nation)) : '—'}</td>
       <td>${esc(c.theater || '—')}</td>
       <td>${c.mission_count}</td>
@@ -321,7 +321,7 @@ async function showCampaignDetail(id) {
         </div>
         ${card ? `<div class="campaign-mission-card"><span ${cardImageAttr(card)}><a href="#/cards/${card.id}">${esc(card.name)}</a></span>${customMissionChip(card)}
           ${card.mission_type && card.mission_type !== 'Standard' ? `<span class="obj-type-badge" style="margin-left:6px">${esc(tv('card_subtype', card.mission_type))}</span>` : ''}
-          <span class="text-muted" style="font-size:12px;margin-left:6px">${stats}</span></div>` : ''}
+          <span class="text-muted" style="font-size:0.75rem;margin-left:6px">${stats}</span></div>` : ''}
         ${m.objective ? `<div class="campaign-mission-meta"><span class="text-muted">${esc(t('campaign.objective'))}:</span>
           <span ${cardImageAttr(m.objective)}><a href="#/cards/${m.objective.id}">${esc(m.objective.name)}</a></span></div>` : ''}
         ${m.situation ? `<div class="campaign-mission-meta"><span class="text-muted">${esc(t('squad.situation'))}:</span>
@@ -359,7 +359,7 @@ async function showCampaignDetail(id) {
                 actionBtn({ id: 'campaign-edit-btn', icon: 'edit', label: t('common.edit'), variant: 'primary' })] : [])}
       <h1 style="margin:4px 0">${esc(c.name)}
         ${c.status === 'draft' ? `<span class="badge badge-draft" style="vertical-align:middle">${esc(tv('squad_status', 'draft'))}</span>` : ''}</h1>
-      <div class="text-muted" style="font-size:12px">${esc(t('campaign.by', { user: c.owner.username }))} · ${fmtDate(c.updated_at)}</div>
+      <div class="text-muted" style="font-size:0.75rem">${esc(t('campaign.by', { user: c.owner.username }))} · ${fmtDate(c.updated_at)}</div>
       ${c.summary ? `<p class="campaign-summary">${esc(c.summary)}</p>` : ''}
       <div class="mission-attrs" style="margin:8px 0">${info}</div>
       ${c.modules.length ? `<div class="campaign-carry"><span class="text-muted">${esc(t('campaign.modules'))}:</span>
@@ -369,7 +369,7 @@ async function showCampaignDetail(id) {
       ${rulesHtml}
       <section class="campaign-section">
         <h2>${esc(t('campaign.sec.missions'))}</h2>
-        <p class="text-muted" style="font-size:12px">${esc(t('campaign.flow_hint.' + c.flow_type))}</p>
+        <p class="text-muted" style="font-size:0.75rem">${esc(t('campaign.flow_hint.' + c.flow_type))}</p>
         ${missionsHtml || `<p class="text-muted">${esc(t('campaign.no_missions'))}</p>`}
       </section>
       ${resolutionHtml}
@@ -479,8 +479,8 @@ function renderCampaignMissionEditor(m, i) {
       <div class="ce-mission-head">
         <button class="btn btn-icon ce-toggle" data-act="toggle" data-mi="${i}" aria-expanded="${!!m._open}">${icon(m._open ? 'down' : 'next')}</button>
         <strong class="ce-mission-title">${esc(missionLabel(m, i))}</strong>
-        ${card ? `<span class="text-muted" style="font-size:12px">${cardName(card)}${customMissionChip(card)}</span>`
-               : `<span class="text-danger" style="font-size:12px">${esc(t('campaign.no_card'))}</span>`}
+        ${card ? `<span class="text-muted" style="font-size:0.75rem">${cardName(card)}${customMissionChip(card)}</span>`
+               : `<span class="text-danger" style="font-size:0.75rem">${esc(t('campaign.no_card'))}</span>`}
         ${st.flow_type === 'branching' && m.is_entry ? `<span class="chip chip-entry">${esc(t('campaign.entry'))}</span>` : ''}
         <span style="flex:1"></span>
         <button class="btn btn-icon" data-act="up" data-mi="${i}" ${i === 0 ? 'disabled' : ''} title="${esc(t('campaign.move_up'))}" aria-label="${esc(t('campaign.move_up'))}">${icon('up')}</button>
@@ -494,7 +494,7 @@ function renderCampaignMissionEditor(m, i) {
         ${ceField(t('campaign.m.title'), ceInput(`${p}.title`, m.title, 'maxlength="120"'))}
         ${ceField(t('col.mission'), `<div class="flex" style="gap:6px;flex-wrap:wrap;align-items:center">
             ${card ? `<span ${cardImageAttr(card)}><strong>${esc(card.name)}</strong></span>${customMissionChip(card)}
-              <span class="text-muted" style="font-size:12px">${card.resources} ${esc(t('stat.rp'))}${card.time != null ? ` · ${card.time} ${esc(t('stat.turns'))}` : ''}</span>` : ''}
+              <span class="text-muted" style="font-size:0.75rem">${card.resources} ${esc(t('stat.rp'))}${card.time != null ? ` · ${card.time} ${esc(t('stat.turns'))}` : ''}</span>` : ''}
             <button class="btn btn-sm btn-ghost" data-act="pick-mission" data-mi="${i}">${esc(t(card ? 'common.change' : 'builder.select_mission'))}</button>
             <button class="btn btn-sm btn-ghost" data-act="custom-mission" data-mi="${i}">${esc(t('builder.custom_mission'))}</button>
           </div>`, true)}
@@ -521,7 +521,7 @@ function renderCampaignMissionEditor(m, i) {
               <select data-ce-link="${li}.to">${others.replace(`value="${esc(l.to)}"`, `value="${esc(l.to)}" selected`)}</select>
               <input type="text" data-ce-link="${li}.label" value="${esc(l.label)}" placeholder="${esc(t('campaign.link_label'))}" maxlength="120">
               <button class="btn btn-icon" data-act="del-link" data-li="${li}" title="${esc(t('common.remove'))}" aria-label="${esc(t('common.remove'))}">${icon('close')}</button>
-            </div>`).join('') || `<div class="text-muted" style="font-size:12px">${esc(t('campaign.no_links'))}</div>`}
+            </div>`).join('') || `<div class="text-muted" style="font-size:0.75rem">${esc(t('campaign.no_links'))}</div>`}
             <button class="btn btn-sm btn-ghost" data-act="add-link" data-mi="${i}">${icon('plus')}${esc(t('campaign.add_link'))}</button>
           </div>`, true) : ''}
       </div>` : ''}
@@ -574,7 +574,7 @@ function renderCampaignEditor(errors = []) {
 
       <section class="ce-section">
         <h2>3 · ${esc(t('campaign.sec.rules'))}</h2>
-        <p class="text-muted" style="font-size:12px">${esc(t('campaign.rules_hint'))}</p>
+        <p class="text-muted" style="font-size:0.75rem">${esc(t('campaign.rules_hint'))}</p>
         ${st.rules.map((r, i) => `<div class="ce-rule">
           <div class="flex" style="gap:6px">${ceInput(`rules.${i}.title`, r.title, `maxlength="120" placeholder="${esc(t('campaign.rule_title'))}" style="flex:1"`)}
             <button class="btn btn-icon" data-act="del-rule" data-ri="${i}" title="${esc(t('common.remove'))}" aria-label="${esc(t('common.remove'))}">${icon('close')}</button></div>
@@ -600,7 +600,7 @@ function renderCampaignEditor(errors = []) {
       <section class="ce-section">
         <h2>5 · ${esc(t('campaign.sec.resolution'))}</h2>
         ${ceField(t('campaign.scoring'), ceArea('scoring', st.scoring, 3, t('campaign.scoring_hint')), true)}
-        <label class="text-muted" style="font-size:12px">${esc(t('campaign.outcomes'))}</label>
+        <label class="text-muted" style="font-size:0.75rem">${esc(t('campaign.outcomes'))}</label>
         ${st.outcomes.map((o, i) => `<div class="ce-outcome">
           ${ceInput(`outcomes.${i}.label`, o.label, `maxlength="120" placeholder="${esc(t('campaign.outcome'))}"`)}
           ${ceInput(`outcomes.${i}.condition`, o.condition, `maxlength="300" placeholder="${esc(t('campaign.condition_hint'))}"`)}
@@ -734,11 +734,11 @@ function openCampaignImportDialog() {
   overlay.innerHTML = `
     <div class="modal">
       <h2>${esc(t('campaign.import_title'))}</h2>
-      <p class="text-muted" style="font-size:12px">${esc(t('campaign.import_hint'))}</p>
-      <textarea id="ci-content" rows="14" spellcheck="false" style="width:100%;font-family:monospace;font-size:12px"></textarea>
+      <p class="text-muted" style="font-size:0.75rem">${esc(t('campaign.import_hint'))}</p>
+      <textarea id="ci-content" rows="14" spellcheck="false" style="width:100%;font-family:monospace;font-size:0.75rem"></textarea>
       <div style="display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap">
         <label class="btn btn-ghost btn-sm" style="margin:0">${esc(t('io.import_file'))}<input type="file" id="ci-file" accept=".yaml,.yml,application/yaml,text/yaml,text/plain" style="display:none"></label>
-        <span id="ci-file-name" class="text-muted" style="font-size:12px"></span>
+        <span id="ci-file-name" class="text-muted" style="font-size:0.75rem"></span>
         <span style="flex:1"></span>
         <button class="btn btn-ghost btn-sm" id="ci-cancel">${esc(t('common.cancel'))}</button>
         <button class="btn btn-primary btn-sm" id="ci-go">${esc(t('campaign.import_go'))}</button>

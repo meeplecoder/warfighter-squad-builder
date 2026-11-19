@@ -130,7 +130,7 @@ async function showUserDetail(id) {
         <input type="text" id="ud-avatar" maxlength="500" value="${esc(u.avatar_url || '')}"></div>
 
       <h2 style="margin-top:18px">${esc(t('users.set_password'))}</h2>
-      <p class="text-muted" style="font-size:13px;margin:0 0 8px">${esc(t('users.password_note'))}</p>
+      <p class="text-muted" style="font-size:0.8125rem;margin:0 0 8px">${esc(t('users.password_note'))}</p>
       <div class="form-field"><label>${esc(t('profile.new_password'))}</label>
         <input type="password" id="ud-pw" autocomplete="new-password" maxlength="128"></div>
       <div class="form-field"><label>${esc(t('auth.password_repeat'))}</label>

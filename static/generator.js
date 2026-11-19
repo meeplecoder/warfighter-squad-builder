@@ -381,7 +381,7 @@ function genSoldierCard(s) {
       <div>${chipForSubtype(c.card_subtype, c.card_type)}
         <span class="soldier-name" ${cardImageAttr(c)}>${esc(c.name)}</span>
         <span class="soldier-number text-muted">(${esc(c.number)})</span></div>
-      <span class="gen-rp"><span class="text-muted" style="font-size:13px">${c.resource_cost != null ? c.resource_cost + ' ' + esc(t('stat.rp')) : ''}</span>${genLockBtn(c.id)}</span>
+      <span class="gen-rp"><span class="text-muted" style="font-size:0.8125rem">${c.resource_cost != null ? c.resource_cost + ' ' + esc(t('stat.rp')) : ''}</span>${genLockBtn(c.id)}</span>
     </div>
     <div class="soldier-stats">
       ${c.health != null ? `<span>${esc(t('stat.hp'))} ${c.health}</span>` : ''}
@@ -389,7 +389,7 @@ function genSoldierCard(s) {
       ${c.movement != null ? `<span>${esc(t('stat.move'))} ${c.movement}</span>` : ''}
       ${c.hth != null ? `<span>${esc(t('stat.hth'))} ${c.hth >= 0 ? '+' : ''}${c.hth}</span>` : ''}
     </div>
-    ${isPS ? `<div class="text-muted" style="font-size:12px;margin-bottom:6px">${esc(t('stat.loadout'))}: ${used}/${eff}</div>` : ''}
+    ${isPS ? `<div class="text-muted" style="font-size:0.75rem;margin-bottom:6px">${esc(t('stat.loadout'))}: ${used}/${eff}</div>` : ''}
     ${gear ? `<div class="default-gear-section"><div class="default-gear-label">${esc(t('squad.gear'))}</div><table class="gear-table">${gear}</table></div>` : ''}
   </div>`;
 }
