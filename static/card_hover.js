@@ -87,3 +87,9 @@ function cardName(card, inner) {
   window.addEventListener('hashchange', hide);
   window.addEventListener('blur', hide);
 })();
+
+// Upper half of a card image (click-through to the card detail), for boxes on the squad page.
+function cardTopHalfHtml(card) {
+  if (!card || !card.image_url) return '';
+  return `<a href="#/cards/${card.id}" class="card-top-half"><img src="${esc(card.image_url)}" alt="${esc(card.name)}" loading="lazy" onload="this.parentNode.style.height=(this.clientHeight/2)+'px'"></a>`;
+}

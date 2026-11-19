@@ -1492,6 +1492,7 @@ async function showSquadDetail(squadId) {
           const mtColor = MISSION_TYPE_COLOR[m.mission_type] || 'var(--text-muted)';
           const isFortified = squad.objectives?.some(o => o.objective_family === 'Fortification');
           return `
+            ${cardTopHalfHtml(m)}
             <div class="mission-name">
               <span ${cardImageAttr(m)}>${esc(m.name)}</span>${customMissionChip(m)}
               ${m.nation ? `<span class="chip chip-mission" style="margin-left:6px;vertical-align:middle">${esc(tv('nation', m.nation))}</span>` : ''}
@@ -1555,7 +1556,7 @@ async function showSquadDetail(squadId) {
               ].filter(Boolean);
               const chips = attrDefs.map(([k,v]) =>
                 `<span class="mission-attr">${esc(k)} <strong>${esc(v)}</strong></span>`).join('');
-              return `<div class="mission-name">
+              return `${cardTopHalfHtml(o)}<div class="mission-name">
                 ${o.objective_mechanic ? objBadge(tv('card_subtype', o.objective_mechanic), typeColor) : ''}
                 ${familyColor ? objBadge(tv('card_subtype', o.objective_family), familyColor) : ''}
                 <span ${cardImageAttr(o)}>${esc(o.name)}</span>

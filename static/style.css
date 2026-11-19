@@ -1678,3 +1678,7 @@ input:focus, select:focus, textarea:focus { outline-color: var(--kraft); }
 .stats-legend i { display: inline-block; width: 10px; height: 10px; margin-right: 5px; border-radius: 2px; }
 .stats-bar-cell { width: 55%; }
 .stats-bar { display: block; height: 10px; background: var(--accent); border-radius: 2px; }
+
+/* Upper half of a card image: the wrapper is sized to half the image height on load */
+.card-top-half { display: block; overflow: hidden; border-radius: 6px; margin: 4px 0 10px; border: 1px solid var(--border); }
+.card-top-half img { display: block; width: 100%; height: auto; }
