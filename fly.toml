@@ -11,6 +11,10 @@ primary_region = "ams"        # change to the region nearest your players (fly p
   PROXY_FIX_HOPS = "1"
   # Custom domain (certificate: `fly certs add warfighterww2.armydice.com`; armydice.com redirects here via Cloudflare)
   APP_BASE_URL = "https://warfighterww2.armydice.com"
+  # Card images live on the volume (never in the repo or the image); upload with scripts/push_card_images.sh
+  CARD_IMAGES_DIR = "/data/card_images"
+  # Card images on Cloudflare R2: <base>/<cards.cdn_hash>.webp; load the hashes with scripts/load_cdn_hashes.py
+  CARD_CDN_BASE_URL = "https://www2cards.armydice.com/coreeu"
   MAIL_BACKEND = "resend"
   # Sender on the domain verified in Resend (armydice.com); the Resend test sender onboarding@resend.dev only
   # delivers to the Resend account owner
@@ -20,7 +24,7 @@ primary_region = "ams"        # change to the region nearest your players (fly p
 [mounts]
   source = "wf_data"
   destination = "/data"
-  initial_size = "1gb"
+  initial_size = "2gb"
 
 [http_service]
   internal_port = 8080

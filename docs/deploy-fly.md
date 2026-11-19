@@ -27,6 +27,19 @@ Either use the dashboard's **Launch an App from GitHub**, or the included workfl
 runs the tests and deploys. The dashboard generates its own Dockerfile if the repository has none; this repository has
 one, so check that the build uses it.
 
+## Card images
+
+The images are never in the repository or the Docker image. They live on the volume at `/data/card_images`
+(`CARD_IMAGES_DIR` in `fly.toml`) and are served only to logged-in users. The volume must hold them plus the database
+(about 0.5 GB for the full set):
+
+```bash
+fly volumes extend <volume id> --size 2          # `fly volumes list` shows the id; `initial_size` only applies at creation
+scripts/push_card_images.sh                      # packs static/card_images, copies it, unpacks it on the machine
+```
+
+Re-run the script after adding images; the app resolves files from disk on every request, so no restart is needed.
+
 ## Backups
 
 Fly snapshots the volume daily (a few days kept) — not a complete backup. Also copy the database out now and then:

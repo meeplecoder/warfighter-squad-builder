@@ -57,6 +57,10 @@ Card images are **not** part of the repository. If you own the game, put your ow
 [static/card_images/README.md](static/card_images/README.md). Images are ignored by git — never commit or publicly
 redistribute them. Re-run the card import after adding images.
 
+For a hosted instance, keep the images on the data volume instead of in the image: set `CARD_IMAGES_DIR=/data/card_images`
+(already set in `fly.toml`) and upload them with `scripts/push_card_images.sh` (see [docs/deploy-fly.md](docs/deploy-fly.md)).
+The app serves them to logged-in users only.
+
 ## 5. Run
 
 ```bash

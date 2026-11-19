@@ -246,6 +246,11 @@ def create_app():
             except Exception:
                 pass  # Column already exists
             try:
+                conn.execute(db.text("ALTER TABLE cards ADD COLUMN cdn_hash TEXT"))
+                conn.commit()
+            except Exception:
+                pass  # Column already exists
+            try:
                 conn.execute(db.text("ALTER TABLE cards ADD COLUMN created_at TEXT"))
                 conn.commit()
             except Exception:

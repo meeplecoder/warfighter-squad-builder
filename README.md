@@ -58,7 +58,8 @@ Full instructions — real card data, images, admin rights, deployment — are i
 - **Card data** — `cards/warfighter_cards.csv` holds the cards (names, stats, card text, expansion) in the simple format
   described in [docs/card_data.md](docs/card_data.md) and [docs/card_taxonomy.md](docs/card_taxonomy.md). It is
   DVG's content, included for convenience; see [NOTICE.md](NOTICE.md). You can import any other CSV with `--csv`.
-- **Card images** — **not included.** If you own the game you can add your own scans locally (git-ignored); see
+- **Card images** — **not included in the repository.** The official hosted instance shows them (DVG's permission,
+  logged-in users only, stored on its data volume). On your own instance, add your own scans locally (git-ignored); see
   [static/card_images/README.md](static/card_images/README.md).
 - [`examples/cards.sample.csv`](examples/cards.sample.csv) is a small **fictional** set used by the tests and for
   screenshots.

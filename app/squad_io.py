@@ -88,6 +88,9 @@ def export_csv(squad):
 
 
 def _tts_image_url(card):
+    cdn = card.cdn_image_url()
+    if cdn:
+        return cdn
     base = (current_app.config.get('TTS_IMAGE_BASE_URL') or '').rstrip('/')
     if not base:
         return ''

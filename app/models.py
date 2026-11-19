@@ -71,6 +71,7 @@ class Card(db.Model):
     weapon_mode_table = db.Column(db.Text)    # JSON: {'headers': [...], 'rows': [...]}
     vassal_module = db.Column(db.Text)
     has_image = db.Column(db.Integer, nullable=False, default=0)
+    cdn_hash = db.Column(db.Text)  # file name stem of the card image on the CDN; loaded by scripts/load_cdn_hashes.py
     cx = db.Column('combat_xp', db.Integer, nullable=False, default=0)  # CX = Combat Experience (pre-printed)
     xp = db.Column('soldier_xp', db.Integer, nullable=False, default=0)  # XP = Experience Points (pre-printed)
     # Custom (user-made) cards — module CUSTOM_MODULE, number 'CM-<id>'. Excluded from the catalog.
@@ -105,11 +106,19 @@ class Card(db.Model):
         """Card name in the request language (falls back to English)."""
         return i18n.card_text(self.number, 'name', self.name)
 
+    def cdn_image_url(self):
+        """'<CARD_CDN_BASE_URL>/<cdn_hash>.webp' when the base URL is configured and the hash is loaded, else None."""
+        base = (current_app.config.get('CARD_CDN_BASE_URL') or '').rstrip('/')
+        return f'{base}/{self.cdn_hash}.webp' if base and self.cdn_hash else None
+
     def image_url(self):
         """Image in the request language (→ en → any) if the file exists on disk, or None.
         None for anonymous visitors too: the image route is login-only, so the URL would just 401."""
         if has_request_context() and not current_user.is_authenticated:
             return None
+        cdn = self.cdn_image_url()
+        if cdn:
+            return cdn
         rel = card_images.resolve(current_app.config['CARD_IMAGES_DIR'],
                                   self.number, i18n.get_lang())
         return f'/api/cards/images/{rel}' if rel else None

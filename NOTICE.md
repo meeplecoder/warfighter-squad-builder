@@ -15,14 +15,16 @@ to DVG. If you enjoy the game, please support the publisher: <https://www.dvg.co
 |---|---|
 | Source code and documentation in this repository | [MIT License](LICENSE) |
 | `cards/warfighter_cards.csv` — card names, stats, card text, module names | **Not covered by the MIT License.** Owned by DVG. A fan transcription included only so that players can use the app; see below |
-| Warfighter card images, scans, artwork, logos, rulebook text | **Not included** and not covered — owned by DVG |
+| Warfighter card images, scans, artwork, logos, rulebook text | **Not included in this repository** and not covered — owned by DVG. The official hosted instance shows card images with DVG's permission (see below); they are never committed |
 | `app/metric_reference.json` | Aggregate statistics only (distributions of Hostile Cover/Penetration, Location entrance costs, metric values of reference squads) — numbers, no card text |
 | The demo card set (`examples/cards.sample.csv`) | Entirely fictional placeholder cards written for this project (MIT) |
 
 The card CSV is included for the convenience of people who own the game. It is DVG's intellectual property and remains
 so; no license to it is granted by this repository. **If DVG (or any rights holder) asks for it to be changed or removed,
 it will be removed promptly** — please open an issue or contact the maintainer. Card images are never part of this
-repository: to see them in the app you add your own scans locally (they are git-ignored). Please do not commit or publicly
+repository: to see them in your own instance you add your own scans locally (they are git-ignored). The official hosted
+instance serves card images, to logged-in users only, with the permission of DVG; that permission does not extend to
+other instances or to redistribution. Please do not commit or publicly
 redistribute scans or artwork, and if you host a public instance consider a non-commercial, no-ads setup in the spirit of
 fan content and keep the footer notice.
 
