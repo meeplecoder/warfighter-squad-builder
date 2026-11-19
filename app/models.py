@@ -5,7 +5,7 @@ import json
 import re
 from app.utils import classify_objective_type, classify_objective_family, theater_from_raw_type
 from app import i18n, card_images
-from flask import current_app, has_request_context
+from flask import current_app
 from flask_login import current_user
 from sqlalchemy.orm import validates
 
@@ -116,10 +116,7 @@ class Card(db.Model):
         return f"{base}/{i18n.DEFAULT_LANG}/{self.number.split('-')[0].lower()}/{self.cdn_hash}.webp"
 
     def image_url(self):
-        """Image in the request language (→ en → any) if the file exists on disk, or None.
-        None for anonymous visitors too: the image route is login-only, so the URL would just 401."""
-        if has_request_context() and not current_user.is_authenticated:
-            return None
+        """Image in the request language (→ en → any) if the file exists on disk, or None."""
         cdn = self.cdn_image_url()
         if cdn:
             return cdn
