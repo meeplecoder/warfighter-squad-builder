@@ -7,7 +7,7 @@ Run from the warfighter-squad-builder/ directory (in production, on the server w
     python scripts/load_cdn_hashes.py /path/to/cards_cdn_manifest.json
     python scripts/load_cdn_hashes.py /path/to/cards_cdn_manifest.json --dry-run
 
-Then set CARD_CDN_BASE_URL (e.g. https://www2cards.armydice.com/coreeu) in the environment.
+Then set CARD_CDN_BASE_URL (e.g. https://www2cards.armydice.com) in the environment.
 """
 import argparse
 import json

@@ -107,9 +107,13 @@ class Card(db.Model):
         return i18n.card_text(self.number, 'name', self.name)
 
     def cdn_image_url(self):
-        """'<CARD_CDN_BASE_URL>/<cdn_hash>.webp' when the base URL is configured and the hash is loaded, else None."""
+        """'<CARD_CDN_BASE_URL>/en/<prefix>/<cdn_hash>.webp' (same <lang>/<prefix> folders as static/card_images,
+        prefix = lowercase number prefix: W-001 -> w) when the base URL is configured and the hash is loaded, else None.
+        One hash per card, so the folder is always the default language."""
         base = (current_app.config.get('CARD_CDN_BASE_URL') or '').rstrip('/')
-        return f'{base}/{self.cdn_hash}.webp' if base and self.cdn_hash else None
+        if not (base and self.cdn_hash and '-' in self.number):
+            return None
+        return f"{base}/{i18n.DEFAULT_LANG}/{self.number.split('-')[0].lower()}/{self.cdn_hash}.webp"
 
     def image_url(self):
         """Image in the request language (→ en → any) if the file exists on disk, or None.

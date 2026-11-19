@@ -23,10 +23,10 @@ class Config:
     CARDS_CSV = os.environ.get('CARDS_CSV', os.path.join(_BASE, 'cards', 'warfighter_cards.csv'))
     # Override to keep the images outside the app tree (production: on the data volume, e.g. /data/card_images)
     CARD_IMAGES_DIR = os.environ.get('CARD_IMAGES_DIR') or os.path.join(_BASE, 'static', 'card_images')
-    # Card images on a CDN (Cloudflare R2): '<CARD_CDN_BASE_URL>/<cards.cdn_hash>.webp'. The hashes live only in the
+    # Card images on a CDN (Cloudflare R2): '<CARD_CDN_BASE_URL>/en/<prefix>/<cards.cdn_hash>.webp'. The hashes live only in the
     # database (scripts/load_cdn_hashes.py), never in the repo. Cards without a hash fall back to the local
     # CARD_IMAGES_DIR route.
-    CARD_CDN_BASE_URL = os.environ.get('CARD_CDN_BASE_URL', '')   # e.g. https://www2cards.armydice.com/coreeu
+    CARD_CDN_BASE_URL = os.environ.get('CARD_CDN_BASE_URL', '')   # e.g. https://www2cards.armydice.com
     DEBUG = os.environ.get('DEBUG', 'false').lower() == 'true'
     # Card images: CARD_IMAGES_DIR/<lang>/<prefix>/<number>.<jpg|png|webp>, lowercase (see app/card_images.py)
     # Tabletop Simulator export: public base URL holding card images as <lang>/<prefix>/<number>.jpg
