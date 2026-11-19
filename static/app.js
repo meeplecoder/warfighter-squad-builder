@@ -604,7 +604,7 @@ function sortedNations(nations) {
     .sort((a, b) => tv('nation', a).localeCompare(tv('nation', b), I18N.lang));
   return [...pinned, ...rest];
 }
-let allCategories = ['Soldier','Mission','Objective','Weapon','Equipment','Skill','Service Record'];
+let allCategories = ['Soldier','Mission','Objective','Weapon','Equipment','Skill','Service Record','Hostile','Location','Action','Event','Fortification','Enemy Lines','Medal','Situation','Landing Zone','Shore Defense','Clergy','Reference','Other'];
 
 register('cards', async function(subId) {
   if (subId) { await showCardDetail(subId); return; }
@@ -652,7 +652,7 @@ function renderCardsShell() {
       <select id="module-select">${moduleOptions}</select>
     </div>
     ${smartHelpBox('cards-smart-help')}
-    <div id="cards-count" style="font-size:12px;color:var(--text-muted);margin-bottom:8px"></div>
+    <div id="cards-count" style="font-size:0.75rem;color:var(--text-muted);margin-bottom:8px"></div>
     <div id="cards-results"></div>
     <div id="cards-pagination"></div>
   `);
@@ -739,7 +739,7 @@ async function refreshCardsTable() {
 
   const rows = items.map(c => `
     <tr class="clickable" data-id="${c.id}">
-      <td><span class="text-muted" style="font-size:11px">${esc(c.number)}</span></td>
+      <td><span class="text-muted" style="font-size:0.6875rem">${esc(c.number)}</span></td>
       <td><span ${cardImageAttr(c)}>${esc(c.name)}</span>${trMarker(c)}</td>
       <td>${chipForCategory(c.card_type)}</td>
       <td>${SUBTYPE_CATS.has(c.card_type) ? esc(tv('card_subtype', c.card_subtype || '')) : ''}</td>
@@ -1177,7 +1177,7 @@ async function renderSquadList(containerEl) {
       <input type="text" class="search-input" id="squads-q" placeholder="${esc(t('squads.search_placeholder'))}" value="${esc(f.q)}" style="flex:1;min-width:160px">
       ${userBtns}
     </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">${esc(tn('squads.count', total))}</div>
+    <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:8px">${esc(tn('squads.count', total))}</div>
     <table class="data-table squads-table">
       <thead><tr>
         <th class="squad-edit-cell"></th>
@@ -1351,7 +1351,7 @@ async function showSquadDetail(squadId) {
       const tip = lm !== 0
         ? `data-tooltip="${esc(t('squad.loadout_tip', { base: c.loadout, mod: (lm >= 0 ? '+' : '') + lm }))}"`
         : '';
-      return `<div class="text-muted" style="font-size:12px;margin-bottom:6px;${color}" ${tip}>${esc(t('stat.loadout'))}: ${ss.gear_loadout_used}/${ss.effective_loadout}</div>`;
+      return `<div class="text-muted" style="font-size:0.75rem;margin-bottom:6px;${color}" ${tip}>${esc(t('stat.loadout'))}: ${ss.gear_loadout_used}/${ss.effective_loadout}</div>`;
     })();
 
     const gearHtml = (() => {
@@ -1397,7 +1397,7 @@ async function showSquadDetail(squadId) {
             <span class="soldier-name" ${cardImageAttr(c)}>${esc(c.name)}</span>
             <span class="soldier-number text-muted">(${esc(c.number)})</span>
           </div>
-          <span class="text-muted" style="font-size:13px">${c.resource_cost != null ? c.resource_cost + ' ' + esc(t('stat.rp')) : ''}</span>
+          <span class="text-muted" style="font-size:0.8125rem">${c.resource_cost != null ? c.resource_cost + ' ' + esc(t('stat.rp')) : ''}</span>
         </div>
         <div class="soldier-stats">
           ${c.health != null ? `<span>${esc(t('stat.hp'))} ${c.health}</span>` : ''}
@@ -1499,7 +1499,7 @@ async function showSquadDetail(squadId) {
             <div class="mission-meta-row">
               ${m.mission_type && m.mission_type !== 'Standard' ? `<span class="obj-type-badge" style="background:${mtColor}">${esc(tv('card_subtype', m.mission_type))}</span>` : ''}
               ${isFortified ? `<span class="obj-type-badge" style="background:#7f1d1d">${esc(tv('card_subtype', 'Fortification'))}</span>` : ''}
-              ${m.theater ? `<span class="text-muted" style="font-size:12px">${esc(tv('theater', m.theater))}</span>` : ''}
+              ${m.theater ? `<span class="text-muted" style="font-size:0.75rem">${esc(tv('theater', m.theater))}</span>` : ''}
             </div>
             ${m.module && !m.is_custom ? `<div class="mission-subtitle">${esc(tv('module', m.module))}</div>` : ''}
             <div class="mission-rp-track"><div class="mission-rp-fill ${over ? 'over' : ''}" style="width:${pct}%"></div></div>
@@ -1534,14 +1534,14 @@ async function showSquadDetail(squadId) {
           const situationHtml = squad.situation ? `
             <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
               <div class="squad-box-label" style="margin-bottom:4px">${esc(t('squad.situation'))}</div>
-              <div style="font-size:13px"><span ${cardImageAttr(squad.situation)}>${esc(squad.situation.name)}</span>
+              <div style="font-size:0.8125rem"><span ${cardImageAttr(squad.situation)}>${esc(squad.situation.name)}</span>
               ${squad.situation.nation ? `<span class="chip chip-mission" style="margin-left:6px;vertical-align:middle">${esc(tv('nation', squad.situation.nation))}</span>` : ''}</div>
               ${squad.situation.module ? `<div class="mission-subtitle" style="margin-top:2px">${esc(tv('module', squad.situation.module))}</div>` : ''}
             </div>` : '';
 
           const objs = squad.objectives || [];
           if (!objs.length) {
-            return `<div class="text-muted" style="font-size:13px;margin-top:4px">${esc(t('squad.no_objective'))}</div>${situationHtml}`;
+            return `<div class="text-muted" style="font-size:0.8125rem;margin-top:4px">${esc(t('squad.no_objective'))}</div>${situationHtml}`;
           }
           const isSingle = objs.length === 1;
           const objsHtml = objs.map((o, idx) => {
@@ -1566,8 +1566,8 @@ async function showSquadDetail(squadId) {
             } else {
               // Compact row — name + tiny badges only
               return `<div class="flex items-center obj-compact-row" style="${idx > 0 ? 'margin-top:6px;padding-top:6px;border-top:1px solid var(--border)' : ''}">
-                <span style="font-size:13px"><span ${cardImageAttr(o)}>${esc(o.name)}</span></span>
-                ${o.objective_mechanic ? objBadge(tv('card_subtype', o.objective_mechanic), typeColor, ';margin-left:6px;font-size:10px;padding:1px 5px') : ''}
+                <span style="font-size:0.8125rem"><span ${cardImageAttr(o)}>${esc(o.name)}</span></span>
+                ${o.objective_mechanic ? objBadge(tv('card_subtype', o.objective_mechanic), typeColor, ';margin-left:6px;font-size:0.625rem;padding:1px 5px') : ''}
               </div>`;
             }
           }).join('');
@@ -1585,7 +1585,7 @@ async function showSquadDetail(squadId) {
       <h2 style="margin-bottom:8px">${esc(t('squad.strategy_notes'))}</h2>
       ${squad.notes
         ? `<div class="card-notes">${renderMentions(squad.notes, squad.mentions)}</div>`
-        : `<p class="text-muted" style="font-size:13px;margin:0">${esc(t('squad.no_notes'))}</p>`}
+        : `<p class="text-muted" style="font-size:0.8125rem;margin:0">${esc(t('squad.no_notes'))}</p>`}
     </div>
 
     <div class="comments-section">
@@ -1916,8 +1916,8 @@ function openImportDialog() {
   overlay.innerHTML = `
     <div class="modal">
       <h2>${esc(t('io.import_title'))}</h2>
-      <p class="text-muted" style="font-size:12px">${esc(t('io.import_hint'))}</p>
-      <textarea id="import-content" rows="12" style="width:100%;font-family:monospace;font-size:12px"></textarea>
+      <p class="text-muted" style="font-size:0.75rem">${esc(t('io.import_hint'))}</p>
+      <textarea id="import-content" rows="12" style="width:100%;font-family:monospace;font-size:0.75rem"></textarea>
       <div style="display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap">
         <label class="btn btn-ghost btn-sm" style="margin:0">${esc(t('io.import_file'))}<input type="file" id="import-file" accept=".txt,.csv,text/plain,text/csv" style="display:none"></label>
         <span style="flex:1"></span>
@@ -2072,7 +2072,7 @@ function renderBuilder() {
           <div class="gear-item gear-item-default">
             ${g.quantity > 1 ? `<span class="gear-qty">${g.quantity}×</span>` : ''}
             <span ${cardImageAttr(g.card)}>${esc(g.card.name)}</span>
-            <span class="text-muted" style="font-size:11px">${esc(tv('card_type', g.card.card_type))}</span>
+            <span class="text-muted" style="font-size:0.6875rem">${esc(tv('card_type', g.card.card_type))}</span>
           </div>`).join('')}
       </div>` : '';
 
@@ -2107,7 +2107,7 @@ function renderBuilder() {
           ${defaultGearHtml}
         ` : c.card_subtype !== 'Vehicle' ? `
           <div class="gear-list">${gearItems}</div>
-          <div class="nps-gear-note" style="font-size:11px;margin-top:4px">${esc(t('builder.nps_not_counted'))}</div>
+          <div class="nps-gear-note" style="font-size:0.6875rem;margin-top:4px">${esc(t('builder.nps_not_counted'))}</div>
           ${defaultGearHtml}
           <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
             <button class="btn btn-sm btn-ghost add-nps-wpn-btn" data-sidx="${idx}">${icon('plus')}${esc(tv('card_type', 'Weapon'))}</button>
@@ -2160,7 +2160,7 @@ function renderBuilder() {
                     <button class="btn btn-sm btn-ghost" id="custom-mission-btn">${esc(t('builder.custom_mission'))}</button>
                   </span>
                 </div>
-                <div class="text-muted" style="font-size:12px;margin-top:4px">${esc([
+                <div class="text-muted" style="font-size:0.75rem;margin-top:4px">${esc([
                   mc.resources != null ? `${mc.resources} ${t('stat.rp')}` : null,
                   mc.time != null ? `${mc.time} ${t('stat.turns')}` : null,
                   mc.objective_position != null ? `${t('stat.obj_loc_short')}: ${mc.objective_position}` : null,
@@ -2197,10 +2197,10 @@ function renderBuilder() {
                         <button class="btn btn-icon remove-obj-btn" data-idx="${idx}" title="${esc(t('common.remove'))}" aria-label="${esc(t('common.remove'))}">${icon('close')}</button>
                       </span>
                     </div>
-                    <div class="text-muted" style="font-size:11px;margin-top:3px">${esc([subtypeLabel, attrs].filter(Boolean).join(' · '))}</div>`;
+                    <div class="text-muted" style="font-size:0.6875rem;margin-top:3px">${esc([subtypeLabel, attrs].filter(Boolean).join(' · '))}</div>`;
                   } else {
                     return `<div class="flex justify-between items-center obj-compact-row">
-                      <span style="font-size:13px"><span ${cardImageAttr(oc)}>${esc(oc.name)}</span></span>
+                      <span style="font-size:0.8125rem"><span ${cardImageAttr(oc)}>${esc(oc.name)}</span></span>
                       <button class="btn btn-icon remove-obj-btn" data-idx="${idx}" title="${esc(t('common.remove'))}" aria-label="${esc(t('common.remove'))}">${icon('close')}</button>
                     </div>`;
                   }
@@ -2242,7 +2242,7 @@ function renderBuilder() {
 
         <div class="builder-section">
           <div class="builder-section-title">${esc(t('squad.strategy_notes'))}</div>
-          <div class="text-muted" style="font-size:12px;margin-bottom:6px">${esc(t('builder.notes_hint'))} ${t('mention.hint_html')}</div>
+          <div class="text-muted" style="font-size:0.75rem;margin-bottom:6px">${esc(t('builder.notes_hint'))} ${t('mention.hint_html')}</div>
           <textarea id="squad-notes" style="width:100%;min-height:100px;resize:vertical">${esc(builderState.notes)}</textarea>
         </div>
 
@@ -2422,7 +2422,7 @@ async function openCustomMissionDialog(opts = {}) {
   overlay.innerHTML = `
     <div class="modal">
       <h2>${esc(t('custom.title'))}</h2>
-      <p class="text-muted" style="font-size:12px">${esc(t('custom.hint'))}</p>
+      <p class="text-muted" style="font-size:0.75rem">${esc(t('custom.hint'))}</p>
       <form id="cm-form" class="custom-mission-form">
         <div class="form-field cm-wide"><label for="cm-name">${esc(t('custom.name'))}</label><input type="text" id="cm-name" maxlength="80" required value="${esc(base?.name_en ?? base?.name ?? '')}"></div>
         <div class="form-field"><label for="cm-type">${esc(t('custom.type'))}</label><select id="cm-type">${optionList(CUSTOM_MISSION_TYPES, 'card_subtype', base?.mission_type)}</select></div>
@@ -2432,7 +2432,7 @@ async function openCustomMissionDialog(opts = {}) {
         ${num('cm-obj', t('stat.obj_location'), 'min="1" max="20"', base?.objective_position)}
         ${num('cm-lm', t('stat.loadout_mod'), 'min="-10" max="10"', base ? (base.loadout_modifier ?? 0) : 0)}
         <div class="form-field cm-wide"><label for="cm-notes">${esc(t('custom.notes'))}</label><textarea id="cm-notes" rows="3" maxlength="1000" style="width:100%">${esc(base?.notes_en ?? base?.notes ?? '')}</textarea></div>
-        <div id="cm-mode-hint" class="cm-wide text-muted" style="font-size:12px"></div>
+        <div id="cm-mode-hint" class="cm-wide text-muted" style="font-size:0.75rem"></div>
         <div id="cm-msg" class="cm-wide"></div>
         <div class="cm-wide" style="display:flex;gap:6px;justify-content:flex-end">
           <button type="button" class="btn btn-ghost btn-sm" id="cm-cancel">${esc(t('common.cancel'))}</button>
@@ -2790,13 +2790,13 @@ register('profile', async function() {
 
     <div class="profile-section">
       <h2>${esc(t('profile.sessions'))}</h2>
-      <p class="text-muted" style="font-size:13px">${esc(t('profile.logout_all_intro'))}</p>
+      <p class="text-muted" style="font-size:0.8125rem">${esc(t('profile.logout_all_intro'))}</p>
       <button class="btn btn-ghost" id="logout-all-btn">${esc(t('profile.logout_all'))}</button>
     </div>
 
     <div class="profile-section">
       <h2>${esc(t('nav.expansions'))}</h2>
-      <p class="text-muted" style="font-size:13px">${esc(t('profile.expansions_intro', { owned: ownedCount, total: profile.modules.length }))}</p>
+      <p class="text-muted" style="font-size:0.8125rem">${esc(t('profile.expansions_intro', { owned: ownedCount, total: profile.modules.length }))}</p>
       <a class="btn btn-ghost" href="#/expansions">${esc(t('profile.manage_expansions'))}</a>
     </div>
   `);
@@ -3000,14 +3000,14 @@ async function refreshTranslationsList() {
   f.navList = data.items.map(i => i.number);
   const rows = data.items.map(i => `
     <tr class="clickable" data-number="${esc(i.number)}">
-      <td class="text-muted" style="font-size:11px">${esc(i.number)}</td>
+      <td class="text-muted" style="font-size:0.6875rem">${esc(i.number)}</td>
       <td><span ${cardImageAttr(i)}>${esc(i.name_en)}</span></td>
       <td>${esc(i.translations.name?.value || '')}</td>
       <td>${chipForCategory(i.card_type)}</td>
       <td>${trStatusBadge(i.status)}</td>
     </tr>`).join('');
   div.innerHTML = `
-    <div style="font-size:12px;color:var(--text-muted);margin:8px 0">${esc(tn('tr.count', data.total))}</div>
+    <div style="font-size:0.75rem;color:var(--text-muted);margin:8px 0">${esc(tn('tr.count', data.total))}</div>
     <div class="table-scroll">
       <table class="data-table">
         <thead><tr><th>#</th><th>${esc(t('tr.english'))}</th><th>${esc(I18N.NAMES[f.lang])}</th><th>${esc(t('col.type'))}</th><th>${esc(t('col.status'))}</th></tr></thead>
@@ -3074,7 +3074,7 @@ async function showTranslationEditor(number) {
           <button class="btn btn-primary" id="tr-save-reviewed">${esc(t('tr.save_reviewed'))}</button>
           <button class="btn btn-ghost" id="tr-save-draft">${esc(t('tr.save_draft'))}</button>
         </div>
-        <div class="text-muted" style="font-size:12px;margin-top:6px">${esc(t('tr.save_hint'))}</div>
+        <div class="text-muted" style="font-size:0.75rem;margin-top:6px">${esc(t('tr.save_hint'))}</div>
         <div id="tr-msg"></div>
       </div>
     </div>
@@ -3112,7 +3112,7 @@ function authForm(title, body) {
 }
 
 function authFooter(html) {
-  return `<div class="auth-form-footer mt-2" style="text-align:center;font-size:13px">${html}</div>`;
+  return `<div class="auth-form-footer mt-2" style="text-align:center;font-size:0.8125rem">${html}</div>`;
 }
 
 const loginLink = () => `<a href="#/login">${esc(t('header.login'))}</a>`;
@@ -3128,7 +3128,7 @@ function newPasswordFields(prefix, labelKey = 'profile.new_password') {
   return `
     <div class="form-field"><label>${esc(t(labelKey))}</label>
       <input type="password" id="${prefix}-pw" autocomplete="new-password" maxlength="128">
-      <div class="text-muted" style="font-size:12px;margin-top:4px">${esc(t('auth.password_hint', { n: PASSWORD_MIN_LENGTH }))}</div></div>
+      <div class="text-muted" style="font-size:0.75rem;margin-top:4px">${esc(t('auth.password_hint', { n: PASSWORD_MIN_LENGTH }))}</div></div>
     <div class="form-field"><label>${esc(t('auth.password_repeat'))}</label>
       <input type="password" id="${prefix}-pw2" autocomplete="new-password" maxlength="128"></div>`;
 }
@@ -3155,7 +3155,7 @@ register('login', function() {
     ${notice ? `<div class="alert alert-warning">${esc(t(notice === 'save' ? 'auth.login_to_save' : 'auth.login_required'))}</div>` : ''}
     <div class="form-field"><label>${esc(t('auth.login_id'))}</label><input type="text" id="login-user" autocomplete="username"></div>
     <div class="form-field"><label>${esc(t('auth.password'))}</label><input type="password" id="login-pw" autocomplete="current-password"></div>
-    <label style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" id="login-remember"> ${esc(t('auth.remember'))}</label>
+    <label style="display:flex;gap:6px;align-items:center;font-size:0.8125rem"><input type="checkbox" id="login-remember"> ${esc(t('auth.remember'))}</label>
     <button class="btn btn-primary" id="login-btn" style="width:100%;margin-top:8px">${esc(t('header.login'))}</button>
     ${authFooter(`<a href="#/forgot">${esc(t('auth.forgot_link'))}</a>`)}
     ${authFooter(`${esc(t('auth.no_account'))} <a href="#/register">${esc(t('header.register'))}</a>`)}`);
@@ -3223,7 +3223,7 @@ register('register', function() {
 // ---------------------------------------------------------------------------
 register('forgot', function() {
   const msg = authForm(t('auth.forgot_title'), `
-    <p class="text-muted" style="font-size:13px">${esc(t('auth.forgot_intro'))}</p>
+    <p class="text-muted" style="font-size:0.8125rem">${esc(t('auth.forgot_intro'))}</p>
     <div class="form-field"><label>${esc(t('auth.email'))}</label><input type="email" id="forgot-email" autocomplete="email"></div>
     <button class="btn btn-primary" id="forgot-btn" style="width:100%;margin-top:8px">${esc(t('auth.send_link'))}</button>
     ${authFooter(loginLink())}`);
@@ -3269,7 +3269,7 @@ function tokenConfirmView(view, introKey, endpoint, onDone) {
     const token = takeToken(view, rawToken);
     const title = t('auth.verify_title'), intro = t(introKey);
     const msg = authForm(title, token ? `
-      <p class="text-muted" style="font-size:13px">${esc(intro)}</p>
+      <p class="text-muted" style="font-size:0.8125rem">${esc(intro)}</p>
       <button class="btn btn-primary" id="confirm-btn" style="width:100%;margin-top:8px">${esc(t('auth.confirm'))}</button>`
       : alertHtml(t('auth.link_invalid')));
     document.getElementById('confirm-btn')?.addEventListener('click', async () => {
