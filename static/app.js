@@ -1561,7 +1561,7 @@ async function showSquadDetail(squadId) {
           const isFortified = squad.objectives?.some(o => o.objective_family === 'Fortification');
           return `<div class="mission-split">${splitOpen(m)}
             <div class="mission-name">
-              <span ${cardImageAttr(m)}>${esc(m.name)}</span>${customMissionChip(m)}
+              <a href="#/cards/${m.id}" class="mission-title-link" ${cardImageAttr(m)}>${esc(m.name)}</a>${customMissionChip(m)}
               ${m.nation ? `<span class="chip chip-mission" style="margin-left:6px;vertical-align:middle">${esc(tv('nation', m.nation))}</span>` : ''}
             </div>
             <div class="mission-meta-row">
@@ -1626,7 +1626,7 @@ async function showSquadDetail(squadId) {
               return `<div class="mission-split">${splitOpen(o)}<div class="mission-name">
                 ${o.objective_mechanic ? objBadge(tv('card_subtype', o.objective_mechanic), typeColor) : ''}
                 ${familyColor ? objBadge(tv('card_subtype', o.objective_family), familyColor) : ''}
-                <span ${cardImageAttr(o)}>${esc(o.name)}</span>
+                <a href="#/cards/${o.id}" class="mission-title-link" ${cardImageAttr(o)}>${esc(o.name)}</a>
                 ${o.nation ? `<span class="chip chip-mission" style="margin-left:6px;vertical-align:middle">${esc(tv('nation', o.nation))}</span>` : ''}
               </div>
               ${o.module ? `<div class="mission-subtitle">${esc(tv('module', o.module))}</div>` : ''}

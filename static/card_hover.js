@@ -92,9 +92,20 @@ function cardName(card, inner) {
 // cannot be loaded, the column is removed and the box looks as it does without an image.
 function cardTopHalfHtml(card) {
   if (!card || !card.image_url) return '';
-  return `<a href="#/cards/${card.id}" class="card-side"><img src="${esc(card.image_url)}" alt="" onerror="this.parentNode.remove()"></a>`;
+  return `<div class="card-side" role="button" tabindex="0" title="${esc(t('common.enlarge'))}" data-zoom-url="${esc(card.image_url)}"><img src="${esc(card.image_url)}" alt="" onerror="this.parentNode.remove()"></div>`;
 }
 // Pair splitOpen()/splitClose() inside a <div class="mission-split">: image column + info column (the info column
 // is always there, so without an image the content is laid out exactly as before).
 function splitOpen(card)  { return `${cardTopHalfHtml(card)}<div class="mission-split-info">`; }
 function splitClose(card) { return '</div>'; }
+
+// Click (or Enter/Space) on a squad-page card image shows it enlarged, as on the card detail page; it does not navigate.
+document.addEventListener('click', e => {
+  const box = e.target.closest('.card-side[data-zoom-url]');
+  if (box) openLightbox(box.dataset.zoomUrl);
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const box = e.target.closest && e.target.closest('.card-side[data-zoom-url]');
+  if (box) { e.preventDefault(); openLightbox(box.dataset.zoomUrl); }
+});
