@@ -46,7 +46,7 @@ html { font-size: 146.25%; }
   --font-body: 'Twemoji Country Flags', 'Roboto Condensed', 'Arial Narrow', system-ui, sans-serif;
   --radius: 3px;
   --header-h: 54px;
-  --sidebar-w: 170px;
+  --sidebar-w: 225px;   /* 170px x 1.3, like the root font size */
 }
 
 /* ---- Reset --------------------------------------------------------- */
