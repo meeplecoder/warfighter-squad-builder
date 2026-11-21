@@ -1350,7 +1350,7 @@ async function showSquadDetail(squadId) {
       const label = lm !== 0
         ? t('squad.loadout_mission', { mod: (lm >= 0 ? '+' : '') + lm })
         : t('stat.loadout');
-      return `<div class="text-muted" style="font-size:0.75rem;margin-bottom:6px;${color}">${esc(label)}: ${ss.gear_loadout_used}/${ss.effective_loadout}</div>`;
+      return `<div class="text-muted" style="font-size:0.75rem;margin-bottom:6px;${color}">${esc(label)} ${ss.gear_loadout_used}/${ss.effective_loadout}</div>`;
     })();
 
     const gearHtml = (() => {
