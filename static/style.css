@@ -463,7 +463,7 @@ h3 { font-size: 1rem; font-weight: 600; }
 .squad-meta { color: var(--text-muted); font-size: 0.8125rem; margin-top: 4px; }
 .squad-info-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 400px));   /* compact boxes (card 120px + info), not stretched to half the page */
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -977,10 +977,12 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
 /* Two-column body */
 .cd-body {
   display: grid;
-  grid-template-columns: 1fr 220px;
+  grid-template-columns: 220px 1fr;   /* card image on the left */
 }
-.cd-main  { padding: 20px; border-right: 1px solid var(--border); min-width: 0; }
-.cd-aside { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.cd-3col { grid-template-columns: 220px minmax(0, 1fr) minmax(0, 1fr); }   /* image | main stats | notes */
+.cd-main  { padding: 20px; min-width: 0; }
+.cd-notes-col { padding: 20px; min-width: 0; border-left: 1px solid var(--border); }
+.cd-aside { padding: 14px; display: flex; flex-direction: column; gap: 10px; border-right: 1px solid var(--border); align-self: start; }
 
 /* Card image */
 .cd-image-wrap {
@@ -1114,8 +1116,9 @@ tr.picker-row-selected td:first-child::before { content: '✓ '; color: var(--ac
 
 /* Responsive: stack image below on narrow screens */
 @media (max-width: 640px) {
-  .cd-body { grid-template-columns: 1fr; }
-  .cd-main { border-right: none; border-bottom: 1px solid var(--border); }
+  .cd-body, .cd-3col { grid-template-columns: 1fr; }
+  .cd-notes-col { border-left: none; border-top: 1px solid var(--border); }
+  .cd-aside { border-right: none; border-bottom: 1px solid var(--border); }
   .cd-aside { padding: 12px; }
   .cd-name  { font-size: 1.4rem; }
 }
@@ -1679,6 +1682,8 @@ input:focus, select:focus, textarea:focus { outline-color: var(--kraft); }
 .stats-bar-cell { width: 55%; }
 .stats-bar { display: block; height: 10px; background: var(--accent); border-radius: 2px; }
 
-/* Upper half of a card image (cards are 262x390 portrait: show the top 50%) */
-.card-top-half { display: block; aspect-ratio: 262 / 195; overflow: hidden; border-radius: 6px; margin: 4px 0 10px; border: 1px solid var(--border); }
-.card-top-half img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+/* Squad-page boxes: the entire card on the left, the box's info on the right */
+.mission-split { display: flex; gap: 14px; align-items: flex-start; }
+.mission-split-info { flex: 1; min-width: 0; }
+.card-side { flex: 0 0 120px; display: block; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
+.card-side img { display: block; width: 100%; height: auto; }

@@ -88,8 +88,13 @@ function cardName(card, inner) {
   window.addEventListener('blur', hide);
 })();
 
-// Upper half of a card image (click-through to the card detail), for boxes on the squad page.
+// Entire card image for the left column of a squad-page box (click-through to the card detail). If the image
+// cannot be loaded, the column is removed and the box looks as it does without an image.
 function cardTopHalfHtml(card) {
   if (!card || !card.image_url) return '';
-  return `<a href="#/cards/${card.id}" class="card-top-half"><img src="${esc(card.image_url)}" alt="${esc(card.name)}"></a>`;
+  return `<a href="#/cards/${card.id}" class="card-side"><img src="${esc(card.image_url)}" alt="" onerror="this.parentNode.remove()"></a>`;
 }
+// Pair splitOpen()/splitClose() inside a <div class="mission-split">: image column + info column (the info column
+// is always there, so without an image the content is laid out exactly as before).
+function splitOpen(card)  { return `${cardTopHalfHtml(card)}<div class="mission-split-info">`; }
+function splitClose(card) { return '</div>'; }
