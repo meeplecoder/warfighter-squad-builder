@@ -144,8 +144,10 @@ function renderHeader() {
     <select id="lang-select" class="lang-select" title="${esc(t('header.language'))}">
       ${I18N.SUPPORTED.map(l => `<option value="${l}" ${l === I18N.lang ? 'selected' : ''}>${esc(I18N.NAMES[l])}</option>`).join('')}
     </select>`;
+  const bugBtn = `<button type="button" class="btn btn-sm btn-ghost" id="report-bug-btn" title="${esc(t('fb.btn'))}">${esc(t('fb.btn'))}</button>`;
   if (currentUser) {
     nav.innerHTML = `
+      ${bugBtn}
       ${langSelect}
       <div class="user-menu-wrap">
         <button type="button" class="user-btn" id="user-menu-btn" aria-haspopup="menu" aria-expanded="false"
@@ -170,11 +172,56 @@ function renderHeader() {
     wireUserMenu(nav);
   } else {
     nav.innerHTML = `
+      ${bugBtn}
       ${langSelect}
       <a href="#/login" class="btn btn-sm btn-ghost">${esc(t('header.login'))}</a>
       <a href="#/register" class="btn btn-sm btn-primary">${esc(t('header.register'))}</a>`;
   }
   nav.querySelector('#lang-select').addEventListener('change', e => changeLanguage(e.target.value));
+  nav.querySelector('#report-bug-btn').addEventListener('click', openReportBug);
+}
+
+// Bug report / feature request popup with a tiny local arithmetic check
+function openReportBug() {
+  const kinds = ['bug', 'ui', 'data', 'translation', 'performance', 'feature', 'other'];
+  const a = 1 + Math.floor(Math.random() * 9), b = 1 + Math.floor(Math.random() * 9);
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h2>${esc(t('fb.title'))}</h2>
+      <form id="fb-form">
+        <div class="form-field"><label for="fb-kind">${esc(t('fb.type'))}</label>
+          <select id="fb-kind">${kinds.map(k => `<option value="${k}">${esc(t('fb.kind.' + k))}</option>`).join('')}</select></div>
+        <div class="form-field"><label for="fb-text">${esc(t('fb.text'))}</label>
+          <textarea id="fb-text" rows="6" maxlength="4000" minlength="10" required style="width:100%" placeholder="${esc(t('fb.text_ph'))}"></textarea></div>
+        <input type="text" id="fb-web" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px">
+        <div class="form-field"><label for="fb-cap">${esc(t('fb.captcha', { a, b }))}</label>
+          <input type="number" id="fb-cap" required style="width:6rem"></div>
+        <div id="fb-msg"></div>
+        <div style="display:flex;gap:6px;justify-content:flex-end">
+          <button type="button" class="btn btn-ghost btn-sm" id="fb-cancel">${esc(t('common.cancel'))}</button>
+          <button type="submit" class="btn btn-primary btn-sm">${esc(t('fb.send'))}</button>
+        </div>
+      </form>
+    </div>`;
+  document.body.appendChild(overlay);
+  const $ = id => overlay.querySelector('#' + id);
+  const close = () => overlay.remove();
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  $('fb-cancel').addEventListener('click', close);
+  $('fb-text').focus();
+  $('fb-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    if (Number($('fb-cap').value) !== a + b) { $('fb-msg').innerHTML = alertHtml(t('fb.captcha_wrong')); return; }
+    try {
+      await API.post('/feedback', { kind: $('fb-kind').value, text: $('fb-text').value, website: $('fb-web').value, page: location.hash });
+      $('fb-form').innerHTML = `<p>${esc(t('fb.sent'))}</p><div style="text-align:right"><button type="button" class="btn btn-primary btn-sm" id="fb-ok">OK</button></div>`;
+      $('fb-ok').addEventListener('click', close);
+    } catch (err) {
+      $('fb-msg').innerHTML = alertHtml(err.error || t('common.failed'));
+    }
+  });
 }
 
 // Header user menu: opens from the icon next to the name; closes on outside click, Esc, selection and navigation

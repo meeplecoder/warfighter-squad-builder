@@ -86,6 +86,8 @@
  "If an account uses that address, we sent a reset link. Check your Spam folder too.": "Si hay una cuenta con esa dirección, hemos enviado un enlace de restablecimiento. Revisa también la carpeta de spam.",
  "Password changed. You can now log in.": "Contraseña cambiada. Ya puedes iniciar sesión.",
  "Check your email to confirm your address, then log in. If you cannot find it, look in your Spam folder.": "Revisa tu correo para confirmar la dirección y después inicia sesión. Si no lo encuentras, mira en la carpeta de spam.",
+ "Invalid report type.": "Tipo de informe no válido.",
+ "Please describe the problem in a few words.": "Describe el problema con unas palabras.",
  "Registration is closed.": "El registro está cerrado.",
  "This link is invalid or has expired.": "Este enlace no es válido o ha caducado.",
  "Please confirm your email address first. Check your inbox and your Spam folder.": "Primero confirma tu correo electrónico. Revisa tu bandeja de entrada y la carpeta de spam.",

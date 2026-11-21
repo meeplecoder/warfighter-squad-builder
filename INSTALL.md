@@ -128,6 +128,7 @@ The tests create a temporary database from the demo cards, so they never touch y
 | `PROXY_FIX_HOPS` | `0` | Number of reverse proxies in front of the app (client IP and https scheme) |
 | `MAIL_BACKEND` | `console` | `console` (prints), `smtp`, or `resend` |
 | `MAIL_FROM` | `Warfighter WWII - Squad Builder <no-reply@localhost>` | Sender address; with `resend`/`smtp` and `DEBUG=false` it must be a real address (the app refuses to start with `@localhost`) |
+| `BUG_REPORT_EMAIL` | — | Recipient of the header "Report a bug" form (logged to the server log when empty) |
 | `RESEND_API_KEY` | — | For `MAIL_BACKEND=resend` |
 | `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_USE_SSL` | — / `587` | For `MAIL_BACKEND=smtp` |
 | `TTS_IMAGE_BASE_URL`, `TTS_CARD_BACK_URL` | — | Public URLs of card images for the Tabletop Simulator export |

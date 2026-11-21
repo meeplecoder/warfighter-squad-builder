@@ -119,6 +119,7 @@ def create_app():
     from app.generator import generator_bp
     from app.admin_users import admin_users_bp
     from app.stats import stats_bp
+    from app.feedback import feedback_bp
     from app.roles import ADMIN_USERNAME
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
@@ -130,6 +131,7 @@ def create_app():
     app.register_blueprint(generator_bp, url_prefix='/api/generator')
     app.register_blueprint(admin_users_bp, url_prefix='/api/admin/users')
     app.register_blueprint(stats_bp, url_prefix='/api/stats')
+    app.register_blueprint(feedback_bp, url_prefix='/api/feedback')
 
     @app.route('/healthz')
     def healthz():

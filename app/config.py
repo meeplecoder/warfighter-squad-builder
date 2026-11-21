@@ -58,6 +58,7 @@ class Config:
     MAIL_BACKEND = os.environ.get('MAIL_BACKEND', 'console')   # console | resend | smtp | memory (tests)
     MAIL_FROM = os.environ.get('MAIL_FROM', 'Warfighter WWII - Squad Builder <no-reply@localhost>')
     RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')       # MAIL_BACKEND=resend
+    BUG_REPORT_EMAIL = os.environ.get('BUG_REPORT_EMAIL', '')   # where header bug reports / feature requests go
     MAIL_HOST = os.environ.get('MAIL_HOST', '')                 # MAIL_BACKEND=smtp
     MAIL_PORT = int(os.environ.get('MAIL_PORT', '587'))
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME', '')
