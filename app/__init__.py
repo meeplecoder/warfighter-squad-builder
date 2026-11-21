@@ -275,6 +275,13 @@ def create_app():
             except Exception:
                 pass  # Column already exists
 
+            # Bug reports: status (open / closed / dismissed); existing reports become open
+            try:
+                conn.execute(db.text("ALTER TABLE bug_reports ADD COLUMN status TEXT NOT NULL DEFAULT 'open'"))
+                conn.commit()
+            except Exception:
+                pass  # Column already exists
+
             # "Based on" link between squads (copy / fork)
             try:
                 conn.execute(db.text(

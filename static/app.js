@@ -221,8 +221,8 @@ function openReportBug() {
     e.preventDefault();
     const token = widgetId !== null ? window.turnstile.getResponse(widgetId) : '';
     try {
-      await API.post('/feedback', { kind: $('fb-kind').value, text: $('fb-text').value, website: $('fb-web').value, page: location.hash, captcha: token });
-      $('fb-form').innerHTML = `<p>${esc(t('fb.sent'))}</p><div style="text-align:right"><button type="button" class="btn btn-primary btn-sm" id="fb-ok">OK</button></div>`;
+      const sent = await API.post('/feedback', { kind: $('fb-kind').value, text: $('fb-text').value, website: $('fb-web').value, page: location.hash, captcha: token });
+      $('fb-form').innerHTML = `<p>${esc(sent.id ? t('fb.sent_id', { id: sent.id }) : t('fb.sent'))}</p><div style="text-align:right"><button type="button" class="btn btn-primary btn-sm" id="fb-ok">OK</button></div>`;
       $('fb-ok').addEventListener('click', close);
     } catch (err) {
       $('fb-msg').innerHTML = alertHtml(err.error || t('common.failed'));

@@ -132,5 +132,7 @@
  "The admin account cannot be renamed.": "La cuenta de administrador no se puede renombrar.",
  "The admin account cannot be disabled.": "La cuenta de administrador no se puede desactivar.",
  "The admin account cannot be deleted.": "La cuenta de administrador no se puede eliminar.",
- "This account has been disabled. Contact the administrator.": "Esta cuenta ha sido desactivada. Contacta con el administrador."
+ "This account has been disabled. Contact the administrator.": "Esta cuenta ha sido desactivada. Contacta con el administrador.",
+ "Report not found.": "Informe no encontrado.",
+ "Invalid status.": "Estado no válido."
 }

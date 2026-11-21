@@ -9,7 +9,7 @@ from flask_login import current_user, login_required
 
 from app import db, limiter, mailer, roles
 from app.i18n import _
-from app.models import BugReport
+from app.models import BUG_STATUSES, BugReport
 
 feedback_bp = Blueprint('feedback', __name__)
 
@@ -58,15 +58,16 @@ def submit():
     body = (f"Type: {kind}\nUser: {who}\nLanguage: {request.headers.get('X-Lang', '')}\n"
             f"Page: {str(data.get('page') or '')[:300]}\nUser-Agent: {request.headers.get('User-Agent', '')[:200]}\n\n"
             f"{text[:MAX_LEN]}")
-    db.session.add(BugReport(user_id=current_user.id, username=who, kind=kind, text=text[:MAX_LEN],
+    report = BugReport(user_id=current_user.id, username=who, kind=kind, text=text[:MAX_LEN],
                              page=str(data.get('page') or '')[:300], language=request.headers.get('X-Lang', '')[:10],
-                             user_agent=request.headers.get('User-Agent', '')[:200]))
+                             user_agent=request.headers.get('User-Agent', '')[:200])
+    db.session.add(report)
     db.session.commit()
     to = current_app.config.get('BUG_REPORT_EMAIL')
-    subject = f'[Squad Builder] {kind}: {text[:60]!r}'.replace('\n', ' ')
+    subject = f'[Squad Builder] #{report.id} {kind}: {text[:60]!r}'.replace('\n', ' ')
     if to:
-        mailer.send(to, subject, body)
-    return jsonify(ok=True)
+        mailer.send(to, subject, f'Report: #{report.id}\n' + body)
+    return jsonify(ok=True, id=report.id)
 
 
 @feedback_bp.route('', methods=['GET'])
@@ -74,4 +75,19 @@ def submit():
 def list_reports():
     rows = BugReport.query.order_by(BugReport.created_at.desc(), BugReport.id.desc()).all()
     return jsonify(reports=[{'id': r.id, 'user_id': r.user_id, 'username': r.username, 'kind': r.kind, 'text': r.text,
-                             'page': r.page, 'language': r.language, 'created_at': r.created_at} for r in rows])
+                             'page': r.page, 'language': r.language, 'status': r.status, 'created_at': r.created_at}
+                            for r in rows])
+
+
+@feedback_bp.route('/<int:report_id>', methods=['PUT'])
+@roles.admin_required
+def set_status(report_id):
+    report = db.session.get(BugReport, report_id)
+    if report is None:
+        return jsonify(error=_('Report not found.')), 404
+    status = (request.get_json(silent=True) or {}).get('status')
+    if status not in BUG_STATUSES:
+        return jsonify(error=_('Invalid status.')), 400
+    report.status = status
+    db.session.commit()
+    return jsonify(ok=True, id=report.id, status=report.status)

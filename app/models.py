@@ -567,6 +567,9 @@ class CampaignLink(db.Model):
     label = db.Column(db.Text)
 
 
+BUG_STATUSES = ("open", "closed", "dismissed")
+
+
 class BugReport(db.Model):
     """Bug report / feature request submitted from the header form (logged-in users only); read by admins."""
     __tablename__ = 'bug_reports'
@@ -579,6 +582,7 @@ class BugReport(db.Model):
     page = db.Column(db.Text)
     language = db.Column(db.Text)
     user_agent = db.Column(db.Text)
+    status = db.Column(db.Text, nullable=False, default='open', server_default='open')   # see BUG_STATUSES
     created_at = db.Column(db.Text, nullable=False, default=now_utc)
 
 
