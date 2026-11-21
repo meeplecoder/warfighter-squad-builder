@@ -416,8 +416,6 @@
  "fb.kind.other": "Otro",
  "fb.text": "Descripción",
  "fb.text_ph": "¿Qué ocurrió y qué esperabas?",
- "fb.captcha": "¿Eres humano? ¿Cuánto es {a} + {b}?",
- "fb.captcha_wrong": "Respuesta incorrecta a la pregunta de comprobación.",
  "fb.send": "Enviar",
  "fb.sent": "¡Gracias! Tu informe ha sido enviado.",
  "header.language": "Idioma",

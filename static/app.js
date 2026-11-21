@@ -185,7 +185,6 @@ function renderHeader() {
 // Bug report / feature request popup with a tiny local arithmetic check
 function openReportBug() {
   const kinds = ['bug', 'ui', 'data', 'translation', 'performance', 'feature', 'other'];
-  const a = 1 + Math.floor(Math.random() * 9), b = 1 + Math.floor(Math.random() * 9);
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
@@ -197,8 +196,7 @@ function openReportBug() {
         <div class="form-field"><label for="fb-text">${esc(t('fb.text'))}</label>
           <textarea id="fb-text" rows="6" maxlength="4000" minlength="10" required style="width:100%" placeholder="${esc(t('fb.text_ph'))}"></textarea></div>
         <input type="text" id="fb-web" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px">
-        <div class="form-field"><label for="fb-cap">${esc(t('fb.captcha', { a, b }))}</label>
-          <input type="number" id="fb-cap" required style="width:6rem"></div>
+        <div id="fb-captcha" style="margin-bottom:8px"></div>
         <div id="fb-msg"></div>
         <div style="display:flex;gap:6px;justify-content:flex-end">
           <button type="button" class="btn btn-ghost btn-sm" id="fb-cancel">${esc(t('common.cancel'))}</button>
@@ -212,17 +210,40 @@ function openReportBug() {
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
   $('fb-cancel').addEventListener('click', close);
   $('fb-text').focus();
+  // Cloudflare Turnstile (only when the server has a site key); the token is verified server-side
+  let widgetId = null;
+  loadTurnstile().then(async api => {
+    if (!api) return;
+    const key = (await API.get('/feedback/captcha')).site_key;
+    if (key && overlay.isConnected) widgetId = api.render($('fb-captcha'), { sitekey: key, language: I18N.lang });
+  }).catch(() => {});
   $('fb-form').addEventListener('submit', async e => {
     e.preventDefault();
-    if (Number($('fb-cap').value) !== a + b) { $('fb-msg').innerHTML = alertHtml(t('fb.captcha_wrong')); return; }
+    const token = widgetId !== null ? window.turnstile.getResponse(widgetId) : '';
     try {
-      await API.post('/feedback', { kind: $('fb-kind').value, text: $('fb-text').value, website: $('fb-web').value, page: location.hash });
+      await API.post('/feedback', { kind: $('fb-kind').value, text: $('fb-text').value, website: $('fb-web').value, page: location.hash, captcha: token });
       $('fb-form').innerHTML = `<p>${esc(t('fb.sent'))}</p><div style="text-align:right"><button type="button" class="btn btn-primary btn-sm" id="fb-ok">OK</button></div>`;
       $('fb-ok').addEventListener('click', close);
     } catch (err) {
       $('fb-msg').innerHTML = alertHtml(err.error || t('common.failed'));
+      if (widgetId !== null) window.turnstile.reset(widgetId);
     }
   });
+}
+
+// Loads the Turnstile script on first use; resolves to window.turnstile (or null when it cannot load)
+let turnstilePromise = null;
+function loadTurnstile() {
+  if (window.turnstile) return Promise.resolve(window.turnstile);
+  turnstilePromise = turnstilePromise || new Promise(resolve => {
+    const sc = document.createElement('script');
+    sc.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    sc.async = true;
+    sc.onload = () => resolve(window.turnstile || null);
+    sc.onerror = () => { turnstilePromise = null; resolve(null); };
+    document.head.appendChild(sc);
+  });
+  return turnstilePromise;
 }
 
 // Header user menu: opens from the icon next to the name; closes on outside click, Esc, selection and navigation

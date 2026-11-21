@@ -280,8 +280,6 @@
  "fb.kind.other": "Other",
  "fb.text": "Description",
  "fb.text_ph": "What happened, and what did you expect?",
- "fb.captcha": "Are you human? What is {a} + {b}?",
- "fb.captcha_wrong": "Wrong answer to the check question.",
  "fb.send": "Send",
  "fb.sent": "Thank you! Your report has been sent.",
  "header.language": "Language",

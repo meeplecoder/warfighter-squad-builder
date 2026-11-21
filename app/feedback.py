@@ -1,5 +1,9 @@
 """Bug reports / feature requests sent from the header button (logged-in users only). They are stored in the
 bug_reports table (admin list at GET /api/feedback) and also mailed to BUG_REPORT_EMAIL when that is set."""
+import json
+import urllib.parse
+import urllib.request
+
 from flask import Blueprint, current_app, jsonify, request
 from flask_login import current_user, login_required
 
@@ -11,6 +15,28 @@ feedback_bp = Blueprint('feedback', __name__)
 
 KINDS = ('bug', 'ui', 'data', 'translation', 'performance', 'feature', 'other')
 MAX_LEN = 4000
+TURNSTILE_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
+
+
+def _turnstile_ok(token):
+    """Verify a Turnstile token server-side. No secret configured = captcha disabled."""
+    secret = current_app.config.get('TURNSTILE_SECRET_KEY')
+    if not secret:
+        return True
+    if not token:
+        return False
+    data = urllib.parse.urlencode({'secret': secret, 'response': token, 'remoteip': request.remote_addr or ''}).encode()
+    try:
+        with urllib.request.urlopen(urllib.request.Request(TURNSTILE_URL, data=data), timeout=5) as r:
+            return bool(json.load(r).get('success'))
+    except Exception:
+        current_app.logger.exception('Turnstile verification failed')
+        return False
+
+
+@feedback_bp.route('/captcha', methods=['GET'])
+def captcha_config():
+    return jsonify(site_key=current_app.config.get('TURNSTILE_SITE_KEY') or '')
 
 
 @feedback_bp.route('', methods=['POST'])
@@ -24,6 +50,8 @@ def submit():
         return jsonify(error=_('Invalid report type.')), 400
     if len(text) < 10:
         return jsonify(error=_('Please describe the problem in a few words.')), 400
+    if not _turnstile_ok(data.get('captcha')):
+        return jsonify(error=_('Captcha check failed. Please try again.')), 400
     if data.get('website'):                       # honeypot field: bots fill it, humans never see it
         return jsonify(ok=True)
     who = current_user.username
