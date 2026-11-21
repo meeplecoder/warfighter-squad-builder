@@ -567,6 +567,21 @@ class CampaignLink(db.Model):
     label = db.Column(db.Text)
 
 
+class BugReport(db.Model):
+    """Bug report / feature request submitted from the header form (logged-in users only); read by admins."""
+    __tablename__ = 'bug_reports'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    username = db.Column(db.Text, nullable=False)            # kept even if the account is later deleted
+    kind = db.Column(db.Text, nullable=False)
+    text = db.Column(db.Text, nullable=False)
+    page = db.Column(db.Text)
+    language = db.Column(db.Text)
+    user_agent = db.Column(db.Text)
+    created_at = db.Column(db.Text, nullable=False, default=now_utc)
+
+
 class StatHit(db.Model):
     """Own, cookieless usage stats: page views per day and app section (no personal data)."""
     __tablename__ = 'stat_hits'

@@ -82,7 +82,7 @@ function route() {
   updateActiveNav(key === 'campaigns' && (rest[0] === 'new' || rest[1] === 'edit') ? 'campaigns/new' : key);
   // Tab title: section by default; detail / editor views refine it with setPageTitle
   const section = { cards: 'nav.cards', squads: 'nav.squads', builder: 'nav.builder', generator: 'nav.generator', campaigns: 'nav.campaigns',
-                    expansions: 'nav.expansions', profile: 'nav.profile', translations: 'nav.translations', users: 'nav.users', stats: 'nav.stats' }[key];
+                    expansions: 'nav.expansions', profile: 'nav.profile', translations: 'nav.translations', users: 'nav.users', stats: 'nav.stats', bugreports: 'nav.bugreports' }[key];
   setPageTitle(section ? t(section) : null);
   if (key !== 'login') loginReturn = null;             // a pending "return to" only lives while the login page is shown
   trackHit(key);
@@ -144,7 +144,7 @@ function renderHeader() {
     <select id="lang-select" class="lang-select" title="${esc(t('header.language'))}">
       ${I18N.SUPPORTED.map(l => `<option value="${l}" ${l === I18N.lang ? 'selected' : ''}>${esc(I18N.NAMES[l])}</option>`).join('')}
     </select>`;
-  const bugBtn = `<button type="button" class="btn btn-sm btn-ghost" id="report-bug-btn" title="${esc(t('fb.btn'))}">${esc(t('fb.btn'))}</button>`;
+  const bugBtn = !currentUser ? '' : `<button type="button" class="btn btn-sm btn-ghost" id="report-bug-btn" title="${esc(t('fb.btn'))}">${esc(t('fb.btn'))}</button>`;
   if (currentUser) {
     nav.innerHTML = `
       ${bugBtn}
@@ -164,7 +164,8 @@ function renderHeader() {
           ${isAdmin() ? `<hr>
           <a role="menuitem" href="#/users">${icon('users')}<span>${esc(t('nav.users'))}</span></a>
           <a role="menuitem" href="#/translations">${icon('language')}<span>${esc(t('nav.translations'))}</span></a>
-          <a role="menuitem" href="#/stats">${icon('chart')}<span>${esc(t('nav.stats'))}</span></a>` : ''}
+          <a role="menuitem" href="#/stats">${icon('chart')}<span>${esc(t('nav.stats'))}</span></a>
+          <a role="menuitem" href="#/bugreports">${icon('chart')}<span>${esc(t('nav.bugreports'))}</span></a>` : ''}
           <hr>
           <button type="button" role="menuitem" id="logout-btn">${icon('logout')}<span>${esc(t('header.logout'))}</span></button>
         </div>
@@ -178,7 +179,7 @@ function renderHeader() {
       <a href="#/register" class="btn btn-sm btn-primary">${esc(t('header.register'))}</a>`;
   }
   nav.querySelector('#lang-select').addEventListener('change', e => changeLanguage(e.target.value));
-  nav.querySelector('#report-bug-btn').addEventListener('click', openReportBug);
+  nav.querySelector('#report-bug-btn')?.addEventListener('click', openReportBug);
 }
 
 // Bug report / feature request popup with a tiny local arithmetic check
