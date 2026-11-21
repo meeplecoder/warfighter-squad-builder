@@ -1024,18 +1024,14 @@ async function showCardDetail(idOrNumber) {
         </div>
       </div>
 
-      <div class="cd-body">
+      <div class="cd-body ${card.notes ? 'cd-3col' : ''}">
+        <div class="cd-aside">
+          <div class="cd-image-wrap ${hasImage ? 'cd-has-image' : ''}">
+            ${imageHtml}
+          </div>
+        </div>
         <div class="cd-main">
           ${statsHtml ? `<div class="cd-section">${statsHtml}</div>` : ''}
-
-          ${card.notes ? `<div class="cd-section">
-            ${sectionLabel(t('cd.notes'))}
-            <div class="cd-notes">${esc(card.notes)}</div>
-            ${card.notes_en && card.notes_en !== card.notes ? `<details class="cd-original">
-              <summary>${esc(t('cd.show_original'))}</summary>
-              <div class="cd-notes">${esc(card.notes_en)}</div>
-            </details>` : ''}
-          </div>` : ''}
 
           ${assocs.length ? `<div class="cd-section">
             ${sectionLabel(t('cd.default_gear'))}
@@ -1056,11 +1052,14 @@ async function showCardDetail(idOrNumber) {
           </div>` : ''}
         </div>
 
-        <div class="cd-aside">
-          <div class="cd-image-wrap ${hasImage ? 'cd-has-image' : ''}">
-            ${imageHtml}
-          </div>
-        </div>
+        ${card.notes ? `<div class="cd-notes-col">
+          ${sectionLabel(t('cd.notes'))}
+          <div class="cd-notes">${esc(card.notes)}</div>
+          ${card.notes_en && card.notes_en !== card.notes ? `<details class="cd-original">
+            <summary>${esc(t('cd.show_original'))}</summary>
+            <div class="cd-notes">${esc(card.notes_en)}</div>
+          </details>` : ''}
+        </div>` : ''}
       </div>
     </div>
   `);
@@ -1347,11 +1346,11 @@ async function showSquadDetail(squadId) {
       if (!isPS || ss.effective_loadout == null) return '';
       const lm = ss.effective_loadout - (c.loadout || 0);
       const over = ss.gear_loadout_used > ss.effective_loadout;      // overloaded: allowed, but shown in red
-      const color = over ? ' color:var(--danger);font-weight:700;' : lm !== 0 ? ' color:var(--danger);' : '';
-      const tip = lm !== 0
-        ? `data-tooltip="${esc(t('squad.loadout_tip', { base: c.loadout, mod: (lm >= 0 ? '+' : '') + lm }))}"`
-        : '';
-      return `<div class="text-muted" style="font-size:0.75rem;margin-bottom:6px;${color}" ${tip}>${esc(t('stat.loadout'))}: ${ss.gear_loadout_used}/${ss.effective_loadout}</div>`;
+      const color = over ? ' color:var(--danger);font-weight:700;' : '';
+      const label = lm !== 0
+        ? t('squad.loadout_mission', { mod: (lm >= 0 ? '+' : '') + lm })
+        : t('stat.loadout');
+      return `<div class="text-muted" style="font-size:0.75rem;margin-bottom:6px;${color}">${esc(label)}: ${ss.gear_loadout_used}/${ss.effective_loadout}</div>`;
     })();
 
     const gearHtml = (() => {
@@ -1491,8 +1490,7 @@ async function showSquadDetail(squadId) {
           };
           const mtColor = MISSION_TYPE_COLOR[m.mission_type] || 'var(--text-muted)';
           const isFortified = squad.objectives?.some(o => o.objective_family === 'Fortification');
-          return `
-            ${cardTopHalfHtml(m)}
+          return `<div class="mission-split">${splitOpen(m)}
             <div class="mission-name">
               <span ${cardImageAttr(m)}>${esc(m.name)}</span>${customMissionChip(m)}
               ${m.nation ? `<span class="chip chip-mission" style="margin-left:6px;vertical-align:middle">${esc(tv('nation', m.nation))}</span>` : ''}
@@ -1508,7 +1506,7 @@ async function showSquadDetail(squadId) {
               <span class="${over ? 'text-danger' : ''}">${rp} / ${budget} ${esc(t('stat.rp'))}</span>
               <span class="${over ? 'text-danger' : 'text-muted'}">${esc(over ? t('budget.over', { n: Math.abs(rem) }) : t('budget.remaining', { n: rem }))}</span>
             </div>
-            ${chips ? `<div class="mission-attrs">${chips}</div>` : ''}`;
+            ${chips ? `<div class="mission-attrs">${chips}</div>` : ''}${splitClose(m)}</div>`;
         })() : '<span class="text-muted">—</span>'}
       </div>
       <div class="squad-mission-box">
@@ -1556,14 +1554,14 @@ async function showSquadDetail(squadId) {
               ].filter(Boolean);
               const chips = attrDefs.map(([k,v]) =>
                 `<span class="mission-attr">${esc(k)} <strong>${esc(v)}</strong></span>`).join('');
-              return `${cardTopHalfHtml(o)}<div class="mission-name">
+              return `<div class="mission-split">${splitOpen(o)}<div class="mission-name">
                 ${o.objective_mechanic ? objBadge(tv('card_subtype', o.objective_mechanic), typeColor) : ''}
                 ${familyColor ? objBadge(tv('card_subtype', o.objective_family), familyColor) : ''}
                 <span ${cardImageAttr(o)}>${esc(o.name)}</span>
                 ${o.nation ? `<span class="chip chip-mission" style="margin-left:6px;vertical-align:middle">${esc(tv('nation', o.nation))}</span>` : ''}
               </div>
               ${o.module ? `<div class="mission-subtitle">${esc(tv('module', o.module))}</div>` : ''}
-              ${chips ? `<div class="mission-attrs" style="margin-top:8px">${chips}</div>` : ''}`;
+              ${chips ? `<div class="mission-attrs" style="margin-top:8px">${chips}</div>` : ''}${splitClose(o)}</div>`;
             } else {
               // Compact row — name + tiny badges only
               return `<div class="flex items-center obj-compact-row" style="${idx > 0 ? 'margin-top:6px;padding-top:6px;border-top:1px solid var(--border)' : ''}">

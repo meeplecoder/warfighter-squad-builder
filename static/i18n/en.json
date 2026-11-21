@@ -356,6 +356,7 @@
  "squad.gear": "Gear",
  "squad.included": "Included",
  "squad.loadout_tip": "Base: {base}, Mission modifier: {mod}",
+ "squad.loadout_mission": "Loadout (mission {mod})",
  "squad.login_to_like": "Log in to like",
  "squad.no_notes": "No strategy notes provided.",
  "squad.no_objective": "No objective selected",

@@ -492,6 +492,7 @@
  "squad.gear": "Equipo",
  "squad.included": "Incluido",
  "squad.loadout_tip": "Base: {base}, modificador de misión: {mod}",
+ "squad.loadout_mission": "Carga (misión {mod})",
  "squad.login_to_like": "Entra para dar me gusta",
  "squad.no_notes": "Sin notas de estrategia.",
  "squad.no_objective": "Sin objetivo",
