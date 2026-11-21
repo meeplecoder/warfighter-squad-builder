@@ -11,8 +11,9 @@
   font-display: swap;
 }
 
-/* UI scale: every font size is in rem, so this one value scales the whole app (100% = 16px) */
-html { font-size: 112.5%; }
+/* UI scale: every font size is in rem, so this one value scales the whole app (100% = 16px).
+   112.5% was the previous size; 146.25% = 112.5% x 1.3 */
+html { font-size: 146.25%; }
 
 :root {
   /* Warfighter palette. Neutral warm charcoal for the big areas; muted navy for actions and charts;
